@@ -1,0 +1,1638 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.ring.opening &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/clipboard.min.js"></script>
+    <script src="../../../../_static/copybutton.js"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.ring.opening</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Classes:</span>
+<span class="sd">        * LoopOpenerCapabilities</span>
+<span class="sd">        * LoopOpening</span>
+<span class="sd">        * LoopOpener</span>
+<span class="sd">        * ALSLoopOpener</span>
+<span class="sd">        * QRLoopOpener</span>
+<span class="sd">        * BLOSTRLoopOpener</span>
+<span class="sd">        * BLOSTRSVDLoopOpener</span>
+<span class="sd">        * _FixedGaugeCoreOpener</span>
+<span class="sd">        * CallableLoopOpener</span>
+
+<span class="sd">    Functions:</span>
+<span class="sd">        * _normalize_context</span>
+<span class="sd">        * _normalize_orientation</span>
+<span class="sd">        * _mirror_rank</span>
+<span class="sd">        * _mirror_cores</span>
+<span class="sd">        * _source_from_context</span>
+<span class="sd">        * _mirror_source</span>
+<span class="sd">        * _cast_source</span>
+<span class="sd">        * _opening_from_result</span>
+<span class="sd">        * resolve_loop_opener</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">Any</span><span class="p">,</span>
+                    <span class="n">Callable</span><span class="p">,</span>
+                    <span class="n">Dict</span><span class="p">,</span>
+                    <span class="n">Mapping</span><span class="p">,</span>
+                    <span class="n">Optional</span><span class="p">,</span>
+                    <span class="n">Protocol</span><span class="p">,</span>
+                    <span class="n">Sequence</span><span class="p">,</span>
+                    <span class="n">Tuple</span><span class="p">,</span>
+                    <span class="n">Union</span><span class="p">,</span>
+                    <span class="n">runtime_checkable</span><span class="p">)</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats</span><span class="w"> </span><span class="kn">import</span> <span class="n">TR</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">safe_divide</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">_normalize_rank</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.als.convergence</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConvergencePolicy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.als.solvers</span><span class="w"> </span><span class="kn">import</span> <span class="n">LeastSquaresSolver</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.als.tr</span><span class="w"> </span><span class="kn">import</span> <span class="n">TRALS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalSolveRecord</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.results</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">TRDecomposition</span><span class="p">,</span>
+                                                 <span class="n">TensorDecomposition</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseSource</span><span class="p">,</span> <span class="n">ConfigurationBatch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources.callable</span><span class="w"> </span><span class="kn">import</span> <span class="n">CallableTensorSource</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources.factory</span><span class="w"> </span><span class="kn">import</span> <span class="n">as_tensor_source</span>
+
+
+<span class="n">_Rank</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span>
+<span class="n">_Context</span> <span class="o">=</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
+
+
+<div class="viewcode-block" id="LoopOpenerCapabilities"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.LoopOpenerCapabilities">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">LoopOpenerCapabilities</span><span class="p">:</span>  <span class="c1"># MARK: LoopOpenerCapabilities</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Declares the constraints accepted by a loop-opening strategy.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    supports_fixed_left, supports_fixed_right : bool</span>
+<span class="sd">        Whether the corresponding external gauge may be fixed.</span>
+<span class="sd">    supports_two_fixed_gauges : bool</span>
+<span class="sd">        Whether both external gauges may be fixed simultaneously.</span>
+<span class="sd">    supports_blocks : bool</span>
+<span class="sd">        Whether a target may contain more than one physical site.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Whether the opener can preserve a left gauge</span>
+    <span class="n">supports_fixed_left</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="c1"># Whether the opener can preserve a right gauge</span>
+    <span class="n">supports_fixed_right</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="c1"># Whether both gauges can be fixed simultaneously</span>
+    <span class="n">supports_two_fixed_gauges</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">supports_blocks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># Whether input blocks are supported</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span>
+                <span class="s1">&#39;supports_fixed_left&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;supports_fixed_right&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;supports_two_fixed_gauges&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;supports_blocks&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="nb">bool</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be bool type&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LoopOpenerCapabilities.require"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.LoopOpenerCapabilities.require">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">require</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                <span class="o">*</span><span class="p">,</span>
+                <span class="n">fixed_left</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                <span class="n">fixed_right</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                <span class="n">block_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Rejects unsupported constraints before executing a local solver.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fixed_left, fixed_right : bool</span>
+<span class="sd">            Whether the corresponding external gauge is fixed.</span>
+<span class="sd">        block_size : int</span>
+<span class="sd">            Number of physical sites in the local target.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">fixed_left</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">supports_fixed_left</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;The loop opener does not support a fixed left gauge&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fixed_right</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">supports_fixed_right</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;The loop opener does not support a fixed right gauge&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fixed_left</span> <span class="ow">and</span> <span class="n">fixed_right</span> <span class="ow">and</span> \
+                <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">supports_two_fixed_gauges</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;The loop opener does not support two fixed gauges&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">block_size</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">supports_blocks</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The loop opener does not support input blocks&#39;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="LoopOpening"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.LoopOpening">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">LoopOpening</span><span class="p">:</span>  <span class="c1"># MARK: LoopOpening</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Stores gauges, local TR cores and diagnostics from one loop opening.</span>
+
+<span class="sd">    ``left_gauge`` and ``right_gauge`` surround the local physical cores.</span>
+<span class="sd">    When both are present, ``all_cores`` follows</span>
+<span class="sd">    standard TR order and contracts to the local target. ``rank[k]`` is the</span>
+<span class="sd">    right-link ``rank`` of ``all_cores[k]``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    left_gauge, right_gauge : torch.Tensor or None</span>
+<span class="sd">        Three-axis external gauge cores. ``None`` omits that gauge.</span>
+<span class="sd">    cores : sequence[torch.Tensor]</span>
+<span class="sd">        Physical TR cores in target order, with shape</span>
+<span class="sd">        ``(left rank, input dimension, right rank)``.</span>
+<span class="sd">    rank : sequence[int]</span>
+<span class="sd">        Actual right-link rank of every core in ``all_cores``.</span>
+<span class="sd">    orientation : {&quot;right&quot;, &quot;left&quot;}</span>
+<span class="sd">        Direction used to solve the local target. Default is ``&quot;right&quot;``.</span>
+<span class="sd">    local_records : sequence[LocalSolveRecord]</span>
+<span class="sd">        Optional local least-squares measurements.</span>
+<span class="sd">    diagnostics : mapping</span>
+<span class="sd">        Optional algorithm metadata and preparation measurements.</span>
+<span class="sd">    left_map, right_map : torch.Tensor, optional</span>
+<span class="sd">        External coordinate maps with shape</span>
+<span class="sd">        ``(new_external, local_external)``, used by :meth:`transform_gauges`.</span>
+<span class="sd">        They leave the stored local gauges and physical cores unchanged.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">left_gauge</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span>  <span class="c1"># Left external gauge core</span>
+    <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span>  <span class="c1"># Raw cores in site order</span>
+    <span class="n">right_gauge</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span>  <span class="c1"># Right external gauge core</span>
+    <span class="n">rank</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>  <span class="c1"># Right-link ranks in core order</span>
+    <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span>  <span class="c1"># Construction direction</span>
+    <span class="c1"># Optional least-squares measurements for this opening</span>
+    <span class="n">local_records</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">LocalSolveRecord</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="c1"># Local strategy diagnostics and construction state</span>
+    <span class="n">diagnostics</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+
+    <span class="c1"># Optional left external coordinate map</span>
+    <span class="n">left_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1"># Optional right external coordinate map</span>
+    <span class="n">right_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orientation</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`orientation` should be &#39;right&#39; or &#39;left&#39;&quot;</span><span class="p">)</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">cores</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`cores` should contain at least one input core&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">core</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)</span>
+                   <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">cores</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`cores` should contain standard three-dimensional TR cores&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;left_gauge&#39;</span><span class="p">,</span> <span class="s1">&#39;right_gauge&#39;</span><span class="p">):</span>
+            <span class="n">gauge</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">gauge</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> \
+                    <span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">gauge</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">gauge</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be a three-dimensional core&#39;</span><span class="p">)</span>
+        <span class="n">all_cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="n">core</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_gauge</span><span class="p">,</span> <span class="o">*</span><span class="n">cores</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_gauge</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">core</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">TRDecomposition</span><span class="p">(</span><span class="n">all_cores</span><span class="p">)</span>
+        <span class="n">rank</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">)</span>
+        <span class="n">actual_rank</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">all_cores</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">rank</span> <span class="o">!=</span> <span class="n">actual_rank</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`rank` should contain one actual right-link rank per core&#39;</span><span class="p">)</span>
+        <span class="n">records</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">local_records</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">LocalSolveRecord</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">records</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`local_records` should contain LocalSolveRecord objects&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">diagnostics</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`diagnostics` should be a mapping&#39;</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;cores&#39;</span><span class="p">,</span> <span class="n">cores</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;rank&#39;</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;local_records&#39;</span><span class="p">,</span> <span class="n">records</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;diagnostics&#39;</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">diagnostics</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">all_cores</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns gauges and input cores in standard cyclic order.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="n">core</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_gauge</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_gauge</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">core</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LoopOpening.transform_gauges"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.LoopOpening.transform_gauges">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">transform_gauges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">left_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="n">right_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                         <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                                    <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Applies external linear maps without changing the local gauges.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        left_map, right_map : torch.Tensor, optional</span>
+<span class="sd">            Matrices with shape ``(new_external, local_external)``. Omitted</span>
+<span class="sd">            maps use those retained by this opening, or the identity.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            Gauges in the mapped external coordinates. No recursion, inverse</span>
+<span class="sd">            or boundary contraction is performed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">left_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_map</span> <span class="k">if</span> <span class="n">left_map</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">left_map</span>
+        <span class="n">right_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_map</span> <span class="k">if</span> <span class="n">right_map</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">right_map</span>
+        <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_gauge</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_gauge</span>
+        <span class="k">for</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">gauge</span> <span class="ow">in</span> <span class="p">((</span><span class="n">left_map</span><span class="p">,</span> <span class="n">left</span><span class="p">),</span> <span class="p">(</span><span class="n">right_map</span><span class="p">,</span> <span class="n">right</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">matrix</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Gauge coordinate maps should be matrices&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">gauge</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">gauge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Gauge coordinate maps should match &#39;</span>
+                                     <span class="s1">&#39;their external axes&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">matrix</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">gauge</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Gauge coordinate maps and gauges &#39;</span>
+                                     <span class="s1">&#39;should share a device&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">left_map</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">left_map</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">left</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">left</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ma,gar-&gt;gmr&#39;</span><span class="p">,</span> <span class="n">left_map</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="p">),</span>
+                                <span class="n">left</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">right_map</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">right_map</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">right</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">right</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;rag,ma-&gt;rmg&#39;</span><span class="p">,</span> <span class="n">right</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="p">),</span>
+                                 <span class="n">right_map</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span></div>
+
+<div class="viewcode-block" id="LoopOpening.contract_dense"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.LoopOpening.contract_dense">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">contract_dense</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts the complete local opening without constructing a</span>
+<span class="sd">        model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">TRDecomposition</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">all_cores</span><span class="p">)</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="LoopOpener"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.LoopOpener">[docs]</a><span class="nd">@runtime_checkable</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">LoopOpener</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>  <span class="c1"># MARK: LoopOpener</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Solves one local cyclic factorization with explicit gauge constraints.</span>
+
+<span class="sd">    An opening represents its target as left gauge, input core(s) and right</span>
+<span class="sd">    gauge. Capabilities declare whether a strategy accepts either or both fixed</span>
+<span class="sd">    gauges and whether it supports multiple input cores. Fixed gauges must be</span>
+<span class="sd">    preserved exactly. The target and gauge recursion are independent of the</span>
+<span class="sd">    opener.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">capabilities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpenerCapabilities</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns constraints supported by this strategy.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="LoopOpener.open"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.LoopOpener.open">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+             <span class="n">rank</span><span class="p">:</span> <span class="n">_Rank</span><span class="p">,</span>
+             <span class="o">*</span><span class="p">,</span>
+             <span class="n">fixed_left</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">fixed_right</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
+             <span class="n">context</span><span class="p">:</span> <span class="n">_Context</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpening</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Opens a local tensor into gauges and input cores.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        target : torch.Tensor or BaseSource</span>
+<span class="sd">            Local scalar tensor with axes ``(left external, *in_dim, right</span>
+<span class="sd">            external)``, or a source representing that tensor.</span>
+<span class="sd">        rank : int or sequence[int]</span>
+<span class="sd">            Prescribed right-link ranks of the complete local ring, including</span>
+<span class="sd">            the two external gauge cores. The last link closes the ring.</span>
+<span class="sd">        fixed_left, fixed_right : torch.Tensor, optional</span>
+<span class="sd">            Gauges to retain exactly. The selected strategy must support the</span>
+<span class="sd">            supplied constraints. Their shapes follow ordinary three-axis TR</span>
+<span class="sd">            cores.</span>
+<span class="sd">        orientation : {&quot;right&quot;, &quot;left&quot;}</span>
+<span class="sd">            Construction direction. Returned cores always follow the original</span>
+<span class="sd">            target order, including when solving a mirrored local problem.</span>
+<span class="sd">        context : mapping, optional</span>
+<span class="sd">            Provider metadata and internal execution options, such as</span>
+<span class="sd">            initialization, generator and whether to collect local metrics.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        LoopOpening</span>
+<span class="sd">            Left gauge, input cores, right gauge, actual ranks and local</span>
+<span class="sd">            diagnostics.</span>
+<span class="sd">        &quot;&quot;&quot;</span></div></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_context</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">_Context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Copies an optional opening ``context`` after validating its type.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">context</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`context` should be a mapping or None&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_orientation</span><span class="p">(</span><span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validates the explicit opening ``orientation``.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">orientation</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`orientation` should be str type&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">orientation</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`orientation` should be &#39;right&#39; or &#39;left&#39;&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">orientation</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_mirror_rank</span><span class="p">(</span><span class="n">rank</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Maps right-link ranks through reversal and core transposition.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="nb">reversed</span><span class="p">(</span><span class="n">rank</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="n">rank</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_mirror_cores</span><span class="p">(</span><span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Mirrors standard TR ``cores`` while preserving their represented tensor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">cores</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_source_from_context</span><span class="p">(</span><span class="n">target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                         <span class="n">context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">BaseSource</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Normalizes a local ``target`` through the shared BaseSource interface.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">BaseSource</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="n">as_tensor_source</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">CallableTensorSource</span><span class="p">(</span>
+        <span class="n">target</span><span class="p">,</span>
+        <span class="n">in_dim</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;in_dim&#39;</span><span class="p">),</span>
+        <span class="n">out_shape</span><span class="o">=</span><span class="p">(),</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dtype&#39;</span><span class="p">),</span>
+        <span class="n">device</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;device&#39;</span><span class="p">,</span> <span class="s1">&#39;cpu&#39;</span><span class="p">),</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;batch_size&#39;</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_mirror_source</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">BaseSource</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BaseSource</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a lazy ``source`` whose variables are in reverse site order.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="n">indices</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+        <span class="n">configurations</span> <span class="o">=</span> <span class="n">ConfigurationBatch</span><span class="p">(</span>
+            <span class="n">indices</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;indices&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">source</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">configurations</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">CallableTensorSource</span><span class="p">(</span>
+        <span class="n">evaluate</span><span class="p">,</span>
+        <span class="n">in_dim</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)),</span>
+        <span class="n">out_shape</span><span class="o">=</span><span class="p">(),</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+        <span class="n">device</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_cast_source</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">BaseSource</span><span class="p">,</span> <span class="n">dtype</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BaseSource</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Lazily casts target values to an initializer&#39;s numerical ``dtype``.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">source</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">dtype</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">source</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="n">indices</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+        <span class="n">configurations</span> <span class="o">=</span> <span class="n">ConfigurationBatch</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;indices&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">source</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">configurations</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">CallableTensorSource</span><span class="p">(</span>
+        <span class="n">evaluate</span><span class="p">,</span>
+        <span class="n">in_dim</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">,</span>
+        <span class="n">out_shape</span><span class="o">=</span><span class="p">(),</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+        <span class="n">device</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_opening_from_result</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="n">TensorDecomposition</span><span class="p">,</span>
+                         <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpening</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Restores a local factorization to the original target orientation.&quot;&quot;&quot;</span>
+    <span class="n">result_cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">orientation</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
+        <span class="n">result_cores</span> <span class="o">=</span> <span class="n">_mirror_cores</span><span class="p">(</span><span class="n">result_cores</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">LoopOpening</span><span class="p">(</span>
+        <span class="n">left_gauge</span><span class="o">=</span><span class="n">result_cores</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">cores</span><span class="o">=</span><span class="n">result_cores</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">right_gauge</span><span class="o">=</span><span class="n">result_cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">rank</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">result_cores</span><span class="p">),</span>
+        <span class="n">orientation</span><span class="o">=</span><span class="n">orientation</span><span class="p">,</span>
+        <span class="n">local_records</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">local_solves</span><span class="p">),</span>
+        <span class="n">diagnostics</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;algorithm&#39;</span><span class="p">,</span> <span class="s1">&#39;als&#39;</span><span class="p">),</span>
+            <span class="s1">&#39;metadata&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metadata</span><span class="p">),</span>
+            <span class="s1">&#39;errors&#39;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">errors</span><span class="p">),</span>
+            <span class="s1">&#39;truncations&#39;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">truncations</span><span class="p">),</span>
+            <span class="s1">&#39;warnings&#39;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">warnings</span><span class="p">),</span>
+        <span class="p">})</span>
+
+
+<div class="viewcode-block" id="ALSLoopOpener"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.ALSLoopOpener">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">ALSLoopOpener</span><span class="p">:</span>  <span class="c1"># MARK: ALSLoopOpener</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Opens local loops using a reusable, encapsulated TR-ALS policy.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fit_options : mapping, optional</span>
+<span class="sd">        Options forwarded to :meth:`TRALS.fit`. Target, rank, fixed cores,</span>
+<span class="sd">        output device and orientation remain controlled by :meth:`open`.</span>
+<span class="sd">        ALS sweeps visit sites in increasing order on every pass. Defaults</span>
+<span class="sd">        use ``gauge=&quot;none&quot;``, ``max_sweeps=100``, ``rtol=1e-10`` and</span>
+<span class="sd">        ``keep_best=True``.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; opener = tk.decompositions.ALSLoopOpener({</span>
+<span class="sd">    ...     &#39;convergence&#39;: tk.decompositions.ConvergencePolicy(max_sweeps=20),</span>
+<span class="sd">    ... })</span>
+<span class="sd">    &gt;&gt;&gt; opener.capabilities.supports_blocks</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_capabilities</span> <span class="o">=</span> <span class="n">LoopOpenerCapabilities</span><span class="p">(</span>
+        <span class="n">supports_fixed_left</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">supports_fixed_right</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">supports_two_fixed_gauges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">supports_blocks</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">fit_options</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">fit_options</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fit_options</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fit_options</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`fit_options` should be a mapping or None&#39;</span><span class="p">)</span>
+        <span class="n">reserved</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;rank&#39;</span><span class="p">,</span> <span class="s1">&#39;fixed_cores&#39;</span><span class="p">,</span> <span class="s1">&#39;initial_cores&#39;</span><span class="p">,</span> <span class="s1">&#39;collect_metrics&#39;</span><span class="p">}</span>
+        <span class="n">overlap</span> <span class="o">=</span> <span class="n">reserved</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">fit_options</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">overlap</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;`fit_options` should not override </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">overlap</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">fit_options</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_options</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;gauge&#39;</span><span class="p">,</span> <span class="s1">&#39;none&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_options</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
+            <span class="s1">&#39;convergence&#39;</span><span class="p">,</span> <span class="n">ConvergencePolicy</span><span class="p">(</span>
+                <span class="n">max_sweeps</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">,</span> <span class="n">keep_best</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">capabilities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpenerCapabilities</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ALS constraint support.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_capabilities</span>
+
+<div class="viewcode-block" id="ALSLoopOpener.open"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.ALSLoopOpener.open">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+             <span class="n">rank</span><span class="p">:</span> <span class="n">_Rank</span><span class="p">,</span>
+             <span class="o">*</span><span class="p">,</span>
+             <span class="n">fixed_left</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">fixed_right</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
+             <span class="n">context</span><span class="p">:</span> <span class="n">_Context</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpening</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fits a local TR with zero or one fixed environment gauge.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        target : torch.Tensor or BaseSource</span>
+<span class="sd">            Local scalar tensor with axes ``(left external, *in_dim, right</span>
+<span class="sd">            external)``, or a source representing that tensor.</span>
+<span class="sd">        rank : int or sequence[int]</span>
+<span class="sd">            Prescribed right-link ranks of the complete local ring, including</span>
+<span class="sd">            the two external gauge cores. The last link closes the ring.</span>
+<span class="sd">        fixed_left : torch.Tensor, optional</span>
+<span class="sd">            Gauges to retain exactly. The selected strategy must support the</span>
+<span class="sd">            supplied constraints. Their shapes follow ordinary three-axis TR</span>
+<span class="sd">            cores.</span>
+<span class="sd">        fixed_right : torch.Tensor, optional</span>
+<span class="sd">            Gauges to retain exactly. The selected strategy must support the</span>
+<span class="sd">            supplied constraints. Their shapes follow ordinary three-axis TR</span>
+<span class="sd">            cores.</span>
+<span class="sd">        orientation : {&quot;right&quot;, &quot;left&quot;}</span>
+<span class="sd">            Construction direction. Returned cores always follow the original</span>
+<span class="sd">            target order, including when solving a mirrored local problem.</span>
+<span class="sd">        context : mapping, optional</span>
+<span class="sd">            Provider metadata and internal execution options, such as</span>
+<span class="sd">            initialization, generator and whether to collect local metrics.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        LoopOpening</span>
+<span class="sd">            Gauges and cores in original ``target`` order with optional local</span>
+<span class="sd">            metrics.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">orientation</span> <span class="o">=</span> <span class="n">_normalize_orientation</span><span class="p">(</span><span class="n">orientation</span><span class="p">)</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">_normalize_context</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">_source_from_context</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+        <span class="n">initial_cores</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;initial_cores&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Promote the target, initializer and fixed gauges to one common dtype.</span>
+        <span class="n">runtime_dtype</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="k">if</span> <span class="n">initial_cores</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">initial_cores</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))</span> <span class="ow">or</span> \
+                    <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">initial_cores</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s1">&#39;`initial_cores` should contain torch.Tensor objects&#39;</span><span class="p">)</span>
+            <span class="n">initial_cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">initial_cores</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">initial_cores</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span>
+                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">core</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">initial_cores</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s1">&#39;`initial_cores` should contain torch.Tensor objects&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">initial_cores</span><span class="p">:</span>
+                <span class="n">runtime_dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span>
+                    <span class="n">runtime_dtype</span><span class="p">,</span> <span class="n">core</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">gauge</span> <span class="ow">in</span> <span class="p">(</span><span class="n">fixed_left</span><span class="p">,</span> <span class="n">fixed_right</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">gauge</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">runtime_dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span>
+                    <span class="n">runtime_dtype</span><span class="p">,</span> <span class="n">gauge</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">_cast_source</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">runtime_dtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">initial_cores</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">initial_cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+                <span class="n">core</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">runtime_dtype</span><span class="p">)</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">initial_cores</span><span class="p">)</span>
+            <span class="n">context</span><span class="p">[</span><span class="s1">&#39;initial_cores&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">initial_cores</span>
+        <span class="k">if</span> <span class="n">fixed_left</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fixed_left</span> <span class="o">=</span> <span class="n">fixed_left</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">runtime_dtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fixed_right</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fixed_right</span> <span class="o">=</span> <span class="n">fixed_right</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">runtime_dtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;A local loop opening should contain left, physical and right &#39;</span>
+                <span class="s1">&#39;input dimensions&#39;</span><span class="p">)</span>
+        <span class="n">ranks</span> <span class="o">=</span> <span class="n">_normalize_rank</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_capabilities</span><span class="o">.</span><span class="n">require</span><span class="p">(</span>
+            <span class="n">fixed_left</span><span class="o">=</span><span class="n">fixed_left</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">fixed_right</span><span class="o">=</span><span class="n">fixed_right</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">block_size</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># Reflect leftward problems so forward ALS follows the outward</span>
+        <span class="c1"># direction.</span>
+        <span class="k">if</span> <span class="n">orientation</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="n">_mirror_source</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+            <span class="n">ranks</span> <span class="o">=</span> <span class="n">_mirror_rank</span><span class="p">(</span><span class="n">ranks</span><span class="p">)</span>
+            <span class="n">fixed_left</span><span class="p">,</span> <span class="n">fixed_right</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="kc">None</span> <span class="k">if</span> <span class="n">fixed_right</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">fixed_right</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="kc">None</span> <span class="k">if</span> <span class="n">fixed_left</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">fixed_left</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">initial_cores</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">initial_cores</span> <span class="o">=</span> <span class="n">_mirror_cores</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">initial_cores</span><span class="p">))</span>
+
+        <span class="c1"># Environment gauges stay frozen while physical factors are optimized.</span>
+        <span class="n">fixed_cores</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)</span>
+        <span class="n">fixed_cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">fixed_left</span>
+        <span class="n">fixed_cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">fixed_right</span>
+
+        <span class="n">fit_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_options</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;generator&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fit_options</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;generator&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;generator&#39;</span><span class="p">])</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">TRALS</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">out_device</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+            <span class="n">rank</span><span class="o">=</span><span class="n">ranks</span><span class="p">,</span>
+            <span class="n">initial_cores</span><span class="o">=</span><span class="n">initial_cores</span><span class="p">,</span>
+            <span class="n">fixed_cores</span><span class="o">=</span><span class="n">fixed_cores</span><span class="p">,</span>
+            <span class="n">collect_metrics</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;collect_metrics&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span>
+            <span class="o">**</span><span class="n">fit_options</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_opening_from_result</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">orientation</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="QRLoopOpener"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.QRLoopOpener">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">QRLoopOpener</span><span class="p">:</span>  <span class="c1"># MARK: QRLoopOpener</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Balances free external axes with QR before opening a local tensor ring.</span>
+
+<span class="sd">    The right axis is factorized first, followed by the left axis using QR</span>
+<span class="sd">    of its adjoint. Both factorizations retain their complete reduced bases:</span>
+<span class="sd">    there is no singular-value threshold or TR-rank cap. Triangular factors</span>
+<span class="sd">    are kept outside the initial objective and restored in the returned</span>
+<span class="sd">    gauges. Inherited fixed gauges and their external axes are unchanged.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    opener : str or LoopOpener, optional</span>
+<span class="sd">        Local strategy applied to the balanced target. Default is ``&quot;als&quot;``.</span>
+<span class="sd">    refinement_sweeps : int, optional</span>
+<span class="sd">        Additional ALS sweeps on the original target after restoring the</span>
+<span class="sd">        factors. Default is one. Zero disables refinement. A candidate that</span>
+<span class="sd">        increases the local residual is rejected. This does not guarantee</span>
+<span class="sd">        a smaller global reconstruction error.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; opener = tk.decompositions.QRLoopOpener(refinement_sweeps=1)</span>
+<span class="sd">    &gt;&gt;&gt; opener.capabilities.supports_blocks</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">opener</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">LoopOpener</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;als&#39;</span><span class="p">,</span>
+                 <span class="n">refinement_sweeps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opener</span> <span class="o">=</span> <span class="n">resolve_loop_opener</span><span class="p">(</span><span class="n">opener</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">refinement_sweeps</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> \
+                <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">refinement_sweeps</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`refinement_sweeps` should be int type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">refinement_sweeps</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`refinement_sweeps` should be non-negative&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refiner</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">refinement_sweeps</span><span class="p">:</span>
+            <span class="n">options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opener</span><span class="o">.</span><span class="n">fit_options</span><span class="p">)</span> \
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opener</span><span class="p">,</span> <span class="n">ALSLoopOpener</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+            <span class="n">options</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+                <span class="s1">&#39;sampler&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="s1">&#39;convergence&#39;</span><span class="p">:</span> <span class="n">ConvergencePolicy</span><span class="p">(</span>
+                    <span class="n">max_sweeps</span><span class="o">=</span><span class="n">refinement_sweeps</span><span class="p">,</span> <span class="n">keep_best</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="p">})</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">refiner</span> <span class="o">=</span> <span class="n">ALSLoopOpener</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">capabilities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpenerCapabilities</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the wrapped solver&#39;s gauge and block constraints.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">opener</span><span class="o">.</span><span class="n">capabilities</span>
+
+<div class="viewcode-block" id="QRLoopOpener.open"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.QRLoopOpener.open">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">target</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+             <span class="n">rank</span><span class="p">:</span> <span class="n">_Rank</span><span class="p">,</span>
+             <span class="o">*</span><span class="p">,</span>
+             <span class="n">fixed_left</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">fixed_right</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
+             <span class="n">context</span><span class="p">:</span> <span class="n">_Context</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpening</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Opens a dense target and restores its original external coordinates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        target : torch.Tensor</span>
+<span class="sd">            Local tensor with left and right external axes surrounding its</span>
+<span class="sd">            physical axes, with shape ``(left, *in_dim, right)``.</span>
+<span class="sd">        rank : int or sequence[int]</span>
+<span class="sd">            Prescribed right-link ranks of the complete local ring, including</span>
+<span class="sd">            the two external gauge cores. The last link closes the ring.</span>
+<span class="sd">        fixed_left, fixed_right : torch.Tensor, optional</span>
+<span class="sd">            Gauges retained exactly. Only free external axes are balanced.</span>
+<span class="sd">        orientation : {&quot;right&quot;, &quot;left&quot;}</span>
+<span class="sd">            Construction direction. ALS mirrors leftward problems so its</span>
+<span class="sd">            forward sweeps follow that direction. Returned cores always follow</span>
+<span class="sd">            the original target order.</span>
+<span class="sd">        context : mapping, optional</span>
+<span class="sd">            Provider metadata, initialization, generator and metric controls.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        LoopOpening</span>
+<span class="sd">            Gauges and cores in the original external coordinates, with</span>
+<span class="sd">            optional full-target refinement diagnostics.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`target` should be torch.Tensor type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">target</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`target` should have at least three axes&#39;</span><span class="p">)</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">_normalize_context</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+        <span class="n">orientation</span> <span class="o">=</span> <span class="n">_normalize_orientation</span><span class="p">(</span><span class="n">orientation</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">capabilities</span><span class="o">.</span><span class="n">require</span><span class="p">(</span>
+            <span class="n">fixed_left</span><span class="o">=</span><span class="n">fixed_left</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">fixed_right</span><span class="o">=</span><span class="n">fixed_right</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">block_size</span><span class="o">=</span><span class="n">target</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">runtime_dtype</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="n">initial</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;initial_cores&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">initial</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">initial</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))</span> <span class="ow">or</span> \
+                    <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">initial</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`initial_cores` should be a tensor sequence&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">initial</span><span class="p">)</span> <span class="o">!=</span> <span class="n">target</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`initial_cores` should match the target axes&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">initial</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">core</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`initial_cores` should contain tensors&#39;</span><span class="p">)</span>
+                <span class="n">runtime_dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">runtime_dtype</span><span class="p">,</span> <span class="n">core</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">gauge</span> <span class="ow">in</span> <span class="p">((</span><span class="s1">&#39;fixed_left&#39;</span><span class="p">,</span> <span class="n">fixed_left</span><span class="p">),</span>
+                            <span class="p">(</span><span class="s1">&#39;fixed_right&#39;</span><span class="p">,</span> <span class="n">fixed_right</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">gauge</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">gauge</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be torch.Tensor type&#39;</span><span class="p">)</span>
+                <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;fixed_left&#39;</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">gauge</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">)</span> <span class="ow">or</span> \
+                        <span class="p">(</span><span class="n">gauge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should match its external target axis&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">gauge</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">target</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` and `target` should share a device&#39;</span><span class="p">)</span>
+                <span class="n">runtime_dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">runtime_dtype</span><span class="p">,</span> <span class="n">gauge</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">runtime_dtype</span><span class="p">)</span>
+        <span class="n">fixed_left</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">fixed_left</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">fixed_left</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">runtime_dtype</span><span class="p">)</span>
+        <span class="n">fixed_right</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">fixed_right</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">fixed_right</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">runtime_dtype</span><span class="p">)</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="n">target</span>
+        <span class="n">left_factor</span> <span class="o">=</span> <span class="n">right_factor</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">fixed_right</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">q</span><span class="p">,</span> <span class="n">right_factor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;reduced&#39;</span><span class="p">)</span>
+            <span class="n">tensor</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">fixed_left</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">q</span><span class="p">,</span> <span class="n">factor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">mH</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;reduced&#39;</span><span class="p">)</span>
+            <span class="n">left_factor</span> <span class="o">=</span> <span class="n">factor</span><span class="o">.</span><span class="n">mH</span>
+            <span class="n">tensor</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">mH</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="o">*</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+
+        <span class="n">local_context</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">context</span><span class="p">,</span> <span class="s1">&#39;in_dim&#39;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+                         <span class="s1">&#39;dtype&#39;</span><span class="p">:</span> <span class="n">tensor</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="s1">&#39;device&#39;</span><span class="p">:</span> <span class="n">tensor</span><span class="o">.</span><span class="n">device</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;initial_cores&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">initial</span> <span class="o">=</span> <span class="p">[</span><span class="n">core</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">runtime_dtype</span><span class="p">)</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">initial</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">left_factor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">initial</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                    <span class="s1">&#39;as,gsr-&gt;gar&#39;</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">left_factor</span><span class="p">),</span> <span class="n">initial</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">right_factor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">initial</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                    <span class="s1">&#39;rtg,tb-&gt;rbg&#39;</span><span class="p">,</span> <span class="n">initial</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">right_factor</span><span class="p">))</span>
+            <span class="n">local_context</span><span class="p">[</span><span class="s1">&#39;initial_cores&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">initial</span><span class="p">)</span>
+        <span class="n">opening</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">opener</span><span class="o">.</span><span class="n">open</span><span class="p">(</span>
+            <span class="n">tensor</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">fixed_left</span><span class="o">=</span><span class="n">fixed_left</span><span class="p">,</span> <span class="n">fixed_right</span><span class="o">=</span><span class="n">fixed_right</span><span class="p">,</span>
+            <span class="n">orientation</span><span class="o">=</span><span class="n">orientation</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">local_context</span><span class="p">)</span>
+        <span class="n">left_gauge</span><span class="p">,</span> <span class="n">right_gauge</span> <span class="o">=</span> <span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span><span class="p">,</span> <span class="n">opening</span><span class="o">.</span><span class="n">right_gauge</span>
+        <span class="k">if</span> <span class="n">left_factor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">left_gauge</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                <span class="s1">&#39;sa,gar-&gt;gsr&#39;</span><span class="p">,</span> <span class="n">left_factor</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">left_gauge</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span> <span class="n">left_gauge</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">right_factor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">right_gauge</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                <span class="s1">&#39;rbg,bt-&gt;rtg&#39;</span><span class="p">,</span> <span class="n">right_gauge</span><span class="p">,</span>
+                <span class="n">right_factor</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">right_gauge</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="n">initial</span> <span class="o">=</span> <span class="n">LoopOpening</span><span class="p">(</span>
+            <span class="n">left_gauge</span><span class="o">=</span><span class="n">left_gauge</span><span class="p">,</span> <span class="n">cores</span><span class="o">=</span><span class="n">opening</span><span class="o">.</span><span class="n">cores</span><span class="p">,</span>
+            <span class="n">right_gauge</span><span class="o">=</span><span class="n">right_gauge</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="n">opening</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span>
+            <span class="n">orientation</span><span class="o">=</span><span class="n">orientation</span><span class="p">,</span> <span class="n">local_records</span><span class="o">=</span><span class="n">opening</span><span class="o">.</span><span class="n">local_records</span><span class="p">,</span>
+            <span class="n">diagnostics</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">opening</span><span class="o">.</span><span class="n">diagnostics</span><span class="p">,</span>
+                         <span class="s1">&#39;qr_left&#39;</span><span class="p">:</span> <span class="n">left_factor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="s1">&#39;qr_right&#39;</span><span class="p">:</span> <span class="n">right_factor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">})</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">refiner</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+                <span class="p">(</span><span class="n">fixed_left</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">fixed_right</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="n">initial</span>
+
+        <span class="n">before</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span><span class="n">target</span> <span class="o">-</span> <span class="n">initial</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">())</span>
+        <span class="n">refined</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">refiner</span><span class="o">.</span><span class="n">open</span><span class="p">(</span>
+            <span class="n">target</span><span class="p">,</span> <span class="n">initial</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="n">fixed_left</span><span class="o">=</span><span class="n">fixed_left</span><span class="p">,</span>
+            <span class="n">fixed_right</span><span class="o">=</span><span class="n">fixed_right</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="n">orientation</span><span class="p">,</span>
+            <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">context</span><span class="p">,</span> <span class="s1">&#39;in_dim&#39;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+                     <span class="s1">&#39;initial_cores&#39;</span><span class="p">:</span> <span class="n">initial</span><span class="o">.</span><span class="n">all_cores</span><span class="p">})</span>
+        <span class="n">candidate</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span><span class="n">target</span> <span class="o">-</span> <span class="n">refined</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">())</span>
+        <span class="n">accepted</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">candidate</span> <span class="o">&lt;=</span> <span class="n">before</span><span class="p">))</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">refined</span> <span class="k">if</span> <span class="n">accepted</span> <span class="k">else</span> <span class="n">initial</span>
+        <span class="n">after</span> <span class="o">=</span> <span class="n">candidate</span> <span class="k">if</span> <span class="n">accepted</span> <span class="k">else</span> <span class="n">before</span>
+        <span class="n">denominator</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">LoopOpening</span><span class="p">(</span>
+            <span class="n">left_gauge</span><span class="o">=</span><span class="n">selected</span><span class="o">.</span><span class="n">left_gauge</span><span class="p">,</span> <span class="n">cores</span><span class="o">=</span><span class="n">selected</span><span class="o">.</span><span class="n">cores</span><span class="p">,</span>
+            <span class="n">right_gauge</span><span class="o">=</span><span class="n">selected</span><span class="o">.</span><span class="n">right_gauge</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="n">selected</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span>
+            <span class="n">orientation</span><span class="o">=</span><span class="n">orientation</span><span class="p">,</span>
+            <span class="n">local_records</span><span class="o">=</span><span class="n">initial</span><span class="o">.</span><span class="n">local_records</span> <span class="o">+</span> <span class="n">refined</span><span class="o">.</span><span class="n">local_records</span><span class="p">,</span>
+            <span class="n">diagnostics</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">initial</span><span class="o">.</span><span class="n">diagnostics</span><span class="p">,</span> <span class="s1">&#39;qr_refinement&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;accepted&#39;</span><span class="p">:</span> <span class="n">accepted</span><span class="p">,</span>
+                <span class="s1">&#39;relative_error_before&#39;</span><span class="p">:</span> <span class="n">safe_divide</span><span class="p">(</span><span class="n">before</span><span class="p">,</span> <span class="n">denominator</span><span class="p">),</span>
+                <span class="s1">&#39;relative_error_after&#39;</span><span class="p">:</span> <span class="n">safe_divide</span><span class="p">(</span><span class="n">after</span><span class="p">,</span> <span class="n">denominator</span><span class="p">),</span>
+                <span class="s1">&#39;metadata&#39;</span><span class="p">:</span> <span class="n">refined</span><span class="o">.</span><span class="n">diagnostics</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">],</span>
+            <span class="p">}})</span></div></div>
+
+
+<div class="viewcode-block" id="BLOSTRLoopOpener"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.BLOSTRLoopOpener">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">BLOSTRLoopOpener</span><span class="p">:</span>  <span class="c1"># MARK: BLOSTRLoopOpener</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Opens exact local tensor rings with the complete BLOSTR algorithm.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fit_options : mapping, optional</span>
+<span class="sd">        Spectral projection and clustering options forwarded to</span>
+<span class="sd">        :func:`tr_blostr`. Target, rank, output device and metric collection</span>
+<span class="sd">        are controlled by :meth:`open`. Fixed gauges are unsupported.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; opener = tk.decompositions.BLOSTRLoopOpener({&#39;n_attempts&#39;: 4})</span>
+<span class="sd">    &gt;&gt;&gt; opener.capabilities.supports_fixed_left</span>
+<span class="sd">    False</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">exact</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">_capabilities</span> <span class="o">=</span> <span class="n">LoopOpenerCapabilities</span><span class="p">(</span><span class="n">supports_blocks</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">fit_options</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">fit_options</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fit_options</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fit_options</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`fit_options` should be a mapping or None&#39;</span><span class="p">)</span>
+        <span class="n">reserved</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;tensor&#39;</span><span class="p">,</span> <span class="s1">&#39;rank&#39;</span><span class="p">,</span> <span class="s1">&#39;out_device&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;collect_metrics&#39;</span><span class="p">,</span> <span class="s1">&#39;verbose&#39;</span><span class="p">}</span>
+        <span class="n">overlap</span> <span class="o">=</span> <span class="n">reserved</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">fit_options</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">overlap</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;`fit_options` should not override </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">overlap</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">fit_options</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">capabilities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpenerCapabilities</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns unrestricted block support without fixed gauges.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_capabilities</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_options</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Combines constructor options with the active local orientation.&quot;&quot;&quot;</span>
+        <span class="n">options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_options</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;generator&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">options</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;generator&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;generator&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;_spectral_orientation&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;slices&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">options</span><span class="p">[</span><span class="s1">&#39;slices&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+                    <span class="nb">tuple</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">configuration</span><span class="p">))</span>
+                    <span class="k">for</span> <span class="n">configuration</span> <span class="ow">in</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;slices&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">options</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_decompose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                   <span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                   <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">_Rank</span><span class="p">],</span>
+                   <span class="n">context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TRDecomposition</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Runs the complete spectral factorization.&quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.ring.blostr</span><span class="w"> </span><span class="kn">import</span> <span class="n">tr_blostr</span>
+        <span class="k">return</span> <span class="n">tr_blostr</span><span class="p">(</span>
+            <span class="n">tensor</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span> <span class="n">out_device</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">collect_metrics</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;collect_metrics&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+            <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">(</span><span class="n">context</span><span class="p">))</span>
+
+<div class="viewcode-block" id="BLOSTRLoopOpener.decompose"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.BLOSTRLoopOpener.decompose">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">decompose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                  <span class="n">target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                  <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">_Rank</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="o">*</span><span class="p">,</span>
+                  <span class="n">context</span><span class="p">:</span> <span class="n">_Context</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TRDecomposition</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Decomposes a complete target without adding external gauge cores.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        target : torch.Tensor or BaseSource</span>
+<span class="sd">            Tensor with one physical axis per resulting TR core. Sources</span>
+<span class="sd">            are materialized before applying the spectral construction.</span>
+<span class="sd">        rank : int or sequence[int], optional</span>
+<span class="sd">            Right-link TR ranks. The last entry is the cyclic link. ``None``</span>
+<span class="sd">            discovers ranks from spectral multiplicities.</span>
+<span class="sd">        context : mapping, optional</span>
+<span class="sd">            Provider metadata, generator and metric controls.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        TRDecomposition</span>
+<span class="sd">            Spectral factorization in the original physical-axis order.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">_normalize_context</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="n">_source_from_context</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decompose</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BLOSTRLoopOpener.open"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.BLOSTRLoopOpener.open">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+             <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">_Rank</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="o">*</span><span class="p">,</span>
+             <span class="n">fixed_left</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">fixed_right</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
+             <span class="n">context</span><span class="p">:</span> <span class="n">_Context</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpening</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Opens an unrestricted exact local target, discovering omitted ranks.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        target : torch.Tensor or BaseSource</span>
+<span class="sd">            Local tensor with left and right external axes surrounding its</span>
+<span class="sd">            physical axes, with shape ``(left, *in_dim, right)``.</span>
+<span class="sd">            Sources are materialized before the spectral construction.</span>
+<span class="sd">        rank : int or sequence[int], optional</span>
+<span class="sd">            Right-link TR ranks, including both gauges. ``None`` discovers</span>
+<span class="sd">            ranks from spectral multiplicities.</span>
+<span class="sd">        fixed_left, fixed_right : torch.Tensor, optional</span>
+<span class="sd">            Unsupported constraints. Passing either gauge raises an error.</span>
+<span class="sd">        orientation : {&quot;right&quot;, &quot;left&quot;}</span>
+<span class="sd">            Construction direction. Leftward targets are reflected internally;</span>
+<span class="sd">            returned cores follow the original target order.</span>
+<span class="sd">        context : mapping, optional</span>
+<span class="sd">            Provider metadata, generator and metric controls.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        LoopOpening</span>
+<span class="sd">            Spectrally recovered gauges and physical cores.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">_normalize_context</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+        <span class="n">orientation</span> <span class="o">=</span> <span class="n">_normalize_orientation</span><span class="p">(</span><span class="n">orientation</span><span class="p">)</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="n">_source_from_context</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">capabilities</span><span class="o">.</span><span class="n">require</span><span class="p">(</span>
+            <span class="n">fixed_left</span><span class="o">=</span><span class="n">fixed_left</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">fixed_right</span><span class="o">=</span><span class="n">fixed_right</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">block_size</span><span class="o">=</span><span class="n">tensor</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">orientation</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
+            <span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="o">*</span><span class="nb">reversed</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">ndim</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">rank</span> <span class="o">=</span> <span class="n">_mirror_rank</span><span class="p">(</span><span class="n">_normalize_rank</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">tensor</span><span class="o">.</span><span class="n">ndim</span><span class="p">))</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;_spectral_orientation&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">orientation</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_opening_from_result</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">orientation</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="BLOSTRSVDLoopOpener"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.BLOSTRSVDLoopOpener">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">BLOSTRSVDLoopOpener</span><span class="p">(</span><span class="n">BLOSTRLoopOpener</span><span class="p">):</span>  <span class="c1"># MARK: BLOSTRSVDLoopOpener</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Recovers the first local gauge with BLOSTR and splits the tail by SVD.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fit_options : mapping, optional</span>
+<span class="sd">        Options forwarded to :func:`tr_blostr_svd`, including spectral</span>
+<span class="sd">        projections, clustering and tail truncation. Target, rank, output</span>
+<span class="sd">        device and metric collection are controlled by :meth:`open`.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; opener = tk.decompositions.BLOSTRSVDLoopOpener({</span>
+<span class="sd">    ...     &#39;projection&#39;: &#39;gaussian&#39;,</span>
+<span class="sd">    ... })</span>
+<span class="sd">    &gt;&gt;&gt; opener.exact</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_decompose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                   <span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                   <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">_Rank</span><span class="p">],</span>
+                   <span class="n">context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TRDecomposition</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Runs first-core spectral recovery followed by TT-SVD.&quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.ring.blostr</span><span class="w"> </span><span class="kn">import</span> <span class="n">tr_blostr_svd</span>
+        <span class="k">return</span> <span class="n">tr_blostr_svd</span><span class="p">(</span>
+            <span class="n">tensor</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span> <span class="n">out_device</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">collect_metrics</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;collect_metrics&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+            <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">(</span><span class="n">context</span><span class="p">))</span></div>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_FixedGaugeCoreOpener</span><span class="p">:</span>  <span class="c1"># MARK: _FixedGaugeCoreOpener</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Solves the single remaining input core with both gauges fixed.</span>
+
+<span class="sd">    The full effective local design is solved once using LeastSquaresSolver.</span>
+<span class="sd">    The external maps remain fixed; they are not pseudoinverted separately.</span>
+<span class="sd">    This opener requires exactly one input core between the two gauges.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    solver : LeastSquaresSolver, optional</span>
+<span class="sd">        Reusable local solver. Defaults to the shared stable least-squares</span>
+<span class="sd">        policy.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_capabilities</span> <span class="o">=</span> <span class="n">LoopOpenerCapabilities</span><span class="p">(</span>
+        <span class="n">supports_fixed_left</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">supports_fixed_right</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">supports_two_fixed_gauges</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">supports_blocks</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solver</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LeastSquaresSolver</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">solver</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">solver</span> <span class="o">=</span> <span class="n">LeastSquaresSolver</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">solver</span><span class="p">,</span> <span class="n">LeastSquaresSolver</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`solver` should be LeastSquaresSolver type&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">=</span> <span class="n">solver</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">capabilities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpenerCapabilities</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns direct fixed-gauge constraint support.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_capabilities</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+             <span class="n">rank</span><span class="p">:</span> <span class="n">_Rank</span><span class="p">,</span>
+             <span class="o">*</span><span class="p">,</span>
+             <span class="n">fixed_left</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">fixed_right</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
+             <span class="n">context</span><span class="p">:</span> <span class="n">_Context</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpening</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Solves the unique unknown core by one dense least-squares system.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        target : torch.Tensor or BaseSource</span>
+<span class="sd">            Local scalar tensor with axes ``(left external, *in_dim, right</span>
+<span class="sd">            external)``, or a source representing that tensor.</span>
+<span class="sd">        rank : int or sequence[int]</span>
+<span class="sd">            Prescribed right-link ranks of the complete local ring, including</span>
+<span class="sd">            the two external gauge cores. The last link closes the ring.</span>
+<span class="sd">        fixed_left : torch.Tensor, optional</span>
+<span class="sd">            Gauges to retain exactly. The selected strategy must support the</span>
+<span class="sd">            supplied constraints. Their shapes follow ordinary three-axis TR</span>
+<span class="sd">            cores.</span>
+<span class="sd">        fixed_right : torch.Tensor, optional</span>
+<span class="sd">            Gauges to retain exactly. The selected strategy must support the</span>
+<span class="sd">            supplied constraints. Their shapes follow ordinary three-axis TR</span>
+<span class="sd">            cores.</span>
+<span class="sd">        orientation : {&quot;right&quot;, &quot;left&quot;}</span>
+<span class="sd">            Construction direction. Returned cores always follow the original</span>
+<span class="sd">            target order, including when solving a mirrored local problem.</span>
+<span class="sd">        context : mapping, optional</span>
+<span class="sd">            Provider metadata and internal execution options, such as</span>
+<span class="sd">            initialization, generator and whether to collect local metrics.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        LoopOpening</span>
+<span class="sd">            Gauges and cores in original ``target`` order with optional local</span>
+<span class="sd">            metrics.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">orientation</span> <span class="o">=</span> <span class="n">_normalize_orientation</span><span class="p">(</span><span class="n">orientation</span><span class="p">)</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">_normalize_context</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">_source_from_context</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;FixedGaugeCoreOpener requires exactly one physical site&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_capabilities</span><span class="o">.</span><span class="n">require</span><span class="p">(</span>
+            <span class="n">fixed_left</span><span class="o">=</span><span class="n">fixed_left</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">fixed_right</span><span class="o">=</span><span class="n">fixed_right</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">block_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">fixed_left</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">fixed_right</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Both fixed gauges are required for a direct solve&#39;</span><span class="p">)</span>
+        <span class="n">ranks</span> <span class="o">=</span> <span class="n">_normalize_rank</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">orientation</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="n">_mirror_source</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+            <span class="n">ranks</span> <span class="o">=</span> <span class="n">_mirror_rank</span><span class="p">(</span><span class="n">ranks</span><span class="p">)</span>
+            <span class="n">fixed_left</span><span class="p">,</span> <span class="n">fixed_right</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">fixed_right</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="n">fixed_left</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">fixed_left</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span>
+                <span class="n">ranks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ranks</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`fixed_left` shape should match target and ranks&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fixed_right</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span>
+                <span class="n">ranks</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">ranks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`fixed_right` shape should match target and ranks&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">fixed_left</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">fixed_right</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="n">fixed_left</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">fixed_right</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Fixed gauges should share dtype and device&#39;</span><span class="p">)</span>
+
+        <span class="n">configurations</span> <span class="o">=</span> <span class="n">ConfigurationBatch</span><span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">cartesian_prod</span><span class="p">(</span><span class="o">*</span><span class="p">(</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">fixed_left</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)),</span>
+            <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;indices&#39;</span><span class="p">)</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">configurations</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The local target should be scalar-valued&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">fixed_left</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">fixed_left</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Target values and fixed gauges should share dtype and device&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Solve the complete two-sided design rather than inverting gauges</span>
+        <span class="c1"># separately; this preserves the actual least-squares objective.</span>
+        <span class="n">left_environment</span> <span class="o">=</span> <span class="n">fixed_left</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">right_environment</span> <span class="o">=</span> <span class="n">fixed_right</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">environment</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+            <span class="s1">&#39;iab,jca-&gt;ijbc&#39;</span><span class="p">,</span> <span class="n">left_environment</span><span class="p">,</span> <span class="n">right_environment</span><span class="p">)</span>
+        <span class="n">identity</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span>
+            <span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">device</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">design</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+            <span class="s1">&#39;ijbc,pq-&gt;ipjbqc&#39;</span><span class="p">,</span> <span class="n">environment</span><span class="p">,</span> <span class="n">identity</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="n">values</span><span class="o">.</span><span class="n">numel</span><span class="p">(),</span> <span class="n">ranks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">ranks</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">solution</span><span class="p">,</span> <span class="n">record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span>
+            <span class="n">design</span><span class="p">,</span>
+            <span class="n">values</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">site</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">sweep</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">return_record</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;collect_metrics&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>
+        <span class="n">core</span> <span class="o">=</span> <span class="n">solution</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">ranks</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">ranks</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">result_cores</span> <span class="o">=</span> <span class="p">(</span><span class="n">fixed_left</span><span class="p">,</span> <span class="n">core</span><span class="p">,</span> <span class="n">fixed_right</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">orientation</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
+            <span class="n">result_cores</span> <span class="o">=</span> <span class="n">_mirror_cores</span><span class="p">(</span><span class="n">result_cores</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">LoopOpening</span><span class="p">(</span>
+            <span class="n">left_gauge</span><span class="o">=</span><span class="n">result_cores</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">cores</span><span class="o">=</span><span class="p">(</span><span class="n">result_cores</span><span class="p">[</span><span class="mi">1</span><span class="p">],),</span>
+            <span class="n">right_gauge</span><span class="o">=</span><span class="n">result_cores</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+            <span class="n">rank</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">candidate</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">result_cores</span><span class="p">),</span>
+            <span class="n">orientation</span><span class="o">=</span><span class="n">orientation</span><span class="p">,</span>
+            <span class="n">local_records</span><span class="o">=</span><span class="p">()</span> <span class="k">if</span> <span class="n">record</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">record</span><span class="p">,),</span>
+            <span class="n">diagnostics</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="s1">&#39;fixed_gauge_core_solve&#39;</span><span class="p">,</span>
+            <span class="p">})</span>
+
+
+<div class="viewcode-block" id="CallableLoopOpener"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.CallableLoopOpener">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">CallableLoopOpener</span><span class="p">:</span>  <span class="c1"># MARK: CallableLoopOpener</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Adapts a callable to the loop-opening protocol.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    opener : callable</span>
+<span class="sd">        Receives the arguments of :meth:`LoopOpener.open` and returns a</span>
+<span class="sd">        :class:`LoopOpening` or a :class:`~tensorkrowch.formats.TR` format</span>
+<span class="sd">        carrying :class:`~tensorkrowch.decompositions.TensorDecomposition`</span>
+<span class="sd">        diagnostics, including Quantics results.</span>
+<span class="sd">    capabilities : LoopOpenerCapabilities, optional</span>
+<span class="sd">        Constraints supported by the callable. Unsupported fixed gauges or</span>
+<span class="sd">        block sizes are rejected before invoking it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">opener</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+                 <span class="n">capabilities</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LoopOpenerCapabilities</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">opener</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`opener` should be callable&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">capabilities</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">capabilities</span> <span class="o">=</span> <span class="n">LoopOpenerCapabilities</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">capabilities</span><span class="p">,</span> <span class="n">LoopOpenerCapabilities</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`capabilities` should be LoopOpenerCapabilities type&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opener</span> <span class="o">=</span> <span class="n">opener</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_capabilities</span> <span class="o">=</span> <span class="n">capabilities</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">capabilities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpenerCapabilities</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns declared callable capabilities.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_capabilities</span>
+
+<div class="viewcode-block" id="CallableLoopOpener.open"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.CallableLoopOpener.open">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+             <span class="n">rank</span><span class="p">:</span> <span class="n">_Rank</span><span class="p">,</span>
+             <span class="o">*</span><span class="p">,</span>
+             <span class="n">fixed_left</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">fixed_right</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
+             <span class="n">context</span><span class="p">:</span> <span class="n">_Context</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpening</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validates constraints and normalizes the callable result.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        target : torch.Tensor or BaseSource</span>
+<span class="sd">            Local scalar tensor with axes ``(left external, *in_dim, right</span>
+<span class="sd">            external)``, or a source representing that tensor.</span>
+<span class="sd">        rank : int or sequence[int]</span>
+<span class="sd">            Prescribed right-link ranks of the complete local ring, including</span>
+<span class="sd">            the two external gauge cores. The last link closes the ring.</span>
+<span class="sd">        fixed_left : torch.Tensor, optional</span>
+<span class="sd">            Gauges to retain exactly. The selected strategy must support the</span>
+<span class="sd">            supplied constraints. Their shapes follow ordinary three-axis TR</span>
+<span class="sd">            cores.</span>
+<span class="sd">        fixed_right : torch.Tensor, optional</span>
+<span class="sd">            Gauges to retain exactly. The selected strategy must support the</span>
+<span class="sd">            supplied constraints. Their shapes follow ordinary three-axis TR</span>
+<span class="sd">            cores.</span>
+<span class="sd">        orientation : {&quot;right&quot;, &quot;left&quot;}</span>
+<span class="sd">            Construction direction. Returned cores always follow the original</span>
+<span class="sd">            target order, including when solving a mirrored local problem.</span>
+<span class="sd">        context : mapping, optional</span>
+<span class="sd">            Provider metadata and internal execution options, such as</span>
+<span class="sd">            initialization, generator and whether to collect local metrics.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        LoopOpening</span>
+<span class="sd">            Gauges and cores in original ``target`` order with optional local</span>
+<span class="sd">            metrics.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">orientation</span> <span class="o">=</span> <span class="n">_normalize_orientation</span><span class="p">(</span><span class="n">orientation</span><span class="p">)</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">_normalize_context</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+        <span class="n">in_dim</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;in_dim&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">in_dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="n">in_dim</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">shape</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">in_dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">BaseSource</span><span class="p">):</span>
+            <span class="n">in_dim</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">in_dim</span>
+        <span class="n">block_size</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">in_dim</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">in_dim</span><span class="p">))</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_capabilities</span><span class="o">.</span><span class="n">require</span><span class="p">(</span>
+            <span class="n">fixed_left</span><span class="o">=</span><span class="n">fixed_left</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">fixed_right</span><span class="o">=</span><span class="n">fixed_right</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">block_size</span><span class="o">=</span><span class="n">block_size</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">opener</span><span class="p">(</span>
+            <span class="n">target</span><span class="o">=</span><span class="n">target</span><span class="p">,</span>
+            <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+            <span class="n">fixed_left</span><span class="o">=</span><span class="n">fixed_left</span><span class="p">,</span>
+            <span class="n">fixed_right</span><span class="o">=</span><span class="n">fixed_right</span><span class="p">,</span>
+            <span class="n">orientation</span><span class="o">=</span><span class="n">orientation</span><span class="p">,</span>
+            <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">LoopOpening</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">TensorDecomposition</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">TR</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">_opening_from_result</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">orientation</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;The adapted callable should return a LoopOpening&#39;</span><span class="p">)</span></div></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_loop_opener</span><span class="p">(</span><span class="n">loop_opener</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LoopOpener</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Resolves ALS, exact spectral strategies and custom local solvers.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    loop_opener : {&quot;als&quot;, &quot;blostr&quot;, &quot;blostr_svd&quot;}, LoopOpener or callable</span>
+<span class="sd">        Local strategy. Callables receive the arguments of</span>
+<span class="sd">        :meth:`LoopOpener.open` and return a :class:`LoopOpening`.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    LoopOpener</span>
+<span class="sd">        Strategy implementing local loop opening.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">loop_opener</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">loop_opener</span> <span class="o">==</span> <span class="s1">&#39;als&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ALSLoopOpener</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">loop_opener</span> <span class="o">==</span> <span class="s1">&#39;blostr&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">BLOSTRLoopOpener</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">loop_opener</span> <span class="o">==</span> <span class="s1">&#39;blostr_svd&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">BLOSTRSVDLoopOpener</span><span class="p">()</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;`loop_opener` should be &#39;als&#39;, &#39;blostr&#39;, &#39;blostr_svd&#39; or &quot;</span>
+            <span class="s1">&#39;opening strategy&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">loop_opener</span><span class="p">,</span> <span class="n">LoopOpener</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">loop_opener</span>
+    <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">loop_opener</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">CallableLoopOpener</span><span class="p">(</span>
+            <span class="n">loop_opener</span><span class="p">,</span>
+            <span class="n">LoopOpenerCapabilities</span><span class="p">(</span>
+                <span class="n">supports_fixed_left</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">supports_fixed_right</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">supports_two_fixed_gauges</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">supports_blocks</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+        <span class="s1">&#39;`loop_opener` should be a supported literal, LoopOpener or callable&#39;</span><span class="p">)</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;LoopOpening&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;LoopOpenerCapabilities&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;LoopOpener&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ALSLoopOpener&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;QRLoopOpener&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;BLOSTRLoopOpener&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;BLOSTRSVDLoopOpener&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;CallableLoopOpener&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;resolve_loop_opener&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

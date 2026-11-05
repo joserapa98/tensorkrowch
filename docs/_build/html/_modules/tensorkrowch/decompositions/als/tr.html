@@ -1,0 +1,1177 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.als.tr &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/clipboard.min.js"></script>
+    <script src="../../../../_static/copybutton.js"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.als.tr</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Classes:</span>
+<span class="sd">        * _TRALSBackend</span>
+<span class="sd">        * _TRLeverageALSBackend</span>
+<span class="sd">        * TRALS</span>
+
+<span class="sd">    Functions:</span>
+<span class="sd">        * _standard_tr_cores</span>
+<span class="sd">        * _contract_standard_tr</span>
+<span class="sd">        * _evaluate_standard_tr</span>
+<span class="sd">        * _tr_gauge_core_update</span>
+<span class="sd">        * _normalize_tr_core_update</span>
+<span class="sd">        * tr_als</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats.formats1d</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorFormat1D</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">_normalize_rank</span><span class="p">,</span>
+                                                <span class="n">_unravel_indices</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.als.convergence</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConvergencePolicy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.als.driver</span><span class="w"> </span><span class="kn">import</span> <span class="n">ALSBackend</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.als.environments</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">_updated_cores</span><span class="p">,</span>
+    <span class="n">DirectTREnvironment</span><span class="p">,</span>
+    <span class="n">TRSegmentEnvironmentCache</span><span class="p">,</span>
+    <span class="n">_environment_norm</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.als.gauges</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">_absorb_factor</span><span class="p">,</span>
+                                                    <span class="n">_factor_core</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.als.problem</span><span class="w"> </span><span class="kn">import</span> <span class="n">ALSProblem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.als.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">RowSampler</span><span class="p">,</span>
+                                                      <span class="n">SamplingPolicy</span><span class="p">,</span>
+                                                      <span class="n">TRExactLeverageRows</span><span class="p">,</span>
+                                                      <span class="n">TRProductLeverageRows</span><span class="p">,</span>
+                                                      <span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.als.solvers</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">LeastSquaresSolver</span><span class="p">,</span>
+                                                     <span class="n">_solve_local_proposal</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.als.tt</span><span class="w"> </span><span class="kn">import</span> <span class="n">TTALS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalSolveRecord</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">TRDecomposition</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">BaseSource</span><span class="p">,</span>
+                                                 <span class="n">ConfigurationBatch</span><span class="p">)</span>
+
+
+<span class="n">_Rank</span> <span class="o">=</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span>
+
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources.factory</span><span class="w"> </span><span class="kn">import</span> <span class="n">SourceLike</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_standard_tr_cores</span><span class="p">(</span><span class="n">cores</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">TRDecomposition</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]],</span>
+                       <span class="n">in_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalizes lightweight TR ``cores`` to standard cyclic shapes.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">TensorFormat1D</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">cores</span><span class="o">.</span><span class="n">_cyclic</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Initial cores should have cyclic topology&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cores</span><span class="o">.</span><span class="n">n_batches</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Batched TR cores are not supported by TR-ALS&#39;</span><span class="p">)</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="n">cores</span><span class="o">.</span><span class="n">_effective_cores</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))</span> <span class="ow">or</span> \
+            <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="s1">&#39;`initial_cores` should be a TRDecomposition or a core sequence&#39;</span><span class="p">)</span>
+    <span class="n">cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">in_dim</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`initial_cores` should contain one core per site&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">core</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">cores</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`initial_cores` should contain torch.Tensor objects&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">core</span><span class="p">,</span> <span class="n">site_in_dim</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">core</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;TR cores should have left rank, input and right rank &#39;</span>
+                <span class="s1">&#39;dimensions&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">site_in_dim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`initial_cores` input dimensions should match the source&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">TRSegmentEnvironmentCache</span><span class="o">.</span><span class="n">_validate_cores</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_contract_standard_tr</span><span class="p">(</span><span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Contracts standard cyclic ``cores`` without constructing a model graph.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">cores</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;a...b,bpc-&gt;a...pc&#39;</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="n">core</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">dim1</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim2</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_evaluate_standard_tr</span><span class="p">(</span><span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                          <span class="n">indices</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Evaluates standard cyclic ``cores`` at packed configurations.&quot;&quot;&quot;</span>
+    <span class="n">selected</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">][:,</span> <span class="n">indices</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">:]</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">environment</span> <span class="o">=</span> <span class="n">selected</span>
+    <span class="k">for</span> <span class="n">site</span><span class="p">,</span> <span class="n">core</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cores</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">core</span><span class="p">[:,</span> <span class="n">indices</span><span class="p">[:,</span> <span class="n">site</span><span class="p">],</span> <span class="p">:]</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">environment</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">bmm</span><span class="p">(</span><span class="n">environment</span><span class="p">,</span> <span class="n">selected</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">dim1</span><span class="o">=-</span><span class="mi">2</span><span class="p">,</span> <span class="n">dim2</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_tr_gauge_core_update</span><span class="p">(</span><span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                          <span class="n">fixed_sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                          <span class="n">gauge</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                          <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                          <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                          <span class="n">proposal</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+                          <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds an atomic cyclic current-plus-receiver ``gauge`` update.&quot;&quot;&quot;</span>
+    <span class="n">n_sites</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+    <span class="n">receiver</span> <span class="o">=</span> <span class="p">(</span><span class="n">site</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">n_sites</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;forward&#39;</span> <span class="k">else</span> \
+        <span class="p">(</span><span class="n">site</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">n_sites</span>
+    <span class="n">legal_receiver</span> <span class="o">=</span> <span class="p">(</span><span class="n">receiver</span> <span class="o">!=</span> <span class="n">site</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">receiver</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">fixed_sites</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;forward&#39;</span><span class="p">:</span>
+        <span class="n">feasible</span> <span class="o">=</span> <span class="n">proposal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">proposal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">proposal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">feasible</span> <span class="o">=</span> <span class="n">proposal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">proposal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">proposal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">gauge</span> <span class="o">==</span> <span class="s1">&#39;qr&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">legal_receiver</span> <span class="ow">and</span> <span class="n">feasible</span><span class="p">:</span>
+        <span class="n">gauged_core</span><span class="p">,</span> <span class="n">factor</span> <span class="o">=</span> <span class="n">_factor_core</span><span class="p">(</span><span class="n">proposal</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">gauged_core</span><span class="p">,</span> <span class="n">factor</span> <span class="o">=</span> <span class="n">proposal</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="n">replacements</span> <span class="o">=</span> <span class="p">{</span><span class="n">site</span><span class="p">:</span> <span class="n">gauged_core</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">factor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">replacements</span><span class="p">[</span><span class="n">receiver</span><span class="p">]</span> <span class="o">=</span> <span class="n">_absorb_factor</span><span class="p">(</span>
+            <span class="n">factor</span><span class="p">,</span> <span class="n">cores</span><span class="p">[</span><span class="n">receiver</span><span class="p">],</span> <span class="n">direction</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">replacements</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_tr_core_update</span><span class="p">(</span><span class="n">replacements</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                              <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                              <span class="n">fixed_sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                              <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Moves a square-root norm to the next trainable cyclic core.&quot;&quot;&quot;</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="n">replacements</span><span class="p">[</span><span class="n">site</span><span class="p">]</span>
+    <span class="n">norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">norm</span><span class="p">))</span> <span class="ow">or</span> <span class="p">(</span><span class="n">norm</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">replacements</span>
+    <span class="n">scale</span> <span class="o">=</span> <span class="n">norm</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;forward&#39;</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">receiver</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">candidate</span> <span class="k">for</span> <span class="n">offset</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">cores</span><span class="p">))</span>
+                     <span class="k">if</span> <span class="p">(</span><span class="n">candidate</span> <span class="o">:=</span> <span class="p">(</span><span class="n">site</span> <span class="o">+</span> <span class="n">step</span> <span class="o">*</span> <span class="n">offset</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">cores</span><span class="p">))</span>
+                     <span class="ow">not</span> <span class="ow">in</span> <span class="n">fixed_sites</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">receiver</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">replacements</span>
+    <span class="n">updates</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">replacements</span><span class="p">)</span>
+    <span class="n">updates</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="o">=</span> <span class="n">current</span> <span class="o">/</span> <span class="n">scale</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">current</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">core</span> <span class="o">=</span> <span class="n">updates</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">receiver</span><span class="p">,</span> <span class="n">cores</span><span class="p">[</span><span class="n">receiver</span><span class="p">])</span>
+    <span class="n">updates</span><span class="p">[</span><span class="n">receiver</span><span class="p">]</span> <span class="o">=</span> <span class="n">core</span> <span class="o">*</span> <span class="n">scale</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">updates</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_TRALSBackend</span><span class="p">:</span>  <span class="c1"># MARK: _TRALSBackend</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Adapts exact, sampled and completion TR solves to the common driver.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">problem</span><span class="p">:</span> <span class="n">ALSProblem</span><span class="p">,</span>
+                 <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                 <span class="n">target</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                 <span class="n">solver</span><span class="p">:</span> <span class="n">LeastSquaresSolver</span><span class="p">,</span>
+                 <span class="n">gauge</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">fixed_sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                 <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                 <span class="n">n_segments</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="n">sampler</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">RowSampler</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">n_samples</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">sampling_policy</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SamplingPolicy</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">problem</span> <span class="o">=</span> <span class="n">problem</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">full_target</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">target</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">target</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">=</span> <span class="n">solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gauge</span> <span class="o">=</span> <span class="n">gauge</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fixed_sites</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">fixed_sites</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span> <span class="o">=</span> <span class="n">normalize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span> <span class="o">=</span> <span class="n">TRSegmentEnvironmentCache</span><span class="p">(</span>
+            <span class="n">cores</span><span class="p">,</span> <span class="n">n_segments</span><span class="o">=</span><span class="n">n_segments</span><span class="p">,</span> <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sampler</span> <span class="o">=</span> <span class="n">sampler</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_samples</span> <span class="o">=</span> <span class="n">n_samples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sampling_policy</span> <span class="o">=</span> <span class="n">sampling_policy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generator</span> <span class="o">=</span> <span class="n">generator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_batch</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">full_target</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_direction</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_sites</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Number of cores in this backend.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">trainable_sites</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sites that may receive local updates.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">site</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)</span>
+                     <span class="k">if</span> <span class="n">site</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fixed_sites</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cores</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Current cores in original site order.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">cores</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_sweep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">order</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                      <span class="n">sweep</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Prepares directional environments and the current sampling</span>
+<span class="sd">        generation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_direction</span> <span class="o">=</span> <span class="s1">&#39;forward&#39;</span> <span class="k">if</span> <span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s1">&#39;reverse&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampler</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">prepare_sweep</span><span class="p">(</span><span class="n">order</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">full_target</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">False</span>
+
+        <span class="n">batch</span><span class="p">,</span> <span class="n">refreshed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampling_policy</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span>
+            <span class="n">sampler</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sampler</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">,</span> <span class="n">site</span><span class="o">=</span><span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">n_samples</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">generator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">generator</span><span class="p">,</span>
+            <span class="n">sweep</span><span class="o">=</span><span class="n">sweep</span><span class="p">,</span> <span class="n">current</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_batch</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">refreshed</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">invalidate</span><span class="p">(</span><span class="s1">&#39;sample generation changed&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">refreshed</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">problem</span><span class="o">.</span><span class="n">observations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">current_target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">problem</span><span class="o">.</span><span class="n">observations</span><span class="o">.</span><span class="n">support_values</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">indices</span> <span class="o">=</span> <span class="n">_unravel_indices</span><span class="p">(</span><span class="n">batch</span><span class="o">.</span><span class="n">ids</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)</span>
+                <span class="n">evaluated</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">problem</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span>
+                    <span class="n">ConfigurationBatch</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;indices&#39;</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">evaluated</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">batch</span><span class="o">.</span><span class="n">ids</span><span class="o">.</span><span class="n">numel</span><span class="p">(),):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s1">&#39;TR-ALS currently requires a scalar tensor source&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">evaluated</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s1">&#39;The tensor source should return only finite values&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">current_target</span> <span class="o">=</span> <span class="n">evaluated</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_batch</span> <span class="o">=</span> <span class="n">batch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">prepare_sweep</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="n">batch</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">batch</span><span class="o">.</span><span class="n">generation</span><span class="p">,</span> <span class="n">refreshed</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_site</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                    <span class="n">sweep</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                    <span class="n">return_record</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LocalSolveRecord</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Builds one local proposal and its atomic gauge update.&quot;&quot;&quot;</span>
+        <span class="n">environment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">design</span><span class="p">(</span><span class="n">site</span><span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_batch</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span>
+                   <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">problem</span><span class="o">.</span><span class="n">observations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span>
+                   <span class="n">_unravel_indices</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_batch</span><span class="o">.</span><span class="n">ids</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">problem</span><span class="o">.</span><span class="n">in_dim</span><span class="p">))</span>
+        <span class="n">proposal</span><span class="p">,</span> <span class="n">record</span> <span class="o">=</span> <span class="n">_solve_local_proposal</span><span class="p">(</span>
+            <span class="n">solver</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">solver</span><span class="p">,</span> <span class="n">environment</span><span class="o">=</span><span class="n">environment</span><span class="p">,</span>
+            <span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_target</span><span class="p">,</span> <span class="n">current</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">],</span>
+            <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">,</span> <span class="n">sweep</span><span class="o">=</span><span class="n">sweep</span><span class="p">,</span> <span class="n">return_record</span><span class="o">=</span><span class="n">return_record</span><span class="p">,</span>
+            <span class="n">problem</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">problem</span><span class="p">,</span> <span class="n">log_scale</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">log_scale</span><span class="p">,</span>
+            <span class="n">indices</span><span class="o">=</span><span class="n">indices</span><span class="p">,</span>
+            <span class="n">samples</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_batch</span><span class="p">,</span> <span class="n">core_versions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">core_versions</span><span class="p">)</span>
+        <span class="n">replacements</span> <span class="o">=</span> <span class="n">_tr_gauge_core_update</span><span class="p">(</span>
+            <span class="n">cores</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">cores</span><span class="p">,</span>
+            <span class="n">fixed_sites</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fixed_sites</span><span class="p">,</span>
+            <span class="n">gauge</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gauge</span><span class="p">,</span>
+            <span class="n">direction</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_direction</span><span class="p">,</span>
+            <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">,</span>
+            <span class="n">proposal</span><span class="o">=</span><span class="n">proposal</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">:</span>
+            <span class="n">replacements</span> <span class="o">=</span> <span class="n">_normalize_tr_core_update</span><span class="p">(</span>
+                <span class="n">replacements</span><span class="o">=</span><span class="n">replacements</span><span class="p">,</span>
+                <span class="n">cores</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">cores</span><span class="p">,</span>
+                <span class="n">fixed_sites</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fixed_sites</span><span class="p">,</span>
+                <span class="n">direction</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_direction</span><span class="p">,</span>
+                <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="n">replacements</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">record</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">skip_site</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Advances the cache through one frozen site.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">design</span><span class="p">(</span><span class="n">site</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">update</span><span class="p">({})</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">replacements</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Applies one complete local update to its environment owner.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">replacements</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">measure_objective</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                          <span class="n">problem</span><span class="p">:</span> <span class="n">ALSProblem</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Measures the complete-sweep objective on its fixed entries.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">problem</span><span class="o">.</span><span class="n">sampled</span><span class="p">:</span>
+            <span class="n">approximation</span> <span class="o">=</span> <span class="n">_evaluate_standard_tr</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">,</span> <span class="n">problem</span><span class="o">.</span><span class="n">_evaluation_indices</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">problem</span><span class="o">.</span><span class="n">evaluation_error</span><span class="p">(</span><span class="n">approximation</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">problem</span><span class="o">.</span><span class="n">observations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">observations</span><span class="o">.</span><span class="n">support</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">approximation</span> <span class="o">=</span> <span class="n">_evaluate_standard_tr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">cores</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">problem</span><span class="o">.</span><span class="n">objective_error</span><span class="p">(</span><span class="n">approximation</span><span class="p">)</span>
+
+        <span class="n">approximation</span> <span class="o">=</span> <span class="n">_contract_standard_tr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">problem</span><span class="o">.</span><span class="n">_objective_error</span><span class="p">(</span><span class="n">approximation</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">full_target</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the cores forming the current approximation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">restore</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Restores a saved approximation and refreshes its dependent state.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span> <span class="o">=</span> <span class="n">TRSegmentEnvironmentCache</span><span class="p">(</span>
+            <span class="n">cores</span><span class="p">,</span>
+            <span class="n">n_segments</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">segments</span><span class="p">),</span>
+            <span class="n">renormalize</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">renormalize</span><span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_TRLeverageALSBackend</span><span class="p">:</span>  <span class="c1"># MARK: _TRLeverageALSBackend</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Runs product or exact TR leverage sampling by active fibers.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">problem</span><span class="p">:</span> <span class="n">ALSProblem</span><span class="p">,</span>
+                 <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                 <span class="n">solver</span><span class="p">:</span> <span class="n">LeastSquaresSolver</span><span class="p">,</span>
+                 <span class="n">gauge</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">fixed_sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="n">n_samples</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">leverage_method</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">uniform_mix</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                 <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">],</span>
+                 <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                 <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">problem</span> <span class="o">=</span> <span class="n">problem</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cores</span> <span class="o">=</span> <span class="n">TRSegmentEnvironmentCache</span><span class="o">.</span><span class="n">_validate_cores</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_versions</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">=</span> <span class="n">solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gauge</span> <span class="o">=</span> <span class="n">gauge</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fixed_sites</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">fixed_sites</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_samples</span> <span class="o">=</span> <span class="n">n_samples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generator</span> <span class="o">=</span> <span class="n">generator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span> <span class="o">=</span> <span class="n">normalize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">renormalize</span> <span class="o">=</span> <span class="n">renormalize</span>
+        <span class="k">if</span> <span class="n">leverage_method</span> <span class="o">==</span> <span class="s1">&#39;product&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sampler</span> <span class="o">=</span> <span class="n">TRProductLeverageRows</span><span class="p">(</span>
+                <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">,</span> <span class="n">uniform_mix</span><span class="o">=</span><span class="n">uniform_mix</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">leverage_method</span> <span class="o">==</span> <span class="s1">&#39;exact&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sampler</span> <span class="o">=</span> <span class="n">TRExactLeverageRows</span><span class="p">(</span>
+                <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">,</span> <span class="n">uniform_mix</span><span class="o">=</span><span class="n">uniform_mix</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;`leverage_method` should be &#39;product&#39; or &#39;exact&#39;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">leverage_method</span> <span class="o">=</span> <span class="n">leverage_method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_direction</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_generation</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">core_versions</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Versions read by each proposal at draw time.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_versions</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_sites</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Number of cores in this backend.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">trainable_sites</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sites that may receive local updates.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">site</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)</span>
+                     <span class="k">if</span> <span class="n">site</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fixed_sites</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cores</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Current cores in original site order.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cores</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_sweep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">order</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                      <span class="n">sweep</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Prepares directional environments and the current sampling</span>
+<span class="sd">        generation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_direction</span> <span class="o">=</span> <span class="s1">&#39;forward&#39;</span> <span class="k">if</span> <span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s1">&#39;reverse&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_generation</span> <span class="o">=</span> <span class="n">sweep</span>
+        <span class="k">return</span> <span class="n">sweep</span><span class="p">,</span> <span class="kc">True</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_site</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                    <span class="n">sweep</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                    <span class="n">return_record</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LocalSolveRecord</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Builds one local proposal and its atomic gauge update.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sampler</span><span class="o">.</span><span class="n">generation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generation</span>
+        <span class="n">batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampler</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">site</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">generator</span><span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">_unravel_indices</span><span class="p">(</span>
+            <span class="n">batch</span><span class="o">.</span><span class="n">ids</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">))</span>
+        <span class="n">in_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">[</span><span class="n">site</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">base_indices</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[::</span><span class="n">in_dim</span><span class="p">]</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">problem</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">fiber</span><span class="p">(</span>
+            <span class="n">ConfigurationBatch</span><span class="p">(</span><span class="n">base_indices</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;indices&#39;</span><span class="p">),</span> <span class="n">site</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">target</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">batch</span><span class="o">.</span><span class="n">ids</span><span class="o">.</span><span class="n">numel</span><span class="p">(),):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;TR-ALS currently requires a scalar tensor source&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">target</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;The tensor source should return only finite values&#39;</span><span class="p">)</span>
+
+        <span class="n">environment</span> <span class="o">=</span> <span class="n">DirectTREnvironment</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">)</span><span class="o">.</span><span class="n">design</span><span class="p">(</span>
+            <span class="n">site</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="n">batch</span><span class="p">)</span>
+        <span class="n">log_scale</span> <span class="o">=</span> <span class="n">environment</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">new_zeros</span><span class="p">(())</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">renormalize</span><span class="p">:</span>
+            <span class="n">norm</span> <span class="o">=</span> <span class="n">_environment_norm</span><span class="p">(</span><span class="n">environment</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">norm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">environment</span> <span class="o">=</span> <span class="n">environment</span> <span class="o">/</span> <span class="n">norm</span>
+                <span class="n">log_scale</span> <span class="o">=</span> <span class="n">norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
+        <span class="n">proposal</span><span class="p">,</span> <span class="n">record</span> <span class="o">=</span> <span class="n">_solve_local_proposal</span><span class="p">(</span>
+            <span class="n">solver</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">solver</span><span class="p">,</span> <span class="n">environment</span><span class="o">=</span><span class="n">environment</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="n">target</span><span class="p">,</span>
+            <span class="n">current</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">,</span> <span class="n">sweep</span><span class="o">=</span><span class="n">sweep</span><span class="p">,</span>
+            <span class="n">return_record</span><span class="o">=</span><span class="n">return_record</span><span class="p">,</span> <span class="n">problem</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">problem</span><span class="p">,</span>
+            <span class="n">log_scale</span><span class="o">=</span><span class="n">log_scale</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="n">indices</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="n">batch</span><span class="p">,</span>
+            <span class="n">core_versions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_versions</span><span class="p">)</span>
+        <span class="n">replacements</span> <span class="o">=</span> <span class="n">_tr_gauge_core_update</span><span class="p">(</span>
+            <span class="n">cores</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">,</span>
+            <span class="n">fixed_sites</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fixed_sites</span><span class="p">,</span>
+            <span class="n">gauge</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gauge</span><span class="p">,</span>
+            <span class="n">direction</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_direction</span><span class="p">,</span>
+            <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">,</span>
+            <span class="n">proposal</span><span class="o">=</span><span class="n">proposal</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">:</span>
+            <span class="n">replacements</span> <span class="o">=</span> <span class="n">_normalize_tr_core_update</span><span class="p">(</span>
+                <span class="n">replacements</span><span class="o">=</span><span class="n">replacements</span><span class="p">,</span>
+                <span class="n">cores</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">,</span>
+                <span class="n">fixed_sites</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fixed_sites</span><span class="p">,</span>
+                <span class="n">direction</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_direction</span><span class="p">,</span>
+                <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="n">replacements</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">record</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">skip_site</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Advances the sweep through a fixed core.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">replacements</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validates and applies the solved core and any gauge receiver.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_versions</span> <span class="o">=</span> <span class="n">_updated_cores</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_versions</span><span class="p">,</span> <span class="n">replacements</span><span class="p">,</span>
+            <span class="n">TRSegmentEnvironmentCache</span><span class="o">.</span><span class="n">_validate_cores</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">measure_objective</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                          <span class="n">problem</span><span class="p">:</span> <span class="n">ALSProblem</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Measures the complete-sweep objective on its fixed entries.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">problem</span><span class="o">.</span><span class="n">sampled</span><span class="p">:</span>
+            <span class="n">approximation</span> <span class="o">=</span> <span class="n">_evaluate_standard_tr</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">,</span> <span class="n">problem</span><span class="o">.</span><span class="n">_evaluation_indices</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">problem</span><span class="o">.</span><span class="n">evaluation_error</span><span class="p">(</span><span class="n">approximation</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Leverage sweeps require prepared evaluation&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the cores forming the current approximation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">restore</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Restores a saved approximation and refreshes its dependent state.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cores</span> <span class="o">=</span> <span class="n">TRSegmentEnvironmentCache</span><span class="o">.</span><span class="n">_validate_cores</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="TRALS"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.TRALS">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">TRALS</span><span class="p">(</span><span class="n">TTALS</span><span class="p">):</span>  <span class="c1"># MARK: TRALS</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Approximates a fixed finite tensor by one-site TR-ALS.</span>
+
+<span class="sd">    Construction fixes the source, its dimensions and the weighted objective.</span>
+<span class="sd">    Repeated :meth:`fit` calls can use different ranks, initial cores, samplers</span>
+<span class="sd">    and solvers. Exact fits cache all target values on first use; sampled fits</span>
+<span class="sd">    query only their selected configurations. A sparse boolean mask defines</span>
+<span class="sd">    permanent observations, including observed values that are zero.</span>
+
+<span class="sd">    Vector, matrix and Quantics sources use the same scalar local solves;</span>
+<span class="sd">    the result restores the source&#39;s paired dimensions and coordinate metadata.</span>
+<span class="sd">    Continuous inputs need discretization before ALS. Structural batches are</span>
+<span class="sd">    not supported. Sweeps visit sites in increasing order around the ring;</span>
+<span class="sd">    each complete pass counts once toward ``max_sweeps``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor</span>
+<span class="sd">        Finite tensor input, with shape and evaluation defined by the source.</span>
+<span class="sd">    mask : BaseSource or torch.Tensor, optional</span>
+<span class="sd">        Boolean tensor of participating entries. ``True`` participates;</span>
+<span class="sd">        ``False`` is missing. A sparse mask fixes its stored true entries.</span>
+<span class="sd">    weights : torch.Tensor, optional</span>
+<span class="sd">        Non-negative multiplicative residual weights with shape ``in_dim``</span>
+<span class="sd">        of the scalar problem; matrix input/output pairs are fused.</span>
+<span class="sd">    out_device : str or torch.device, optional</span>
+<span class="sd">        Device where finalized cores are stored. The default is ``&quot;cpu&quot;``;</span>
+<span class="sd">        ``None`` keeps them on the computation device.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; engine = tk.decompositions.TRALS(torch.ones(2, 3))</span>
+<span class="sd">    &gt;&gt;&gt; result = engine.fit(rank=1)</span>
+<span class="sd">    &gt;&gt;&gt; tuple(result.contract_dense().shape)</span>
+<span class="sd">    (2, 3)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_topology</span> <span class="o">=</span> <span class="s1">&#39;tr&#39;</span>
+    <span class="n">_result_type</span> <span class="o">=</span> <span class="n">TRDecomposition</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_random_cores</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">ranks</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                      <span class="n">dtype</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+                      <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+                      <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes random cyclic cores with prescribed right-link ``ranks``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">site</span><span class="p">,</span> <span class="n">site_in_dim</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">):</span>
+            <span class="n">core</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span>
+                <span class="n">ranks</span><span class="p">[</span><span class="n">site</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span>
+                <span class="n">site_in_dim</span><span class="p">,</span>
+                <span class="n">ranks</span><span class="p">[</span><span class="n">site</span><span class="p">],</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+                <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">)</span>
+            <span class="n">core</span> <span class="o">=</span> <span class="n">core</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">ranks</span><span class="p">[</span><span class="n">site</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">site_in_dim</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
+            <span class="n">cores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">core</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_initial_cores</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">target</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                       <span class="n">initial_cores</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span>
+                           <span class="n">TensorFormat1D</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]],</span>
+                       <span class="n">rank</span><span class="p">:</span> <span class="n">_Rank</span><span class="p">,</span>
+                       <span class="n">fixed_cores</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
+                           <span class="n">Sequence</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]],</span>
+                       <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
+                           <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
+            <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+            <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Builds and validates initialization plus fixed-site semantics.&quot;&quot;&quot;</span>
+        <span class="n">rank_caps</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_normalize_rank</span><span class="p">(</span>
+            <span class="n">rank</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">initial_cores</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">rank_caps</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`rank` is required without `initial_cores`&#39;</span><span class="p">)</span>
+            <span class="n">cores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_random_cores</span><span class="p">(</span>
+                <span class="n">rank_caps</span><span class="p">,</span> <span class="n">target</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">target</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">generator</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cores</span> <span class="o">=</span> <span class="n">_standard_tr_cores</span><span class="p">(</span><span class="n">initial_cores</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">any</span><span class="p">((</span><span class="n">core</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">target</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">target</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+               <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">cores</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Initial cores and source values should share dtype and &#39;</span>
+                <span class="s1">&#39;device&#39;</span><span class="p">)</span>
+        <span class="n">current_ranks</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">cores</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rank_caps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span>
+                <span class="n">current</span> <span class="o">&gt;</span> <span class="n">cap</span>
+                <span class="k">for</span> <span class="n">current</span><span class="p">,</span> <span class="n">cap</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">current_ranks</span><span class="p">,</span> <span class="n">rank_caps</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Initial TR ranks should not exceed the requested `rank` caps&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">core</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">cores</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`initial_cores` should contain only finite values&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fixed_cores</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">cores</span><span class="p">),</span> <span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fixed_cores</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))</span> <span class="ow">or</span> \
+                <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fixed_cores</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`fixed_cores` should contain one tensor or None per site&#39;</span><span class="p">)</span>
+        <span class="n">fixed_cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">fixed_cores</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fixed_cores</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`fixed_cores` should contain one entry per site&#39;</span><span class="p">)</span>
+
+        <span class="n">final_cores</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+        <span class="n">fixed_sites</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">site</span><span class="p">,</span> <span class="n">fixed_core</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fixed_cores</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">fixed_core</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fixed_core</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s1">&#39;`fixed_cores` should contain torch.Tensor objects &#39;</span>
+                    <span class="s1">&#39;or None&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">fixed_core</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;Every fixed core should match its initialized core shape&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">fixed_core</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">target</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="ow">or</span> \
+                    <span class="p">(</span><span class="n">fixed_core</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">target</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;Fixed cores and source values should share runtime&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">fixed_core</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`fixed_cores` should contain only finite values&#39;</span><span class="p">)</span>
+            <span class="n">final_cores</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="o">=</span> <span class="n">fixed_core</span>
+            <span class="n">fixed_sites</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">site</span><span class="p">)</span>
+        <span class="n">final_cores</span> <span class="o">=</span> <span class="n">TRSegmentEnvironmentCache</span><span class="o">.</span><span class="n">_validate_cores</span><span class="p">(</span><span class="n">final_cores</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">final_cores</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">fixed_sites</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_make_backend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">problem</span><span class="p">:</span> <span class="n">ALSProblem</span><span class="p">,</span>
+                      <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                      <span class="n">target</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                      <span class="n">solver</span><span class="p">:</span> <span class="n">LeastSquaresSolver</span><span class="p">,</span> <span class="n">gauge</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                      <span class="n">fixed_sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                      <span class="n">row_sampler</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">RowSampler</span><span class="p">],</span>
+                      <span class="n">n_samples</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                      <span class="n">sampling_policy</span><span class="p">:</span> <span class="n">SamplingPolicy</span><span class="p">,</span>
+                      <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">],</span>
+                      <span class="n">sampler</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SamplingPolicy</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">ALSBackend</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Builds the topology-specific full-row or leverage backend.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">sampler</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">sampler</span><span class="o">.</span><span class="n">method</span> <span class="ow">in</span> <span class="p">(</span>
+                <span class="s1">&#39;leverage&#39;</span><span class="p">,</span> <span class="s1">&#39;exact_leverage&#39;</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="n">_TRLeverageALSBackend</span><span class="p">(</span>
+                <span class="n">problem</span><span class="p">,</span> <span class="n">cores</span><span class="p">,</span> <span class="n">solver</span><span class="p">,</span> <span class="n">gauge</span><span class="p">,</span> <span class="n">fixed_sites</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span>
+                <span class="s1">&#39;product&#39;</span> <span class="k">if</span> <span class="n">sampler</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;leverage&#39;</span> <span class="k">else</span> <span class="s1">&#39;exact&#39;</span><span class="p">,</span>
+                <span class="n">sampler</span><span class="o">.</span><span class="n">uniform_mix</span><span class="p">,</span> <span class="n">generator</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="n">renormalize</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_TRALSBackend</span><span class="p">(</span>
+            <span class="n">problem</span><span class="p">,</span> <span class="n">cores</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">solver</span><span class="p">,</span> <span class="n">gauge</span><span class="p">,</span> <span class="n">fixed_sites</span><span class="p">,</span>
+            <span class="kc">True</span><span class="p">,</span> <span class="n">renormalize</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">row_sampler</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span>
+            <span class="n">sampling_policy</span><span class="p">,</span> <span class="n">generator</span><span class="p">)</span>
+
+<div class="viewcode-block" id="TRALS.fit"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.TRALS.fit">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">initial_cores</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">TensorFormat1D</span><span class="p">,</span>
+                <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">fixed_cores</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">gauge</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;qr&#39;</span><span class="p">,</span>
+            <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="n">sampler</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SamplingPolicy</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">solver</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LeastSquaresSolver</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">convergence</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ConvergencePolicy</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">collect_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TRDecomposition&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fits a TR by alternating one-site least-squares solves.</span>
+
+<span class="sd">        Sweeps visit sites in increasing order around the ring. Each complete</span>
+<span class="sd">        pass counts once toward ``max_sweeps``.</span>
+<span class="sd">        Without ``initial_cores``, initializes random cores at the requested</span>
+<span class="sd">        ranks. To start from an SVD approximation, compute it separately and</span>
+<span class="sd">        pass its result as ``initial_cores``. Supplied cores are copied.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        rank : int or sequence of int, optional</span>
+<span class="sd">            One upper bound per right link, or a shared bound. The last link</span>
+<span class="sd">            closes the ring. Required without ``initial_cores``.</span>
+<span class="sd">        initial_cores : TensorFormat1D or sequence of torch.Tensor, optional</span>
+<span class="sd">            Initial approximation with matching topology, physical dimensions,</span>
+<span class="sd">            dtype and device. Its ranks must respect ``rank`` when provided.</span>
+<span class="sd">        fixed_cores : sequence of torch.Tensor or None, optional</span>
+<span class="sd">            One entry per site. Tensor entries replace the corresponding</span>
+<span class="sd">            initial core and remain bitwise unchanged throughout ALS.</span>
+<span class="sd">        gauge : {``&quot;none&quot;``, ``&quot;qr&quot;``}</span>
+<span class="sd">            QR moves a factor into the immediate trainable neighbor after each</span>
+<span class="sd">            local solve. No factor is discarded if that receiver is</span>
+<span class="sd">            unavailable.</span>
+<span class="sd">        renormalize : bool</span>
+<span class="sd">            Whether cached environments remove global norms and retain their</span>
+<span class="sd">            logarithmic scales. The local least-squares objective is preserved.</span>
+<span class="sd">        sampler : SamplingPolicy, optional</span>
+<span class="sd">            Row-sampling configuration. ``None`` uses the full tensor or the</span>
+<span class="sd">            permanent observations selected by a sparse boolean mask.</span>
+<span class="sd">        solver : LeastSquaresSolver, optional</span>
+<span class="sd">            Local solver and its scaling and regularization settings. Defaults</span>
+<span class="sd">            to an unregularized solver with automatic column scaling.</span>
+<span class="sd">        convergence : ConvergencePolicy, optional</span>
+<span class="sd">            Complete-sweep stopping criteria and independent error-evaluation</span>
+<span class="sd">            budget. Defaults to ten sweeps. Sampled fits cache fixed uniform</span>
+<span class="sd">            evaluation entries and measure the current approximation on them</span>
+<span class="sd">            after every sweep.</span>
+<span class="sd">        generator : torch.Generator, optional</span>
+<span class="sd">            Generator used by random initialization and row sampling.</span>
+<span class="sd">            Its device</span>
+<span class="sd">            must match the source values.</span>
+<span class="sd">        collect_metrics : bool</span>
+<span class="sd">            Whether to record local solves, complete-sweep errors and timings.</span>
+<span class="sd">        verbose : bool or int</span>
+<span class="sd">            Console verbosity from 0 (silent) to 3 (most detailed).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        TRDecomposition</span>
+<span class="sd">            Approximation with cores, metadata and optional metrics. Matrix and</span>
+<span class="sd">            Quantics sources select the corresponding result family.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; tensor = torch.ones(2, 3, 2, dtype=torch.float64)</span>
+<span class="sd">        &gt;&gt;&gt; result = tk.decompositions.TRALS(tensor).fit(rank=1)</span>
+<span class="sd">        &gt;&gt;&gt; torch.allclose(result.contract_dense(), tensor)</span>
+<span class="sd">        True</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+            <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span> <span class="n">initial_cores</span><span class="o">=</span><span class="n">initial_cores</span><span class="p">,</span> <span class="n">fixed_cores</span><span class="o">=</span><span class="n">fixed_cores</span><span class="p">,</span>
+            <span class="n">gauge</span><span class="o">=</span><span class="n">gauge</span><span class="p">,</span> <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span> <span class="n">sampler</span><span class="o">=</span><span class="n">sampler</span><span class="p">,</span>
+            <span class="n">solver</span><span class="o">=</span><span class="n">solver</span><span class="p">,</span> <span class="n">convergence</span><span class="o">=</span><span class="n">convergence</span><span class="p">,</span> <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">,</span>
+            <span class="n">collect_metrics</span><span class="o">=</span><span class="n">collect_metrics</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="tr_als"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.tr_als">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">tr_als</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="s1">&#39;SourceLike&#39;</span><span class="p">,</span>
+           <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">initial_cores</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">TensorFormat1D</span><span class="p">,</span>
+               <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">fixed_cores</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">gauge</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;qr&#39;</span><span class="p">,</span>
+           <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+           <span class="n">max_sweeps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+           <span class="n">atol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">rtol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">out_device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]]</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span><span class="p">,</span>
+           <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">collect_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+           <span class="n">verbose</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+           <span class="o">*</span><span class="p">,</span>
+           <span class="n">mask</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">BaseSource</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">weights</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TRDecomposition&#39;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Approximates a finite tensor with one-site TR-ALS.</span>
+
+<span class="sd">    Returns a decomposition object. Use :class:`TRALS` and its :meth:`fit</span>
+<span class="sd">    &lt;TRALS.fit&gt;` method for sampled fits, customized local solvers or advanced</span>
+<span class="sd">    convergence criteria. Sweeps visit sites in increasing order around the</span>
+<span class="sd">    ring; each complete pass counts once toward ``max_sweeps``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor</span>
+<span class="sd">        Finite tensor input, with shape and evaluation defined by the source.</span>
+<span class="sd">    rank : int or sequence of int, optional</span>
+<span class="sd">        One upper bound per right link, or a shared bound. The last link</span>
+<span class="sd">        closes the ring. Required without ``initial_cores``.</span>
+<span class="sd">    initial_cores : TensorFormat1D or sequence of torch.Tensor, optional</span>
+<span class="sd">        Initial approximation with matching topology, physical dimensions,</span>
+<span class="sd">        dtype and device. Its ranks must respect ``rank`` when provided.</span>
+<span class="sd">    fixed_cores : sequence of torch.Tensor or None, optional</span>
+<span class="sd">        One entry per site. Tensor entries replace the corresponding</span>
+<span class="sd">        initial core and remain bitwise unchanged throughout ALS.</span>
+<span class="sd">    gauge : {``&quot;none&quot;``, ``&quot;qr&quot;``}</span>
+<span class="sd">        QR moves a factor into the immediate trainable neighbor after each</span>
+<span class="sd">        local solve. No factor is discarded if that receiver is unavailable.</span>
+<span class="sd">    renormalize : bool</span>
+<span class="sd">        Whether cached environments remove global norms and retain their</span>
+<span class="sd">        logarithmic scales. The local least-squares objective is preserved.</span>
+<span class="sd">    max_sweeps : int</span>
+<span class="sd">        Positive maximum number of directional sweeps. Default is ``10``.</span>
+<span class="sd">    atol : float, optional</span>
+<span class="sd">        Stop when the absolute objective error is at most this value.</span>
+<span class="sd">    rtol : float, optional</span>
+<span class="sd">        Stop when the relative objective error is at most this value.</span>
+<span class="sd">    out_device : str or torch.device, optional</span>
+<span class="sd">        Device where finalized cores are stored. The default is ``&quot;cpu&quot;``;</span>
+<span class="sd">        ``None`` keeps them on the computation device.</span>
+<span class="sd">    generator : torch.Generator, optional</span>
+<span class="sd">        Generator used by random initialization and row sampling. Its device</span>
+<span class="sd">        must match the source values.</span>
+<span class="sd">    collect_metrics : bool</span>
+<span class="sd">        Whether to record local solves, complete-sweep errors and timings.</span>
+<span class="sd">    verbose : bool or int</span>
+<span class="sd">        Console verbosity from 0 (silent) to 3 (most detailed).</span>
+<span class="sd">    mask : BaseSource or torch.Tensor, optional</span>
+<span class="sd">        Boolean tensor of participating entries. ``True`` participates;</span>
+<span class="sd">        ``False`` is missing. A sparse mask fixes its stored true entries.</span>
+<span class="sd">    weights : torch.Tensor, optional</span>
+<span class="sd">        Non-negative multiplicative residual weights with shape ``in_dim``</span>
+<span class="sd">        of the scalar problem; matrix input/output pairs are fused.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    TRDecomposition</span>
+<span class="sd">        Approximation with cores, metadata and optional metrics. Matrix and</span>
+<span class="sd">        Quantics sources select the corresponding result family.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; tensor = torch.ones(2, 3, 2, dtype=torch.float64)</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.tr_als(tensor, rank=1)</span>
+<span class="sd">    &gt;&gt;&gt; torch.allclose(result.contract_dense(), tensor)</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">TRALS</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">weights</span><span class="p">,</span> <span class="n">out_device</span><span class="o">=</span><span class="n">out_device</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+        <span class="n">rank</span><span class="p">,</span> <span class="n">initial_cores</span><span class="p">,</span> <span class="n">fixed_cores</span><span class="p">,</span> <span class="n">gauge</span><span class="p">,</span> <span class="n">renormalize</span><span class="p">,</span>
+        <span class="n">convergence</span><span class="o">=</span><span class="n">ConvergencePolicy</span><span class="p">(</span>
+            <span class="n">max_sweeps</span><span class="o">=</span><span class="n">max_sweeps</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="n">atol</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">),</span>
+        <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">,</span> <span class="n">collect_metrics</span><span class="o">=</span><span class="n">collect_metrics</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span></div>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;TRALS&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;tr_als&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

@@ -1,0 +1,1071 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Utilities &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" href="_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/clipboard.min.js"></script>
+    <script src="_static/copybutton.js"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="shortcut icon" href="_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Formats" href="formats.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="current nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="api.html">
+   API Reference
+  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+<div class="menu-dropdown menu-dropdown-download-buttons">
+  <button class="headerbtn menu-dropdown__trigger"
+      aria-label="Download this page">
+      <i class="fas fa-download"></i>
+  </button>
+  <div class="menu-dropdown__content">
+    <ul>
+      <li>
+        <a href="_sources/utils.rst.txt"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="left"
+title="Download source file"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="headerbtn__text-container">.rst</span>
+</a>
+
+      </li>
+      
+      <li>
+        
+<button onclick="printPdf(this)"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="left"
+title="Print to PDF"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="headerbtn__text-container">.pdf</span>
+</button>
+
+      </li>
+      
+    </ul>
+  </div>
+</div>
+<label for="__page-toc"
+  class="headerbtn headerbtn-page-toc"
+  
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-list"></i>
+  </span>
+
+</label>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+    <div class="tocsection onthispage pt-5 pb-3">
+        <i class="fas fa-list"></i> Contents
+    </div>
+    <nav id="bd-toc-nav" aria-label="Page">
+        <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#strings-and-names">
+   Strings and names
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#sequences-and-permutations">
+   Sequences and permutations
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#combinatorics">
+   Combinatorics
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#tensor-construction">
+   Tensor construction
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#tensor-scaling-and-normalization">
+   Tensor scaling and normalization
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#singular-value-decompositions">
+   Singular-value decompositions
+  </a>
+ </li>
+</ul>
+
+    </nav>
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1>Utilities</h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                        <div>
+                            <h2> Contents </h2>
+                        </div>
+                        <nav aria-label="Page">
+                            <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#strings-and-names">
+   Strings and names
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#sequences-and-permutations">
+   Sequences and permutations
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#combinatorics">
+   Combinatorics
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#tensor-construction">
+   Tensor construction
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#tensor-scaling-and-normalization">
+   Tensor scaling and normalization
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#singular-value-decompositions">
+   Singular-value decompositions
+  </a>
+ </li>
+</ul>
+
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <section id="utilities">
+<h1>Utilities<a class="headerlink" href="#utilities" title="Permalink to this headline">#</a></h1>
+<p>Helpers for names, sequences, tensor construction and numerical operations.</p>
+<section id="strings-and-names">
+<h2>Strings and names<a class="headerlink" href="#strings-and-names" title="Permalink to this headline">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.print_list">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">print_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lst</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#print_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.print_list" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.tab_string">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">tab_string</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">string</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_tabs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#tab_string"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.tab_string" title="Permalink to this definition">#</a></dt>
+<dd><p>Introduces ‘        ‘ a certain amount of times before each line.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>string</strong> (<em>str</em>) – Text to be displaced.</p></li>
+<li><p><strong>num_tabs</strong> (<em>int</em>) – Number of ‘     ‘ introduced.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.check_name_style">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">check_name_style</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'axis'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#check_name_style"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.check_name_style" title="Permalink to this definition">#</a></dt>
+<dd><p>Axis’ names can only contain letters, numbers and underscores. Nodes’ names
+cannot contain blank spaces.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.erase_enum">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">erase_enum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#erase_enum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.erase_enum" title="Permalink to this definition">#</a></dt>
+<dd><p>Given a name, returns the same name without any enumeration suffix with
+format <code class="docutils literal notranslate"><span class="pre">_{digit}</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.enum_repeated_names">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">enum_repeated_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">names_list</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#enum_repeated_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.enum_repeated_names" title="Permalink to this definition">#</a></dt>
+<dd><p>Given a list of (axes or nodes) names, returns the same list but adding
+an enumeration for the names that appear more than once in the list.</p>
+</dd></dl>
+
+</section>
+<section id="sequences-and-permutations">
+<h2>Sequences and permutations<a class="headerlink" href="#sequences-and-permutations" title="Permalink to this headline">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.permute_list">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">permute_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lst</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#permute_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.permute_list" title="Permalink to this definition">#</a></dt>
+<dd><p>Permutes elements of list based on a permutation of indices. It is not
+required that <code class="docutils literal notranslate"><span class="pre">lst</span></code> and <code class="docutils literal notranslate"><span class="pre">dims</span></code> have the same length; in such case the
+returned list will only have as many elements as indices specified in
+<code class="docutils literal notranslate"><span class="pre">dims</span></code>, in the corresponding order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lst</strong> (<em>list</em>) – List to be permuted.</p></li>
+<li><p><strong>dims</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – List of dimensions (indices) in the new order.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.is_permutation">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">is_permutation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lst</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">permuted_lst</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#is_permutation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.is_permutation" title="Permalink to this definition">#</a></dt>
+<dd><p>Indicates if <code class="docutils literal notranslate"><span class="pre">permuted_lst</span></code> is a permutation of the elements of <code class="docutils literal notranslate"><span class="pre">lst</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.inverse_permutation">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">inverse_permutation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#inverse_permutation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.inverse_permutation" title="Permalink to this definition">#</a></dt>
+<dd><p>Given a permutation of indices (to permute the elements of a list, tensor,
+etc.), returns the inverse permutation of indices needed to recover the
+original object (in the original order).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dims</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – Permutation of indices. It can be complete if all numbers in
+range(len(dims)) appear (e.g. (2, 0, 1) -&gt; (1, 2, 0)), or incomplete
+if after permutation some elements were removed (e.g. (3, 0, 2) -&gt;
+(1, 2, 0), removed element in position 1).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.list2slice">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">list2slice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lst</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#list2slice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.list2slice" title="Permalink to this definition">#</a></dt>
+<dd><p>Given a list (of indices) returns, if possible, an object <code class="docutils literal notranslate"><span class="pre">slice</span></code>
+containing the same indices.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.split_sequence_into_regions">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">split_sequence_into_regions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lst</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#split_sequence_into_regions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.split_sequence_into_regions" title="Permalink to this definition">#</a></dt>
+<dd><p>Splits a sequence of integers into regions where each region contains
+consecutive integers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>lst</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – List of integers in ascending order.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>list[list[int]]</p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – If the input is not a sequence of integers.</p></li>
+<li><p><strong>ValueError</strong> – If the input sequence is not ordered.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sequence</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">13</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tk</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">split_sequence_into_regions</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span>
+<span class="go">[[1, 2, 3], [5, 6, 7], [10, 11], [13]]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+<section id="combinatorics">
+<h2>Combinatorics<a class="headerlink" href="#combinatorics" title="Permalink to this headline">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.fact">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">fact</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#fact"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.fact" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns factorial of <code class="docutils literal notranslate"><span class="pre">n</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.binomial_coeffs">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">binomial_coeffs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#binomial_coeffs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.binomial_coeffs" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns binomiaal coefficients (<code class="docutils literal notranslate"><span class="pre">n</span></code> choose <code class="docutils literal notranslate"><span class="pre">k</span></code>).</p>
+</dd></dl>
+
+</section>
+<section id="tensor-construction">
+<h2>Tensor construction<a class="headerlink" href="#tensor-construction" title="Permalink to this headline">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.stack_unequal_tensors">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">stack_unequal_tensors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lst_tensors</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#stack_unequal_tensors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.stack_unequal_tensors" title="Permalink to this definition">#</a></dt>
+<dd><p>Stacks a list of tensors. These tensors need not have equal sizes in each
+dimension, but they must have the same rank.</p>
+<p>The smallest tensors are extended with zeros to match the shape of the
+biggest ones.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>lst_tensors</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>]</em>) – List of tensors to be stacked</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.random_unitary">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">random_unitary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">generator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#random_unitary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.random_unitary" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns random unitary matrix from the Haar measure of size n x n.</p>
+<p>Unitary matrix is created as described in this <a class="reference external" href="https://arxiv.org/abs/math-ph/0609050v2">paper</a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">generator</span></code> controls the Gaussian matrix without modifying the global
+random state and should belong to the requested <code class="docutils literal notranslate"><span class="pre">device</span></code>.</p>
+</dd></dl>
+
+</section>
+<section id="tensor-scaling-and-normalization">
+<h2>Tensor scaling and normalization<a class="headerlink" href="#tensor-scaling-and-normalization" title="Permalink to this headline">#</a></h2>
+<p>These operations are shared by formats and decomposition algorithms. They
+retain PyTorch broadcasting, devices and autograd. A zero tensor remains zero
+under normalization with extracted log-scale <code class="docutils literal notranslate"><span class="pre">0</span></code>; its mathematical log-norm
+is <code class="docutils literal notranslate"><span class="pre">-inf</span></code>.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.safe_divide">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">safe_divide</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">numerator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">denominator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zero_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#safe_divide"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.safe_divide" title="Permalink to this definition">#</a></dt>
+<dd><p>Divides tensors, substituting <code class="docutils literal notranslate"><span class="pre">zero_value</span></code> wherever the denominator is zero.</p>
+<p>The denominator is made safe before division, including in branches that
+are later discarded. PyTorch broadcasting, device and dtype rules apply.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>numerator</strong> (<em>torch.Tensor</em>) – Tensors to divide elementwise, with broadcastable shapes.</p></li>
+<li><p><strong>denominator</strong> (<em>torch.Tensor</em>) – Tensors to divide elementwise, with broadcastable shapes.</p></li>
+<li><p><strong>zero_value</strong> (<em>number</em><em> or </em><em>torch.Tensor</em>) – Result at zero denominators. Defaults to <code class="docutils literal notranslate"><span class="pre">0</span></code>; a tensor must be
+broadcastable with the quotient.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Quotient with the requested values at zero denominators.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tk</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">safe_divide</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">2.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]),</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">4.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]))</span>
+<span class="go">tensor([0.5000, 0.0000])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.scale_tensor">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">scale_tensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keepdim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#scale_tensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.scale_tensor" title="Permalink to this definition">#</a></dt>
+<dd><p>Extracts a maximum-magnitude scale before numerical tensor operations.</p>
+<p>Zero reductions use scale <code class="docutils literal notranslate"><span class="pre">1</span></code>, leaving their values unchanged. For
+complex tensors, the maximum absolute real or imaginary component is used
+so that forming a complex magnitude cannot overflow before scaling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tensor</strong> (<em>torch.Tensor</em>) – Real floating or complex tensor. The input is not modified.</p></li>
+<li><p><strong>dim</strong> (<em>int</em><em> or </em><em>sequence of int</em><em>, </em><em>optional</em>) – Axes over which to extract the scale. Defaults to all axes.</p></li>
+<li><p><strong>keepdim</strong> (<em>bool</em>) – Retains reduced axes of size <code class="docutils literal notranslate"><span class="pre">1</span></code> in the returned scale when <code class="docutils literal notranslate"><span class="pre">True</span></code>.
+The scaled tensor always retains its original shape.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Scaled tensor and its real, positive scale. Multiplying by the scale,
+with reduced axes restored when necessary, reconstructs the input.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple[torch.Tensor, torch.Tensor]</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">scaled</span><span class="p">,</span> <span class="n">scale</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">scale_tensor</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">3.</span><span class="p">,</span> <span class="o">-</span><span class="mf">6.</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">scaled</span>
+<span class="go">tensor([ 0.5000, -1.0000])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">scale</span>
+<span class="go">tensor(6.)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.stable_norm">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">stable_norm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keepdim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#stable_norm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.stable_norm" title="Permalink to this definition">#</a></dt>
+<dd><p>Computes an L2 norm after extracting the tensor’s largest component.</p>
+<p>Scaling avoids overflow or underflow while squaring the input values.
+A norm outside the dtype’s representable range may still overflow; use
+<a class="reference internal" href="#tensorkrowch.utils.log_tensor_norm" title="tensorkrowch.utils.log_tensor_norm"><code class="xref py py-func docutils literal notranslate"><span class="pre">log_tensor_norm()</span></code></a> when the norm itself need not be materialized.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tensor</strong> (<em>torch.Tensor</em>) – Real floating or complex tensor.</p></li>
+<li><p><strong>dim</strong> (<em>int</em><em> or </em><em>sequence of int</em><em>, </em><em>optional</em>) – Reduction axes. Defaults to all axes, giving the Frobenius norm.</p></li>
+<li><p><strong>keepdim</strong> (<em>bool</em>) – Retains reduced axes of size <code class="docutils literal notranslate"><span class="pre">1</span></code> when <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Real norm, with zero returned for zero or empty reductions.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tk</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">stable_norm</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">3.</span><span class="p">,</span> <span class="mf">4.</span><span class="p">]))</span>
+<span class="go">tensor(5.)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.log_tensor_norm">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">log_tensor_norm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keepdim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#log_tensor_norm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.log_tensor_norm" title="Permalink to this definition">#</a></dt>
+<dd><p>Computes the natural logarithm of an L2 norm without materializing the norm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tensor</strong> (<em>torch.Tensor</em>) – Real floating or complex tensor.</p></li>
+<li><p><strong>dim</strong> (<em>int</em><em> or </em><em>sequence of int</em><em>, </em><em>optional</em>) – Reduction axes. Defaults to all axes, giving the log Frobenius norm.</p></li>
+<li><p><strong>keepdim</strong> (<em>bool</em>) – Retains reduced axes of size <code class="docutils literal notranslate"><span class="pre">1</span></code> when <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Real log-norm. Zero or empty reductions have log-norm <code class="docutils literal notranslate"><span class="pre">-inf</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tk</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">log_tensor_norm</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]))</span>
+<span class="go">tensor(-inf)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.normalize_tensor">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">normalize_tensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#normalize_tensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.normalize_tensor" title="Permalink to this definition">#</a></dt>
+<dd><p>Normalizes a tensor and returns the logarithmic scale extracted from it.</p>
+<p>Maximum-component scaling precedes the L2 normalization, so the original
+norm need not be representable. Zero reductions remain zero and contribute
+log-scale <code class="docutils literal notranslate"><span class="pre">0</span></code>. Use <a class="reference internal" href="#tensorkrowch.utils.log_tensor_norm" title="tensorkrowch.utils.log_tensor_norm"><code class="xref py py-func docutils literal notranslate"><span class="pre">log_tensor_norm()</span></code></a> for their actual log-norm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tensor</strong> (<em>torch.Tensor</em>) – Real floating or complex tensor. The input is not modified.</p></li>
+<li><p><strong>dim</strong> (<em>int</em><em> or </em><em>sequence of int</em><em>, </em><em>optional</em>) – Axes to normalize jointly. Defaults to all axes.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Normalized tensor and real log-scale, with reduction axes removed.
+Autograd is retained through both outputs.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple[torch.Tensor, torch.Tensor]</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">normalized</span><span class="p">,</span> <span class="n">log_scale</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">normalize_tensor</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">3.</span><span class="p">,</span> <span class="mf">4.</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">normalized</span>
+<span class="go">tensor([0.6000, 0.8000])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">log_scale</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+<span class="go">tensor(5.)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.ratio_from_log">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">ratio_from_log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">log_numerator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_denominator</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#ratio_from_log"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.ratio_from_log" title="Permalink to this definition">#</a></dt>
+<dd><p>Computes a ratio of non-negative magnitudes from their natural logarithms.</p>
+<p>Subtracts the logarithms before exponentiating, avoiding overflow from
+materializing the two magnitudes separately. Zero is represented by
+<code class="docutils literal notranslate"><span class="pre">-inf</span></code>; <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">/</span> <span class="pre">0</span></code> is defined as <code class="docutils literal notranslate"><span class="pre">0</span></code> and a positive magnitude divided
+by zero gives <code class="docutils literal notranslate"><span class="pre">inf</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>log_numerator</strong> (<em>torch.Tensor</em>) – Real logarithms with broadcastable shapes, on the same device.</p></li>
+<li><p><strong>log_denominator</strong> (<em>torch.Tensor</em>) – Real logarithms with broadcastable shapes, on the same device.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Ratio with the documented zero-denominator convention.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tk</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">ratio_from_log</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">1000.</span><span class="p">,</span> <span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">inf</span><span class="p">]),</span>
+<span class="gp">... </span>                        <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">1000.</span><span class="p">,</span> <span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">inf</span><span class="p">]))</span>
+<span class="go">tensor([1., 0.])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.norm_from_log">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">norm_from_log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">log_norm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_norm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#norm_from_log"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.norm_from_log" title="Permalink to this definition">#</a></dt>
+<dd><p>Reconstructs a magnitude from its natural logarithm using an optional scale.</p>
+<p>A positive reference expresses the magnitude relative to that scale before
+multiplying it back. A zero reference uses scale <code class="docutils literal notranslate"><span class="pre">1</span></code>; it does not change
+the reconstructed magnitude. Values outside the dtype’s representable
+range can still overflow or underflow.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>log_norm</strong> (<em>torch.Tensor</em>) – Real logarithm of a non-negative magnitude. <code class="docutils literal notranslate"><span class="pre">-inf</span></code> represents zero.</p></li>
+<li><p><strong>reference_norm</strong> (<em>torch.Tensor</em><em>, </em><em>optional</em>) – Finite, non-negative reference with a broadcastable shape on the same
+device. Without a reference, returns <code class="docutils literal notranslate"><span class="pre">log_norm.exp()</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Reconstructed non-negative magnitude.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tk</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">norm_from_log</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">inf</span><span class="p">]),</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+<span class="go">tensor([1., 0.])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+<section id="singular-value-decompositions">
+<h2>Singular-value decompositions<a class="headerlink" href="#singular-value-decompositions" title="Permalink to this headline">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.accurate_svd">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">accurate_svd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recursion_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_depth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#accurate_svd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.accurate_svd" title="Permalink to this definition">#</a></dt>
+<dd><p>Computes an economy-size SVD with recursive refinement of small values.</p>
+<p>Implements the Appendix of Stoudenmire and White’s
+<a class="reference external" href="https://arxiv.org/pdf/1301.3494">Real-Space Parallel Density Matrix Renormalization Group</a>. After the initial SVD, the small-value
+subspace is projected from the original matrix and decomposed recursively.
+A single SVD may resolve the largest singular values well while losing
+relative accuracy in much smaller ones. Refinement isolates that tail in
+a smaller matrix, recomputes its SVD and updates the associated singular
+vectors. This repeats only when the smaller matrix still has a separated
+tail, up to the recursion limit.</p>
+<p>This can improve relative accuracy in the tail, but cannot recover values
+lost when forming the input or guarantee relative accuracy below its
+floating-point resolution. No singular values are truncated or inverted.</p>
+<p>The backend is selected by <code class="xref py py-func docutils literal notranslate"><span class="pre">get_svd_method()</span></code>, including
+overrides from <a class="reference internal" href="decompositions_api.html#tensorkrowch.svd_method" title="tensorkrowch.svd_method"><code class="xref py py-func docutils literal notranslate"><span class="pre">svd_method()</span></code></a>, and is fixed throughout
+recursion. This function always attempts refinement, independently of
+<code class="xref py py-func docutils literal notranslate"><span class="pre">get_svd_refinement()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tensor</strong> (<em>torch.Tensor</em>) – Finite floating-point or complex matrix with shape <code class="docutils literal notranslate"><span class="pre">(*,</span> <span class="pre">m,</span> <span class="pre">n)</span></code>.
+Leading batch dimensions and empty matrix dimensions are supported;
+each matrix may select a different refinement subspace. Dtype and
+dimensionality validation is delegated to the PyTorch backend.</p></li>
+<li><p><strong>recursion_threshold</strong> (<em>float</em>) – Relative threshold in <code class="docutils literal notranslate"><span class="pre">(0,</span> <span class="pre">1)</span></code> for selecting the small-value tail
+at each level: refine values satisfying <code class="docutils literal notranslate"><span class="pre">s[i]</span> <span class="pre">/</span> <span class="pre">s[0]</span> <span class="pre">&lt;</span> <span class="pre">threshold</span></code>.
+Default is <code class="docutils literal notranslate"><span class="pre">1e-4</span></code>. Larger thresholds include more values in the
+refinement; this is neither a truncation tolerance nor an error bound.</p></li>
+<li><p><strong>max_depth</strong> (<em>int</em>) – Maximum number of additional SVD refinement levels after the initial
+SVD. Default is 16. Zero returns the unrefined economy-size SVD.
+Recursion stops earlier if no tail is selected, the subspace has only
+one singular value, or all singular values are zero.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">(u,</span> <span class="pre">s,</span> <span class="pre">vh)</span></code> with shapes <code class="docutils literal notranslate"><span class="pre">(*,</span> <span class="pre">m,</span> <span class="pre">r)</span></code>, <code class="docutils literal notranslate"><span class="pre">(*,</span> <span class="pre">r)</span></code>, <code class="docutils literal notranslate"><span class="pre">(*,</span> <span class="pre">r,</span> <span class="pre">n)</span></code>
+and <code class="docutils literal notranslate"><span class="pre">r</span> <span class="pre">=</span> <span class="pre">min(m,</span> <span class="pre">n)</span></code>. Device and core dtype are preserved; singular
+values use the corresponding real dtype. Uses PyTorch exclusively.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple[torch.Tensor, torch.Tensor, torch.Tensor]</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>TypeError</strong> – If tensor or refinement controls have invalid types.</p></li>
+<li><p><strong>ValueError</strong> – If a refinement control is outside its accepted interval.</p></li>
+<li><p><strong>RuntimeError</strong> – If the PyTorch backend rejects the tensor’s dtype or dimensions, or
+    the decomposition does not converge.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Batch-specific refinement decisions require scalar synchronization on
+accelerators. Autograd follows the underlying QR/SVD requirements; rank
+deficiency, repeated singular values and subspace-selection boundaries
+can make derivatives undefined.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1e-6</span><span class="p">,</span> <span class="mf">1e-12</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">tk</span><span class="o">.</span><span class="n">svd_method</span><span class="p">(</span><span class="s1">&#39;qr_svd&#39;</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">vh</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">accurate_svd</span><span class="p">(</span>
+<span class="gp">... </span>        <span class="n">tensor</span><span class="p">,</span> <span class="n">recursion_threshold</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">max_depth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">torch</span><span class="o">.</span><span class="n">allclose</span><span class="p">((</span><span class="n">u</span> <span class="o">*</span> <span class="n">s</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">))</span> <span class="o">@</span> <span class="n">vh</span><span class="p">,</span> <span class="n">tensor</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.utils.truncated_svd">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.utils.</span></span><span class="sig-name descname"><span class="pre">truncated_svd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">atol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rtol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">svd_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/utils.html#truncated_svd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.utils.truncated_svd" title="Permalink to this definition">#</a></dt>
+<dd><p>Computes a truncated SVD. If no truncation criterion is specified, it
+returns the full SVD. If more than one criterion is specified, the final
+rank is the minimum one, i.e. the one imposed by the most restrictive
+criterion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tensor</strong> (<em>torch.Tensor</em>) – Tensor to be decomposed, with shape <code class="docutils literal notranslate"><span class="pre">(*,</span> <span class="pre">m,</span> <span class="pre">n)</span></code> where <code class="docutils literal notranslate"><span class="pre">*</span></code> denotes
+zero or more batch dimensions.</p></li>
+<li><p><strong>rank</strong> (<em>int</em><em>, </em><em>optional</em>) – Maximum number of singular values to keep.</p></li>
+<li><p><strong>cutoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum singular value to keep. It must be finite and non-negative.
+Singular values <code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">cutoff</span></code> are removed.</p></li>
+<li><p><strong>atol</strong> (<em>float</em><em>, </em><em>optional</em>) – Absolute tolerance over the tail sum of squared singular values.
+Starting from the smallest singular value, values are discarded while
+the accumulated sum of squares is <code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">atol</span></code>. It must be finite and
+non-negative.</p></li>
+<li><p><strong>rtol</strong> (<em>float</em><em>, </em><em>optional</em>) – Relative tolerance over the tail sum of squared singular values.
+Starting from the smallest singular value, values are discarded while
+the tail sum of squares divided by the total sum of squares is
+<code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">rtol</span></code>. It must be finite and in <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code>.</p></li>
+<li><p><strong>cum_percentage</strong> (<em>float</em><em>, </em><em>optional</em>) – <p>Minimum fraction of squared singular-value mass to keep. Equivalent to
+setting <code class="docutils literal notranslate"><span class="pre">rtol</span> <span class="pre">=</span> <span class="pre">1</span> <span class="pre">-</span> <span class="pre">cum_percentage</span></code>. It must be finite and in
+<code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code>.</p>
+<div class="math notranslate nohighlight">
+\[\frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+cum\_percentage\]</div>
+</p></li>
+<li><p><strong>svd_method</strong> (<em>{&quot;svd&quot;</em><em>, </em><em>&quot;qr_svd&quot;}</em><em>, </em><em>optional</em>) – <p>Exact backend used to compute the economy-size SVD. <code class="docutils literal notranslate"><span class="pre">&quot;svd&quot;</span></code> calls
+<code class="xref py py-func docutils literal notranslate"><span class="pre">torch.linalg.svd()</span></code> directly. <code class="docutils literal notranslate"><span class="pre">&quot;qr_svd&quot;</span></code> first reduces the
+larger matrix dimension with QR. If omitted, it uses the active value
+from <code class="xref py py-func docutils literal notranslate"><span class="pre">get_svd_method()</span></code>, whose initial default is
+<code class="docutils literal notranslate"><span class="pre">&quot;svd&quot;</span></code>. The active backend can be changed globally with
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.set_svd_method" title="tensorkrowch.set_svd_method"><code class="xref py py-func docutils literal notranslate"><span class="pre">set_svd_method()</span></code></a>, or temporarily with the
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.svd_method" title="tensorkrowch.svd_method"><code class="xref py py-func docutils literal notranslate"><span class="pre">svd_method()</span></code></a> context manager. These configuration
+mechanisms also select the backend for higher-level methods that call
+<a class="reference internal" href="#tensorkrowch.utils.truncated_svd" title="tensorkrowch.utils.truncated_svd"><code class="xref py py-func docutils literal notranslate"><span class="pre">truncated_svd()</span></code></a> internally.
+Recursive tail refinement can independently be enabled with
+<code class="docutils literal notranslate"><span class="pre">svd_method(...,</span> <span class="pre">refine=True)</span></code> or
+<code class="xref py py-func docutils literal notranslate"><span class="pre">set_svd_refinement()</span></code>. It is disabled by default.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Backward through <code class="docutils literal notranslate"><span class="pre">&quot;qr_svd&quot;</span></code> follows the differentiability
+requirements of <code class="xref py py-func docutils literal notranslate"><span class="pre">torch.linalg.qr()</span></code>: the input needs full
+column rank in the tall case and full row rank in the wide case.</p>
+</div>
+</p></li>
+<li><p><strong>return_info</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, also returns <code class="docutils literal notranslate"><span class="pre">_TruncatedSVDInfo</span></code> with the full and
+selected ranks, the total and discarded squared norms, their per-batch
+values and the effective SVD backend. The complete singular value
+spectrum is not retained in this record.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>By default, returns <code class="docutils literal notranslate"><span class="pre">(u,</span> <span class="pre">s,</span> <span class="pre">vh)</span></code> from an exact economy-size SVD after
+truncation. <code class="docutils literal notranslate"><span class="pre">u</span></code> has shape <code class="docutils literal notranslate"><span class="pre">(*,</span> <span class="pre">m,</span> <span class="pre">r)</span></code>, <code class="docutils literal notranslate"><span class="pre">s</span></code> has shape <code class="docutils literal notranslate"><span class="pre">(*,</span> <span class="pre">r)</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">vh</span></code> has shape <code class="docutils literal notranslate"><span class="pre">(*,</span> <span class="pre">r,</span> <span class="pre">n)</span></code>, where <code class="docutils literal notranslate"><span class="pre">r</span></code> is the selected final
+rank. If <code class="docutils literal notranslate"><span class="pre">return_info=True</span></code>, returns <code class="docutils literal notranslate"><span class="pre">(u,</span> <span class="pre">s,</span> <span class="pre">vh,</span> <span class="pre">info)</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>TypeError</strong> – If <code class="docutils literal notranslate"><span class="pre">tensor</span></code> is not a <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.Tensor</span></code> or <code class="docutils literal notranslate"><span class="pre">svd_method</span></code> is not
+    a string, if <code class="docutils literal notranslate"><span class="pre">rank</span></code> is not an integer, if a tolerance is not a real
+    number, or if <code class="docutils literal notranslate"><span class="pre">return_info</span></code> is not boolean.</p></li>
+<li><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">rank</span></code> is not positive, a tolerance is not finite or lies outside
+    its accepted interval, or <code class="docutils literal notranslate"><span class="pre">svd_method</span></code> is not accepted.</p></li>
+<li><p><strong>RuntimeError</strong> – If <code class="docutils literal notranslate"><span class="pre">tensor</span></code> has fewer than two dimensions, as raised by
+    <code class="xref py py-func docutils literal notranslate"><span class="pre">torch.linalg.svd()</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">vh</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">truncated_svd</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="go">2</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+    <a class='left-prev' id="prev-link" href="formats.html" title="previous page">
+        <i class="fas fa-angle-left"></i>
+        <div class="prev-next-info">
+            <p class="prev-next-subtitle">previous</p>
+            <p class="prev-next-title">Formats</p>
+        </div>
+    </a>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

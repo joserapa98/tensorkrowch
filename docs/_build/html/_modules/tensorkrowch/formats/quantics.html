@@ -1,0 +1,1654 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.formats.quantics &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/clipboard.min.js"></script>
+    <script src="../../../_static/copybutton.js"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.formats.quantics</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Internal classes:</span>
+<span class="sd">        * _QuanticsFormat</span>
+<span class="sd">        * _QuanticsVector</span>
+<span class="sd">        * _QuanticsMatrix</span>
+
+<span class="sd">    Public classes:</span>
+<span class="sd">        * QTT, QTR, QTTM, QTRM</span>
+
+<span class="sd">    Internal functions:</span>
+<span class="sd">        * _map_structure</span>
+<span class="sd">        * _equal_structure</span>
+<span class="sd">        * _same_references</span>
+<span class="sd">        * _resolve_quantization</span>
+
+<span class="sd">Terminology:</span>
+<span class="sd">    * Coordinates are continuous input values in their original domains.</span>
+<span class="sd">    * A grid provides discrete coordinate values; an index selects one per</span>
+<span class="sd">      coordinate.</span>
+<span class="sd">    * Digits expand each index in its chosen base and select core inputs.</span>
+<span class="sd">    * A layout fixes the order of these digit sites across coordinates.</span>
+
+<span class="sd">Thus ``evaluate_coordinates`` maps coordinates to grid indices, and</span>
+<span class="sd">``evaluate_indices`` encodes those indices as digits before evaluating the</span>
+<span class="sd">cores. ``evaluate_digits`` accepts digits already in layout order.</span>
+<span class="sd">Quantics evaluation requires every digit; ``in_sites`` identifies all input</span>
+<span class="sd">digit sites, and ``out_sites`` does the same for matrix outputs.</span>
+<span class="sd">The layout determines the order of digit values; the ordered site lists</span>
+<span class="sd">determine which cores receive them. Digit value ``i`` evaluates ``in_sites[i]``</span>
+<span class="sd">or ``out_sites[i]`` on the corresponding side. These lists need not be</span>
+<span class="sd">increasing. Axes outside the lists remain open in chain order, with input-side</span>
+<span class="sd">axes before output-side axes for matrices.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">fields</span><span class="p">,</span> <span class="n">is_dataclass</span><span class="p">,</span> <span class="n">replace</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats.formats1d</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">_restore_cores</span><span class="p">,</span> <span class="n">TensorFormat1D</span><span class="p">,</span>
+                                            <span class="n">_VectorFormat1D</span><span class="p">,</span>
+                                            <span class="n">TT</span><span class="p">,</span> <span class="n">TR</span><span class="p">,</span> <span class="n">TTM</span><span class="p">,</span> <span class="n">TRM</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats.quantization</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">Domain</span><span class="p">,</span> <span class="n">QuantizedLayout</span><span class="p">,</span>
+                                               <span class="n">CoordinateMap</span><span class="p">,</span>
+                                               <span class="n">AffineCoordinateMap</span><span class="p">,</span>
+                                               <span class="n">ExplicitGridMap</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_map_structure</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                   <span class="n">function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Maps stored coordinate tensors without casting real grids to complex.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">function</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">real</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">value</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()</span>
+                <span class="k">else</span> <span class="n">result</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="n">mapped</span> <span class="o">=</span> <span class="p">{</span><span class="n">field</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">_map_structure</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">field</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">function</span><span class="p">)</span>
+                  <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="n">field</span><span class="o">.</span><span class="n">init</span><span class="p">}</span>
+        <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="o">**</span><span class="n">mapped</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">_map_structure</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">function</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">_map_structure</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">function</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_equal_structure</span><span class="p">(</span><span class="n">first</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">second</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compares coordinate meaning without tensor truth-value ambiguities.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">first</span> <span class="ow">is</span> <span class="n">second</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">first</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="n">second</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">first</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">_equal_structure</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">field</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+                                    <span class="nb">getattr</span><span class="p">(</span><span class="n">second</span><span class="p">,</span> <span class="n">field</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+                   <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">(</span><span class="n">first</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">first</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">second</span><span class="p">))</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="n">_equal_structure</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span> <span class="k">for</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">first</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="n">first</span> <span class="o">==</span> <span class="n">second</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_same_references</span><span class="p">(</span><span class="n">first</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">second</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compares storage references to decide whether a conversion was a no-op.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">first</span> <span class="ow">is</span> <span class="n">second</span>
+    <span class="k">if</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">first</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">_same_references</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">field</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+                                    <span class="nb">getattr</span><span class="p">(</span><span class="n">second</span><span class="p">,</span> <span class="n">field</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+                   <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">(</span><span class="n">first</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">_same_references</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span>
+                   <span class="k">for</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">))</span>
+    <span class="k">return</span> <span class="kc">True</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_quantization</span><span class="p">(</span>
+        <span class="n">n_coordinates</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">base</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]],</span>
+        <span class="n">level</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]],</span>
+        <span class="n">domain</span><span class="p">:</span> <span class="n">Domain</span><span class="p">,</span>
+        <span class="n">grid_coordinates</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]],</span>
+        <span class="n">layout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">QuantizedLayout</span><span class="p">],</span>
+        <span class="n">coordinate_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">CoordinateMap</span><span class="p">]</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">QuantizedLayout</span><span class="p">,</span> <span class="n">CoordinateMap</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds or accepts a layout and map, then checks their compatibility.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_coordinates</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_coordinates</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`n_coordinates` should be int type&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_coordinates</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`n_coordinates` should be positive&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">layout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">coordinate_map</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span>
+                <span class="n">base</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">grid_coordinates</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Do not combine `layout` or `coordinate_map` with &#39;</span>
+                <span class="s1">&#39;shorthand arguments&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layout</span><span class="p">,</span> <span class="n">QuantizedLayout</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`layout` should be QuantizedLayout type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coordinate_map</span><span class="p">,</span> <span class="n">CoordinateMap</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`coordinate_map` should be CoordinateMap type&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">base</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">level</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`base` and `level` are required without `layout`&#39;</span><span class="p">)</span>
+        <span class="n">layout</span> <span class="o">=</span> <span class="n">QuantizedLayout</span><span class="p">(</span><span class="n">n_coordinates</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span>
+                                 <span class="n">ordering</span><span class="o">=</span><span class="s1">&#39;interleaved&#39;</span><span class="p">,</span>
+                                 <span class="n">digit_order</span><span class="o">=</span><span class="s1">&#39;coarse_to_fine&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">grid_coordinates</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">domain</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`domain` should be None with `grid_coordinates`&#39;</span><span class="p">)</span>
+            <span class="n">coordinate_map</span> <span class="o">=</span> <span class="n">ExplicitGridMap</span><span class="p">(</span><span class="n">grid_coordinates</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`domain` is required without `grid_coordinates`&#39;</span><span class="p">)</span>
+            <span class="n">coordinate_map</span> <span class="o">=</span> <span class="n">AffineCoordinateMap</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">layout</span><span class="o">.</span><span class="n">grid_size</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">layout</span><span class="o">.</span><span class="n">n_coordinates</span> <span class="o">!=</span> <span class="n">n_coordinates</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`n_coordinates` should match `layout.n_coordinates`&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">coordinate_map</span><span class="o">.</span><span class="n">grid_size</span> <span class="o">!=</span> <span class="n">layout</span><span class="o">.</span><span class="n">grid_size</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s1">&#39;`coordinate_map.grid_size` should match `layout.grid_size`&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">layout</span><span class="p">,</span> <span class="n">coordinate_map</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_QuanticsFormat</span><span class="p">:</span>  <span class="c1"># MARK: _QuanticsFormat</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Coordinate compatibility and direct construction of Quantics results.&quot;&quot;&quot;</span>
+
+    <span class="n">_quantized</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">_coordinate_names</span> <span class="o">=</span> <span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_map_tensors</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorFormat1D</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Maps cores, factors and tensors stored in coordinate metadata.&quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_map_tensors</span><span class="p">(</span><span class="n">function</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coordinate_names</span><span class="p">:</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">_map_structure</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="n">function</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_same_aux_tensors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">TensorFormat1D</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Checks whether coordinate tensors retain their original references.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">_same_references</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+                   <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coordinate_names</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_to_format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">TensorFormat1D</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TensorFormat1D</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Drops coordinate metadata while retaining cores and bond factors.&quot;&quot;&quot;</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;n_batches&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span><span class="p">,</span> <span class="s1">&#39;in_sites&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">}</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;out_sites&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_sites</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bonds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">_bonds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bonds</span><span class="o">.</span><span class="n">_map_tensors</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">tensor</span><span class="p">:</span> <span class="n">tensor</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">_on_bonds_changed</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">_is_row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_row</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_semantics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                         <span class="n">other</span><span class="p">:</span> <span class="n">TensorFormat1D</span><span class="p">,</span>
+                         <span class="n">product</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Checks layouts, coordinate maps and contracted coordinate spaces.&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_check_semantics</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">product</span><span class="o">=</span><span class="n">product</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">product</span><span class="p">:</span>
+            <span class="n">left</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_layout</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_coordinate_map</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">)</span>
+            <span class="n">right</span> <span class="o">=</span> <span class="p">((</span><span class="n">other</span><span class="o">.</span><span class="n">out_layout</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">out_coordinate_map</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">_out_sites</span><span class="p">)</span>
+                     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">_QuanticsMatrix</span><span class="p">)</span>
+                     <span class="k">else</span> <span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">layout</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">coordinate_map</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">_equal_structure</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;Contracted Quantics coordinate spaces should match&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="p">((</span><span class="s1">&#39;layout&#39;</span><span class="p">,</span> <span class="s1">&#39;coordinate_map&#39;</span><span class="p">,</span> <span class="s1">&#39;_in_sites&#39;</span><span class="p">)</span>
+                     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_QuanticsVector</span><span class="p">)</span>
+                     <span class="k">else</span> <span class="p">(</span><span class="s1">&#39;in_layout&#39;</span><span class="p">,</span> <span class="s1">&#39;out_layout&#39;</span><span class="p">,</span>
+                           <span class="s1">&#39;in_coordinate_map&#39;</span><span class="p">,</span> <span class="s1">&#39;out_coordinate_map&#39;</span><span class="p">,</span>
+                           <span class="s1">&#39;_in_sites&#39;</span><span class="p">,</span> <span class="s1">&#39;_out_sites&#39;</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="ow">not</span> <span class="n">_equal_structure</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
+                                        <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+                   <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;Quantics layouts and coordinate maps should match&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_new_from_standard_cores</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                 <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                                 <span class="n">in_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                                 <span class="n">out_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+                                 <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                                 <span class="n">cyclic</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                                 <span class="n">other</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TensorFormat1D</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                 <span class="n">product</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorFormat1D</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Constructs algebra results with their input and output coordinate maps.&quot;&quot;&quot;</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="n">_restore_cores</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">,</span> <span class="n">out_dim</span><span class="p">,</span> <span class="n">n_batches</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">out_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">cls</span> <span class="o">=</span> <span class="n">QTRM</span> <span class="k">if</span> <span class="n">cyclic</span> <span class="k">else</span> <span class="n">QTTM</span>
+            <span class="n">input_format</span> <span class="o">=</span> <span class="n">other</span> <span class="k">if</span> <span class="n">product</span> <span class="k">else</span> <span class="bp">self</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+                <span class="n">cores</span><span class="o">=</span><span class="n">cores</span><span class="p">,</span>
+                <span class="n">in_n_coordinates</span><span class="o">=</span><span class="n">input_format</span><span class="o">.</span><span class="n">in_layout</span><span class="o">.</span><span class="n">n_coordinates</span><span class="p">,</span>
+                <span class="n">out_n_coordinates</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">out_layout</span><span class="o">.</span><span class="n">n_coordinates</span><span class="p">,</span>
+                <span class="n">in_layout</span><span class="o">=</span><span class="n">input_format</span><span class="o">.</span><span class="n">in_layout</span><span class="p">,</span>
+                <span class="n">out_layout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">out_layout</span><span class="p">,</span>
+                <span class="n">in_coordinate_map</span><span class="o">=</span><span class="n">input_format</span><span class="o">.</span><span class="n">in_coordinate_map</span><span class="p">,</span>
+                <span class="n">out_coordinate_map</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">out_coordinate_map</span><span class="p">,</span>
+                <span class="n">n_batches</span><span class="o">=</span><span class="n">n_batches</span><span class="p">,</span>
+                <span class="n">in_sites</span><span class="o">=</span><span class="n">input_format</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">,</span>
+                <span class="n">out_sites</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_out_sites</span><span class="p">)</span>
+
+        <span class="bp">cls</span> <span class="o">=</span> <span class="n">QTR</span> <span class="k">if</span> <span class="n">cyclic</span> <span class="k">else</span> <span class="n">QTT</span>
+        <span class="n">layout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_layout</span> <span class="k">if</span> <span class="n">product</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">layout</span>
+        <span class="n">coordinate_map</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_coordinate_map</span> <span class="k">if</span> <span class="n">product</span>
+                          <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">coordinate_map</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">cores</span><span class="o">=</span><span class="n">cores</span><span class="p">,</span>
+                   <span class="n">n_coordinates</span><span class="o">=</span><span class="n">layout</span><span class="o">.</span><span class="n">n_coordinates</span><span class="p">,</span>
+                   <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">,</span>
+                   <span class="n">coordinate_map</span><span class="o">=</span><span class="n">coordinate_map</span><span class="p">,</span>
+                   <span class="n">n_batches</span><span class="o">=</span><span class="n">n_batches</span><span class="p">,</span>
+                   <span class="n">in_sites</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_out_sites</span> <span class="k">if</span> <span class="n">product</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_QuanticsVector</span><span class="p">(</span><span class="n">_QuanticsFormat</span><span class="p">):</span>  <span class="c1"># MARK: _QuanticsVector</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Coordinate semantics shared by open and cyclic Quantics vectors.&quot;&quot;&quot;</span>
+
+    <span class="n">_coordinate_names</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;coordinate_map&#39;</span><span class="p">,)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                 <span class="n">n_coordinates</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="o">*</span><span class="p">,</span>
+                 <span class="n">base</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">level</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">domain</span><span class="p">:</span> <span class="n">Domain</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">grid_coordinates</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span>
+                     <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">layout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">QuantizedLayout</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">coordinate_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">CoordinateMap</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                 <span class="n">bonds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">in_sites</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">coordinate_map</span> <span class="o">=</span> <span class="n">_resolve_quantization</span><span class="p">(</span>
+            <span class="n">n_coordinates</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="n">base</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">level</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="n">domain</span><span class="p">,</span>
+            <span class="n">grid_coordinates</span><span class="o">=</span><span class="n">grid_coordinates</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">,</span>
+            <span class="n">coordinate_map</span><span class="o">=</span><span class="n">coordinate_map</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_coordinates</span> <span class="o">=</span> <span class="n">n_coordinates</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span> <span class="o">=</span> <span class="n">in_sites</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">n_batches</span><span class="o">=</span><span class="n">n_batches</span><span class="p">,</span>
+                         <span class="n">bonds</span><span class="o">=</span><span class="n">bonds</span><span class="p">,</span> <span class="n">in_sites</span><span class="o">=</span><span class="n">in_sites</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_sites</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sites</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+                        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Checks that the sites cover all digits in layout order.&quot;&quot;&quot;</span>
+        <span class="n">sites</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_validate_sites</span><span class="p">(</span><span class="n">sites</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sites</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">tuple</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">sites</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">in_dim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`in_sites` should contain all digit sites in layout order, &#39;</span>
+                <span class="s1">&#39;with dimensions matching `layout.in_dim`&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sites</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_new_from_standard_cores</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                 <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                                 <span class="n">in_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                                 <span class="n">out_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+                                 <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                                 <span class="n">cyclic</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                                 <span class="n">other</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TensorFormat1D</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                 <span class="n">product</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorFormat1D</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Preserves Quantics vector orientation in algebra results.&quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_new_from_standard_cores</span><span class="p">(</span>
+            <span class="n">cores</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">,</span> <span class="n">out_dim</span><span class="p">,</span> <span class="n">n_batches</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">,</span>
+            <span class="n">other</span><span class="o">=</span><span class="n">other</span><span class="p">,</span> <span class="n">product</span><span class="o">=</span><span class="n">product</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">product</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">_is_row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_row</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_new_outer_product</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                           <span class="n">other</span><span class="p">:</span> <span class="n">_VectorFormat1D</span><span class="p">,</span>
+                           <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                           <span class="n">cyclic</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;QTTM&#39;</span><span class="p">,</span> <span class="s1">&#39;QTRM&#39;</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Builds an operator with the row&#39;s inputs and this column&#39;s outputs.&quot;&quot;&quot;</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="n">_restore_cores</span><span class="p">(</span>
+            <span class="n">cores</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">_in_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span><span class="p">,</span> <span class="n">n_batches</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">)</span>
+        <span class="bp">cls</span> <span class="o">=</span> <span class="n">QTRM</span> <span class="k">if</span> <span class="n">cyclic</span> <span class="k">else</span> <span class="n">QTTM</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">cores</span><span class="o">=</span><span class="n">cores</span><span class="p">,</span>
+                   <span class="n">in_n_coordinates</span><span class="o">=</span><span class="n">other</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">n_coordinates</span><span class="p">,</span>
+                   <span class="n">out_n_coordinates</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">n_coordinates</span><span class="p">,</span>
+                   <span class="n">in_layout</span><span class="o">=</span><span class="n">other</span><span class="o">.</span><span class="n">layout</span><span class="p">,</span>
+                   <span class="n">out_layout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">,</span>
+                   <span class="n">in_coordinate_map</span><span class="o">=</span><span class="n">other</span><span class="o">.</span><span class="n">coordinate_map</span><span class="p">,</span>
+                   <span class="n">out_coordinate_map</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinate_map</span><span class="p">,</span>
+                   <span class="n">n_batches</span><span class="o">=</span><span class="n">n_batches</span><span class="p">,</span>
+                   <span class="n">in_sites</span><span class="o">=</span><span class="n">other</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">,</span>
+                   <span class="n">out_sites</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorFormat1D</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validates cores and their Quantics digit-layout dimensions.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TensorFormat1D`</span>
+<span class="sd">            The current format. Invalid controlled replacement restores prior</span>
+<span class="sd">            metadata.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">validate</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_sites</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">,</span> <span class="s1">&#39;in_sites&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate_digits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">digits</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluates complete digit configurations at ``in_sites``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        digits : torch.Tensor</span>
+<span class="sd">            Integer digit configurations in layout schedule order, with shape</span>
+<span class="sd">            ``(*data_batch, layout.n_sites)``. Every digit should lie within</span>
+<span class="sd">            its site base. Digit ``digits[..., i]`` evaluates the core at</span>
+<span class="sd">            ``in_sites[i]``; the layout orders the digit values, while</span>
+<span class="sd">            ``in_sites`` locates their cores.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Values with shape ``(*core_batch, *data_batch, *out_shape)``.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; format = tk.formats.QTT([torch.eye(2), torch.eye(2)], 1,</span>
+<span class="sd">        ...     base=2, level=2, domain=torch.tensor([0., 1.]))</span>
+<span class="sd">        &gt;&gt;&gt; format.evaluate_digits(torch.tensor([[0, 0], [0, 1], [1, 1]])).tolist()</span>
+<span class="sd">        [1.0, 0.0, 1.0]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">digits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">_validate_digits</span><span class="p">(</span><span class="n">digits</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">digits</span><span class="p">,</span> <span class="n">n_batches</span><span class="o">=</span><span class="n">digits</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluates original coordinate index configurations.</span>
+
+<span class="sd">        Encodes indices through</span>
+<span class="sd">        :meth:`~tensorkrowch.formats.QuantizedLayout.encode_indices` and calls</span>
+<span class="sd">        :meth:`evaluate_digits`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        indices : torch.Tensor</span>
+<span class="sd">            Integer grid indices with shape ``(*data_batch, n_coordinates)``;</span>
+<span class="sd">            each value lies in ``[0, grid_size[coordinate] - 1]``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Values with shape ``(*core_batch, *data_batch, *out_shape)``.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; layout = tk.formats.QuantizedLayout(1, 2, 2)</span>
+<span class="sd">        &gt;&gt;&gt; coordinate_map = tk.formats.AffineCoordinateMap(</span>
+<span class="sd">        ...     domain=torch.tensor([0., 1.]), grid_size=layout.grid_size)</span>
+<span class="sd">        &gt;&gt;&gt; format = tk.formats.QTT([torch.eye(2), torch.eye(2)], 1,</span>
+<span class="sd">        ...     layout=layout, coordinate_map=coordinate_map)</span>
+<span class="sd">        &gt;&gt;&gt; format.evaluate_indices(torch.tensor([[0], [3]])).tolist()</span>
+<span class="sd">        [1.0, 1.0]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluate_digits</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">encode_indices</span><span class="p">(</span><span class="n">indices</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coordinates</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluates coordinate configurations in the domain.</span>
+
+<span class="sd">        The coordinate map quantizes the inputs using its stored grid</span>
+<span class="sd">        and out-of-domain policy.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        coordinates : torch.Tensor</span>
+<span class="sd">            Finite coordinates in the domain with shape</span>
+<span class="sd">            ``(*data_batch, n_coordinates)``. A coordinate map is required.</span>
+<span class="sd">            Coordinates are quantized to the computational grid; no</span>
+<span class="sd">            interpolation of the represented function is performed.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Values with shape ``(*core_batch, *data_batch, *out_shape)``.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; layout = tk.formats.QuantizedLayout(1, 2, 2)</span>
+<span class="sd">        &gt;&gt;&gt; format = tk.formats.QTT([torch.eye(2), torch.eye(2)], 1,</span>
+<span class="sd">        ...     layout=layout, coordinate_map=tk.formats.AffineCoordinateMap(</span>
+<span class="sd">        ...         domain=torch.tensor([0., 3.]), grid_size=layout.grid_size))</span>
+<span class="sd">        &gt;&gt;&gt; format.evaluate_coordinates(torch.tensor([[0.], [3.]])).tolist()</span>
+<span class="sd">        [1.0, 1.0]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coordinate_map</span><span class="o">.</span><span class="n">to_indices</span><span class="p">(</span><span class="n">coordinates</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluate_indices</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">contract_dense_grid_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts the tensor and combines digits into original grid axes.</span>
+
+<span class="sd">        Returns one axis per original coordinate, combining its digits and</span>
+<span class="sd">        restoring coordinate order independently of the layout schedule.</span>
+<span class="sd">        Axes outside ``in_sites`` follow the grid axes. In contrast,</span>
+<span class="sd">        :meth:`contract_dense` returns one axis per core in chain order.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Values with shape ``(*core_batch, *grid_size, *out_shape)``, in</span>
+<span class="sd">            original coordinate order followed by axes outside ``in_sites``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sites</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sites</span><span class="p">)),</span> <span class="n">key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">sites</span><span class="p">()</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">)</span>
+        <span class="n">out_sites</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">site</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)</span>
+                          <span class="k">if</span> <span class="n">site</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sites</span><span class="p">)</span>
+        <span class="n">dense</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span>
+            <span class="o">*</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span><span class="p">),</span>
+            <span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span> <span class="o">+</span> <span class="n">sites</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">order</span><span class="p">),</span>
+            <span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span> <span class="o">+</span> <span class="n">site</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">out_sites</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">dense</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_batch_shape</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">grid_size</span><span class="p">,</span>
+                             <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">out_shape</span><span class="p">)</span>
+
+
+
+<div class="viewcode-block" id="QTT"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTT">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">QTT</span><span class="p">(</span><span class="n">_QuanticsVector</span><span class="p">,</span> <span class="n">TT</span><span class="p">):</span>  <span class="c1"># MARK: QTT</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Quantics tensor train with a :class:`~tensorkrowch.formats.QuantizedLayout`</span>
+<span class="sd">    and a :class:`~tensorkrowch.formats.CoordinateMap`.</span>
+
+<span class="sd">    ``in_sites`` contains all digit sites in layout order; partial digit</span>
+<span class="sd">    evaluation is not supported. Normally every core represents a digit site.</span>
+<span class="sd">    Tensor-valued functions may add cores outside ``in_sites``, whose axes</span>
+<span class="sd">    remain open during evaluation and define ``out_shape``.</span>
+
+<span class="sd">    Shorthand construction uses ``base``, ``level`` and either ``domain`` or</span>
+<span class="sd">    ``grid_coordinates``. Its layout is ``interleaved`` and ``coarse_to_fine``;</span>
+<span class="sd">    domain intervals produce an affine map with ``grid_offset=&quot;left&quot;``. For other</span>
+<span class="sd">    choices, supply ``layout`` and ``coordinate_map`` explicitly.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Core tensors with the shapes described in :class:`~tensorkrowch.formats.TT`.</span>
+<span class="sd">        The container is copied; tensors retain storage and autograd.</span>
+<span class="sd">    n_coordinates : int</span>
+<span class="sd">        Number of original input coordinates.</span>
+<span class="sd">    base : int or sequence of int, optional</span>
+<span class="sd">        Digit bases for shorthand construction. Required together with ``level``</span>
+<span class="sd">        and either ``domain`` or ``grid_coordinates``.</span>
+<span class="sd">    level : int or sequence of int, optional</span>
+<span class="sd">        Number of digits per coordinate for shorthand construction.</span>
+<span class="sd">    domain : torch.Tensor or sequence of torch.Tensor, optional</span>
+<span class="sd">        Intervals used to build an :class:`~tensorkrowch.formats.AffineCoordinateMap`</span>
+<span class="sd">        with ``grid_offset=&quot;left&quot;``. Cannot be combined with</span>
+<span class="sd">        ``grid_coordinates`` or</span>
+<span class="sd">        prebuilt objects.</span>
+<span class="sd">    grid_coordinates : torch.Tensor or sequence of torch.Tensor, optional</span>
+<span class="sd">        Grid points in the domain, used to build an</span>
+<span class="sd">        :class:`~tensorkrowch.formats.ExplicitGridMap`. A vector describes one</span>
+<span class="sd">        coordinate; a matrix or sequence of vectors describes multiple</span>
+<span class="sd">        coordinates. Sizes must equal ``base ** level`` exactly.</span>
+<span class="sd">    layout : :class:`~tensorkrowch.formats.QuantizedLayout`, optional</span>
+<span class="sd">        Prebuilt digit layout, supplied together with ``coordinate_map``.</span>
+<span class="sd">        Cannot be combined with shorthand construction arguments.</span>
+<span class="sd">    coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional</span>
+<span class="sd">        Prebuilt map containing the domain, grid and conversion policy.</span>
+<span class="sd">        Its ``grid_size`` must match ``layout.grid_size``.</span>
+<span class="sd">    n_batches : int</span>
+<span class="sd">        Number of leading structural batch axes shared by the cores.</span>
+<span class="sd">        Independent of data batches during evaluation.</span>
+<span class="sd">    bonds : sequence of torch.Tensor or None, optional</span>
+<span class="sd">        Diagonal factors between cores, as in the corresponding plain format.</span>
+<span class="sd">    in_sites : sequence[int], optional</span>
+<span class="sd">        Ordered core positions for all digits generated by ``layout``.</span>
+<span class="sd">        Digit at position ``i`` evaluates ``in_sites[i]``; the positions</span>
+<span class="sd">        need not be increasing. Defaults to all cores in increasing</span>
+<span class="sd">        order. Specify these sites when additional cores remain open.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    First, discretize domain coordinates into indices on a four-point grid:</span>
+
+<span class="sd">    &gt;&gt;&gt; coordinate_map = tk.formats.AffineCoordinateMap(</span>
+<span class="sd">    ...     domain=torch.tensor([0., 1.]), grid_size=(4,))</span>
+<span class="sd">    &gt;&gt;&gt; coordinates = torch.tensor([[0.], [0.25], [0.75]])</span>
+<span class="sd">    &gt;&gt;&gt; indices = coordinate_map.to_indices(coordinates)</span>
+<span class="sd">    &gt;&gt;&gt; indices.tolist()</span>
+<span class="sd">    [[0], [1], [3]]</span>
+
+<span class="sd">    Then, expand each index into two binary digits, one per TT site:</span>
+
+<span class="sd">    &gt;&gt;&gt; layout = tk.formats.QuantizedLayout(1, base=2, level=2)</span>
+<span class="sd">    &gt;&gt;&gt; layout.encode_indices(indices).tolist()</span>
+<span class="sd">    [[0, 0], [0, 1], [1, 1]]</span>
+
+<span class="sd">    Finally, construct the QTT with these objects and evaluate the coordinates:</span>
+
+<span class="sd">    &gt;&gt;&gt; format = tk.formats.QTT([torch.eye(2), torch.eye(2)], 1,</span>
+<span class="sd">    ...     layout=layout, coordinate_map=coordinate_map)</span>
+<span class="sd">    &gt;&gt;&gt; format.evaluate_coordinates(coordinates).tolist()</span>
+<span class="sd">    [1.0, 0.0, 1.0]</span>
+
+<span class="sd">    With two coordinates, interleave their digits and evaluate both together:</span>
+
+<span class="sd">    &gt;&gt;&gt; coordinate_map = tk.formats.AffineCoordinateMap(</span>
+<span class="sd">    ...     domain=torch.tensor([0., 1.]), grid_size=(4, 4))</span>
+<span class="sd">    &gt;&gt;&gt; layout = tk.formats.QuantizedLayout(2, base=2, level=2)</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.tensor([[1.], [2.]]), torch.ones(1, 2, 1),</span>
+<span class="sd">    ...          torch.ones(1, 2, 1), torch.tensor([[3., 4.]])]</span>
+<span class="sd">    &gt;&gt;&gt; format = tk.formats.QTT(cores, 2,</span>
+<span class="sd">    ...     layout=layout, coordinate_map=coordinate_map)</span>
+<span class="sd">    &gt;&gt;&gt; coordinates = torch.tensor([[0., 0.], [0.5, 0.25]])</span>
+<span class="sd">    &gt;&gt;&gt; layout.encode_indices(coordinate_map.to_indices(coordinates)).tolist()</span>
+<span class="sd">    [[0, 0, 0, 0], [1, 0, 0, 1]]</span>
+<span class="sd">    &gt;&gt;&gt; format.evaluate_coordinates(coordinates).tolist()</span>
+<span class="sd">    [3.0, 8.0]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="QTT.to_tt"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTT.to_tt">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_tt</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TT</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Drops Quantics metadata while retaining the represented tensor.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TT`</span>
+<span class="sd">            Plain raw-tensor format sharing tensor storage. Coordinate maps,</span>
+<span class="sd">            domains and digit-layout semantics are not retained.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_format</span><span class="p">(</span><span class="n">TT</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="QTR"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTR">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">QTR</span><span class="p">(</span><span class="n">_QuanticsVector</span><span class="p">,</span> <span class="n">TR</span><span class="p">):</span>  <span class="c1"># MARK: QTR</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Quantics tensor ring with a :class:`~tensorkrowch.formats.QuantizedLayout`</span>
+<span class="sd">    and a :class:`~tensorkrowch.formats.CoordinateMap`.</span>
+
+<span class="sd">    ``in_sites`` contains all digit sites in layout order; partial digit</span>
+<span class="sd">    evaluation is not supported. Normally every core represents a digit site.</span>
+<span class="sd">    Tensor-valued functions may add cores outside ``in_sites``, whose axes</span>
+<span class="sd">    remain open during evaluation and define ``out_shape``.</span>
+
+<span class="sd">    Shorthand construction uses ``base``, ``level`` and either ``domain`` or</span>
+<span class="sd">    ``grid_coordinates``. Its layout is ``interleaved`` and ``coarse_to_fine``;</span>
+<span class="sd">    domain intervals produce an affine map with ``grid_offset=&quot;left&quot;``. For other</span>
+<span class="sd">    choices, supply ``layout`` and ``coordinate_map`` explicitly.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Core tensors with the shapes described in :class:`~tensorkrowch.formats.TR`.</span>
+<span class="sd">        The container is copied; tensors retain storage and autograd.</span>
+<span class="sd">    n_coordinates : int</span>
+<span class="sd">        Number of original input coordinates.</span>
+<span class="sd">    base : int or sequence of int, optional</span>
+<span class="sd">        Digit bases for shorthand construction. Required together with ``level``</span>
+<span class="sd">        and either ``domain`` or ``grid_coordinates``.</span>
+<span class="sd">    level : int or sequence of int, optional</span>
+<span class="sd">        Number of digits per coordinate for shorthand construction.</span>
+<span class="sd">    domain : torch.Tensor or sequence of torch.Tensor, optional</span>
+<span class="sd">        Intervals used to build an :class:`~tensorkrowch.formats.AffineCoordinateMap`</span>
+<span class="sd">        with ``grid_offset=&quot;left&quot;``. Cannot be combined with</span>
+<span class="sd">        ``grid_coordinates`` or</span>
+<span class="sd">        prebuilt objects.</span>
+<span class="sd">    grid_coordinates : torch.Tensor or sequence of torch.Tensor, optional</span>
+<span class="sd">        Grid points in the domain, used to build an</span>
+<span class="sd">        :class:`~tensorkrowch.formats.ExplicitGridMap`. A vector describes one</span>
+<span class="sd">        coordinate; a matrix or sequence of vectors describes multiple</span>
+<span class="sd">        coordinates. Sizes must equal ``base ** level`` exactly.</span>
+<span class="sd">    layout : :class:`~tensorkrowch.formats.QuantizedLayout`, optional</span>
+<span class="sd">        Prebuilt digit layout, supplied together with ``coordinate_map``.</span>
+<span class="sd">        Cannot be combined with shorthand construction arguments.</span>
+<span class="sd">    coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional</span>
+<span class="sd">        Prebuilt map containing the domain, grid and conversion policy.</span>
+<span class="sd">        Its ``grid_size`` must match ``layout.grid_size``.</span>
+<span class="sd">    n_batches : int</span>
+<span class="sd">        Number of leading structural batch axes shared by the cores.</span>
+<span class="sd">        Independent of data batches during evaluation.</span>
+<span class="sd">    bonds : sequence of torch.Tensor or None, optional</span>
+<span class="sd">        Diagonal factors between cores, as in the corresponding plain format.</span>
+<span class="sd">    in_sites : sequence[int], optional</span>
+<span class="sd">        Ordered core positions for all digits generated by ``layout``.</span>
+<span class="sd">        Digit at position ``i`` evaluates ``in_sites[i]``; the positions</span>
+<span class="sd">        need not be increasing. Defaults to all cores in increasing</span>
+<span class="sd">        order. Specify these sites when additional cores remain open.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    First, discretize domain coordinates into indices on a four-point grid:</span>
+
+<span class="sd">    &gt;&gt;&gt; coordinate_map = tk.formats.AffineCoordinateMap(</span>
+<span class="sd">    ...     domain=torch.tensor([0., 1.]), grid_size=(4,))</span>
+<span class="sd">    &gt;&gt;&gt; coordinates = torch.tensor([[0.], [0.25], [0.75]])</span>
+<span class="sd">    &gt;&gt;&gt; indices = coordinate_map.to_indices(coordinates)</span>
+<span class="sd">    &gt;&gt;&gt; indices.tolist()</span>
+<span class="sd">    [[0], [1], [3]]</span>
+
+<span class="sd">    Then, expand each index into two binary digits, one per ring site:</span>
+
+<span class="sd">    &gt;&gt;&gt; layout = tk.formats.QuantizedLayout(1, base=2, level=2)</span>
+<span class="sd">    &gt;&gt;&gt; layout.encode_indices(indices).tolist()</span>
+<span class="sd">    [[0, 0], [0, 1], [1, 1]]</span>
+
+<span class="sd">    Finally, construct a ring whose cores select matching digits:</span>
+
+<span class="sd">    &gt;&gt;&gt; core = torch.tensor([[[1., 0.], [0., 0.]],</span>
+<span class="sd">    ...                      [[0., 0.], [0., 1.]]])</span>
+<span class="sd">    &gt;&gt;&gt; format = tk.formats.QTR([core, core], 1,</span>
+<span class="sd">    ...     layout=layout, coordinate_map=coordinate_map)</span>
+<span class="sd">    &gt;&gt;&gt; format.evaluate_coordinates(coordinates).tolist()</span>
+<span class="sd">    [1.0, 0.0, 1.0]</span>
+
+<span class="sd">    With two coordinates, interleave their digits and evaluate both together:</span>
+
+<span class="sd">    &gt;&gt;&gt; coordinate_map = tk.formats.AffineCoordinateMap(</span>
+<span class="sd">    ...     domain=torch.tensor([0., 1.]), grid_size=(4, 4))</span>
+<span class="sd">    &gt;&gt;&gt; layout = tk.formats.QuantizedLayout(2, base=2, level=2)</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.tensor([1., 2.]).reshape(1, 2, 1),</span>
+<span class="sd">    ...          torch.ones(1, 2, 1), torch.ones(1, 2, 1),</span>
+<span class="sd">    ...          torch.tensor([3., 4.]).reshape(1, 2, 1)]</span>
+<span class="sd">    &gt;&gt;&gt; format = tk.formats.QTR(cores, 2,</span>
+<span class="sd">    ...     layout=layout, coordinate_map=coordinate_map)</span>
+<span class="sd">    &gt;&gt;&gt; coordinates = torch.tensor([[0., 0.], [0.5, 0.25]])</span>
+<span class="sd">    &gt;&gt;&gt; layout.encode_indices(coordinate_map.to_indices(coordinates)).tolist()</span>
+<span class="sd">    [[0, 0, 0, 0], [1, 0, 0, 1]]</span>
+<span class="sd">    &gt;&gt;&gt; format.evaluate_coordinates(coordinates).tolist()</span>
+<span class="sd">    [3.0, 8.0]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="QTR.to_tr"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTR.to_tr">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_tr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TR</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Drops Quantics metadata while retaining the represented tensor.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TR`</span>
+<span class="sd">            Plain raw-tensor format sharing tensor storage. Coordinate maps,</span>
+<span class="sd">            domains and digit-layout semantics are not retained.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_format</span><span class="p">(</span><span class="n">TR</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="QTR.to_qtt"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTR.to_qtt">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_qtt</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QTT</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Opens the ring while preserving its digit layout and coordinate map.</span>
+
+<span class="sd">        Carries the closing index through the chain, as in</span>
+<span class="sd">        :meth:`~tensorkrowch.formats.TR.to_tt`, without truncation or dense</span>
+<span class="sd">        reconstruction.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :class:`~tensorkrowch.formats.QTT`</span>
+<span class="sd">            Open Quantics format representing the same values, with structural</span>
+<span class="sd">            batches and vector orientation preserved.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_tt</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="QTR.to_tt"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTR.to_tt">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_tt</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TT</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Requires an explicit choice about retaining Quantics information.</span>
+
+<span class="sd">        Use :meth:`to_qtt` to open the ring while retaining Quantics, or</span>
+<span class="sd">        :meth:`to_tr` to remove Quantics while retaining the ring. To obtain</span>
+<span class="sd">        a plain TT, call ``to_qtt().to_tt()`` or ``to_tr().to_tt()``.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        NotImplementedError</span>
+<span class="sd">            Direct conversion is disabled to make the intended format explicit.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="s1">&#39;Use `to_qtt()` to retain Quantics, or `to_qtt().to_tt()` &#39;</span>
+            <span class="s1">&#39;or `to_tr().to_tt()` to obtain a plain TT&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="QTR.rotate"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTR.rotate">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">rotate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">first</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;QTR&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Rotates ring cores and updates ``in_sites`` in layout order.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        first : int</span>
+<span class="sd">            Site that becomes index zero, in ``[0, n_sites - 1]``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :class:`~tensorkrowch.formats.QTR`</span>
+<span class="sd">            Rotated format preserving evaluations at coordinates in the</span>
+<span class="sd">            original domain. Axes outside ``in_sites`` follow the new chain</span>
+<span class="sd">            order and may be permuted when there are several.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`first` should be int type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">first</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`first` should lie inside the format&#39;</span><span class="p">)</span>
+
+        <span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">[</span><span class="n">first</span><span class="p">:],</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">[:</span><span class="n">first</span><span class="p">]]</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">QTR</span><span class="p">(</span><span class="n">cores</span><span class="o">=</span><span class="n">cores</span><span class="p">,</span>
+                     <span class="n">n_coordinates</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">n_coordinates</span><span class="p">,</span>
+                     <span class="n">layout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">layout</span><span class="p">,</span>
+                     <span class="n">coordinate_map</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinate_map</span><span class="p">,</span>
+                     <span class="n">n_batches</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span><span class="p">,</span>
+                     <span class="n">in_sites</span><span class="o">=</span><span class="nb">tuple</span><span class="p">((</span><span class="n">site</span> <span class="o">-</span> <span class="n">first</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span>
+                                    <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">))</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">_is_row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_row</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bonds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">factors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bonds</span><span class="o">.</span><span class="n">factors</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">bonds</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="n">factors</span><span class="p">[</span><span class="n">first</span><span class="p">:],</span> <span class="o">*</span><span class="n">factors</span><span class="p">[:</span><span class="n">first</span><span class="p">]]</span>
+
+        <span class="k">return</span> <span class="n">result</span></div></div>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_QuanticsMatrix</span><span class="p">(</span><span class="n">_QuanticsFormat</span><span class="p">):</span>  <span class="c1"># MARK: _QuanticsMatrix</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Input/output digit layouts with independent sites on each matrix side.&quot;&quot;&quot;</span>
+
+    <span class="n">_coordinate_names</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;in_coordinate_map&#39;</span><span class="p">,</span> <span class="s1">&#39;out_coordinate_map&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                 <span class="n">in_n_coordinates</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">out_n_coordinates</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="o">*</span><span class="p">,</span>
+                 <span class="n">in_base</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">out_base</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">in_level</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">out_level</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">in_domain</span><span class="p">:</span> <span class="n">Domain</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">out_domain</span><span class="p">:</span> <span class="n">Domain</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">in_grid_coordinates</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span>
+                     <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">out_grid_coordinates</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span>
+                     <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">in_layout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">QuantizedLayout</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">out_layout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">QuantizedLayout</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">in_coordinate_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">CoordinateMap</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">out_coordinate_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">CoordinateMap</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                 <span class="n">bonds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">in_sites</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">out_sites</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+                 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_layout</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_coordinate_map</span> <span class="o">=</span> <span class="n">_resolve_quantization</span><span class="p">(</span>
+            <span class="n">in_n_coordinates</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="n">in_base</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">in_level</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="n">in_domain</span><span class="p">,</span>
+            <span class="n">grid_coordinates</span><span class="o">=</span><span class="n">in_grid_coordinates</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">in_layout</span><span class="p">,</span>
+            <span class="n">coordinate_map</span><span class="o">=</span><span class="n">in_coordinate_map</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_layout</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_coordinate_map</span> <span class="o">=</span> <span class="n">_resolve_quantization</span><span class="p">(</span>
+            <span class="n">out_n_coordinates</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="n">out_base</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">out_level</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="n">out_domain</span><span class="p">,</span>
+            <span class="n">grid_coordinates</span><span class="o">=</span><span class="n">out_grid_coordinates</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">out_layout</span><span class="p">,</span>
+            <span class="n">coordinate_map</span><span class="o">=</span><span class="n">out_coordinate_map</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_n_coordinates</span> <span class="o">=</span> <span class="n">in_n_coordinates</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_n_coordinates</span> <span class="o">=</span> <span class="n">out_n_coordinates</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_sites</span> <span class="o">=</span> <span class="n">in_sites</span><span class="p">,</span> <span class="n">out_sites</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">n_batches</span><span class="o">=</span><span class="n">n_batches</span><span class="p">,</span> <span class="n">bonds</span><span class="o">=</span><span class="n">bonds</span><span class="p">,</span>
+                         <span class="n">in_sites</span><span class="o">=</span><span class="n">in_sites</span><span class="p">,</span> <span class="n">out_sites</span><span class="o">=</span><span class="n">out_sites</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_sites</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sites</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+                        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Checks that each matrix side evaluates every digit in layout order.&quot;&quot;&quot;</span>
+        <span class="n">sites</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_validate_sites</span><span class="p">(</span><span class="n">sites</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">layout_name</span> <span class="o">=</span> <span class="s1">&#39;in_layout&#39;</span> <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;in_sites&#39;</span> <span class="k">else</span> <span class="s1">&#39;out_layout&#39;</span>
+        <span class="n">layout</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layout_name</span><span class="p">)</span>
+        <span class="n">dimensions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span> <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;in_sites&#39;</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sites</span><span class="p">)</span> <span class="o">!=</span> <span class="n">layout</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">tuple</span><span class="p">(</span>
+                <span class="n">dimensions</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">sites</span><span class="p">)</span> <span class="o">!=</span> <span class="n">layout</span><span class="o">.</span><span class="n">in_dim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should contain all digit sites in layout order, &#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;with dimensions matching `</span><span class="si">{</span><span class="n">layout_name</span><span class="si">}</span><span class="s1">.in_dim`&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sites</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorFormat1D</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validates cores and their Quantics digit-layout dimensions.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TensorFormat1D`</span>
+<span class="sd">            The current format. Invalid controlled replacement restores prior</span>
+<span class="sd">            metadata.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">validate</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_sites</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">,</span> <span class="s1">&#39;in_sites&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out_sites</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_sites</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_out_sites</span><span class="p">,</span> <span class="s1">&#39;out_sites&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">transpose</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;QTTM&#39;</span><span class="p">,</span> <span class="s1">&#39;QTRM&#39;</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Swaps local matrix input/output axes without reversing sites.</span>
+
+<span class="sd">        Also available through the :attr:`T` property.</span>
+
+<span class="sd">        The result keeps the concrete format class and its methods. Its core</span>
+<span class="sd">        and bond containers are independent, sharing tensor storage.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :class:`~tensorkrowch.formats.QTTM` or :class:`~tensorkrowch.formats.QTRM`</span>
+<span class="sd">            Separate format sharing tensor storage. Sites retain their order.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; layout = tk.formats.QuantizedLayout(1, 2, 1)</span>
+<span class="sd">        &gt;&gt;&gt; core = torch.tensor([[1+2j, 3+4j], [5+6j, 7+8j]])</span>
+<span class="sd">        &gt;&gt;&gt; coordinate_map = tk.formats.AffineCoordinateMap(</span>
+<span class="sd">        ...     domain=torch.tensor([0., 1.]), grid_size=layout.grid_size)</span>
+<span class="sd">        &gt;&gt;&gt; matrix = tk.formats.QTTM([core], 1, 1,</span>
+<span class="sd">        ...     in_layout=layout, out_layout=layout,</span>
+<span class="sd">        ...     in_coordinate_map=coordinate_map,</span>
+<span class="sd">        ...     out_coordinate_map=coordinate_map)</span>
+<span class="sd">        &gt;&gt;&gt; matrix.transpose().contract_dense().tolist()</span>
+<span class="sd">        [[(1+2j), (5+6j)], [(3+4j), (7+8j)]]</span>
+<span class="sd">        &gt;&gt;&gt; torch.equal(matrix.T.contract_dense(),</span>
+<span class="sd">        ...             matrix.transpose().contract_dense())</span>
+<span class="sd">        True</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">in_n_coordinates</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">out_n_coordinates</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out_n_coordinates</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_n_coordinates</span><span class="p">)</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">in_layout</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">out_layout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_layout</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_layout</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">in_coordinate_map</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">out_coordinate_map</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out_coordinate_map</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_coordinate_map</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate_digits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                        <span class="n">in_digits</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                        <span class="n">out_digits</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluates matrix entries using paired digits.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        in_digits : torch.Tensor</span>
+<span class="sd">            Input digits with shape ``(*data_batch, in_layout.n_sites)``.</span>
+<span class="sd">            Values follow ``in_layout`` and should lie within each site base.</span>
+<span class="sd">            Digit ``in_digits[..., i]`` evaluates the input axis at</span>
+<span class="sd">            ``in_sites[i]``.</span>
+<span class="sd">        out_digits : torch.Tensor</span>
+<span class="sd">            Output digits with shape ``(*data_batch, out_layout.n_sites)``,</span>
+<span class="sd">            ordered by ``out_layout`` and within the output site bases.</span>
+<span class="sd">            Digit ``out_digits[..., i]`` evaluates the output axis at</span>
+<span class="sd">            ``out_sites[i]``. Data batches match the inputs.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Values with shape ``(*core_batch, *data_batch, *out_shape)``.</span>
+<span class="sd">            Axes outside ``in_sites`` precede axes outside ``out_sites``,</span>
+<span class="sd">            each in chain order.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">in_digits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_layout</span><span class="o">.</span><span class="n">_validate_digits</span><span class="p">(</span><span class="n">in_digits</span><span class="p">)</span>
+        <span class="n">out_digits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_layout</span><span class="o">.</span><span class="n">_validate_digits</span><span class="p">(</span><span class="n">out_digits</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">in_digits</span><span class="p">,</span> <span class="n">out_digits</span><span class="p">,</span>
+                             <span class="n">n_batches</span><span class="o">=</span><span class="n">in_digits</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                         <span class="n">in_indices</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                         <span class="n">out_indices</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluates matrix entries using paired indices.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        in_indices : torch.Tensor</span>
+<span class="sd">            Input indices with shape ``(*data_batch, in_layout.n_coordinates)``.</span>
+<span class="sd">            Indices lie within the grid bounds of each original input coordinate.</span>
+<span class="sd">        out_indices : torch.Tensor</span>
+<span class="sd">            Output indices with shape</span>
+<span class="sd">            ``(*data_batch, out_layout.n_coordinates)``, within the output grid</span>
+<span class="sd">            bounds. Data batches match the inputs.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Values with shape ``(*core_batch, *data_batch, *out_shape)``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluate_digits</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_layout</span><span class="o">.</span><span class="n">encode_indices</span><span class="p">(</span><span class="n">in_indices</span><span class="p">),</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">out_layout</span><span class="o">.</span><span class="n">encode_indices</span><span class="p">(</span><span class="n">out_indices</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                             <span class="n">in_coordinates</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                             <span class="n">out_coordinates</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluates matrix entries using paired coordinates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        in_coordinates : torch.Tensor</span>
+<span class="sd">            Finite floating input coordinates with shape</span>
+<span class="sd">            ``(*data_batch, in_layout.n_coordinates)``. An input coordinate map</span>
+<span class="sd">            with an inverse or grid lookup is required.</span>
+<span class="sd">        out_coordinates : torch.Tensor</span>
+<span class="sd">            Finite floating output coordinates with shape</span>
+<span class="sd">            ``(*data_batch, out_layout.n_coordinates)``, with matching data</span>
+<span class="sd">            batches. An output coordinate map with an inverse or grid lookup is</span>
+<span class="sd">            required.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Values with shape ``(*core_batch, *data_batch, *out_shape)``. Evaluation</span>
+<span class="sd">            in the domain quantizes both coordinate groups; it does not</span>
+<span class="sd">            interpolate matrix entries.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">in_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_coordinate_map</span><span class="o">.</span><span class="n">to_indices</span><span class="p">(</span><span class="n">in_coordinates</span><span class="p">)</span>
+        <span class="n">out_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_coordinate_map</span><span class="o">.</span><span class="n">to_indices</span><span class="p">(</span><span class="n">out_coordinates</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluate_indices</span><span class="p">(</span><span class="n">in_indices</span><span class="p">,</span> <span class="n">out_indices</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">contract_dense_grid_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts the tensor and combines digits into original grid axes.</span>
+
+<span class="sd">        Returns one axis per original input and output coordinate, combining</span>
+<span class="sd">        their digits and placing input coordinates before output coordinates.</span>
+<span class="sd">        Axes outside ``in_sites`` follow, then axes outside ``out_sites``,</span>
+<span class="sd">        each in chain order, as in :meth:`evaluate`.</span>
+<span class="sd">        In contrast, :meth:`contract_dense` returns the interleaved input and</span>
+<span class="sd">        output axes in chain order. Both methods materialize</span>
+<span class="sd">        the complete tensor.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Values with shape</span>
+<span class="sd">            ``(*core_batch, *in_grid_size, *out_grid_size, *out_shape)``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">in_order</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">)),</span>
+                          <span class="n">key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">in_layout</span><span class="o">.</span><span class="n">sites</span><span class="p">()</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">)</span>
+        <span class="n">out_order</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_out_sites</span><span class="p">)),</span>
+                           <span class="n">key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">out_layout</span><span class="o">.</span><span class="n">sites</span><span class="p">()</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">)</span>
+        <span class="n">in_out_axes</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">site</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)</span>
+                       <span class="k">if</span> <span class="n">site</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">]</span>
+        <span class="n">in_out_axes</span> <span class="o">+=</span> <span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">site</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">site</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_sites</span><span class="p">]</span>
+        <span class="n">dense</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span>
+            <span class="o">*</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span><span class="p">),</span>
+            <span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">in_order</span><span class="p">),</span>
+            <span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_sites</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+              <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">out_order</span><span class="p">),</span>
+            <span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span> <span class="o">+</span> <span class="n">axis</span> <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="n">in_out_axes</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">dense</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_batch_shape</span><span class="p">,</span>
+                             <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">in_layout</span><span class="o">.</span><span class="n">grid_size</span><span class="p">,</span>
+                             <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">out_layout</span><span class="o">.</span><span class="n">grid_size</span><span class="p">,</span>
+                             <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">out_shape</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="QTTM"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTTM">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">QTTM</span><span class="p">(</span><span class="n">_QuanticsMatrix</span><span class="p">,</span> <span class="n">TTM</span><span class="p">):</span>  <span class="c1"># MARK: QTTM</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Quantics tensor train operator with a</span>
+<span class="sd">    :class:`~tensorkrowch.formats.QuantizedLayout` and a</span>
+<span class="sd">    :class:`~tensorkrowch.formats.CoordinateMap` for each input and output</span>
+<span class="sd">    space.</span>
+
+<span class="sd">    Each space independently accepts shorthand arguments or a prebuilt layout</span>
+<span class="sd">    and map, as in :class:`QTT`. Shorthand layouts are ``interleaved`` and</span>
+<span class="sd">    ``coarse_to_fine``; shorthand affine maps use ``grid_offset=&quot;left&quot;``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Core tensors with the shapes described in :class:`~tensorkrowch.formats.TTM`.</span>
+<span class="sd">        The container is copied; tensors retain storage and autograd.</span>
+<span class="sd">    in_n_coordinates, out_n_coordinates : int</span>
+<span class="sd">        Number of original input and output coordinates.</span>
+<span class="sd">    in_base, out_base : int or sequence of int, optional</span>
+<span class="sd">        Digit bases for shorthand construction of each coordinate space.</span>
+<span class="sd">        Each base requires its corresponding level and domain or grid points.</span>
+<span class="sd">    in_level, out_level : int or sequence of int, optional</span>
+<span class="sd">        Number of digits per coordinate in each space.</span>
+<span class="sd">    in_domain, out_domain : torch.Tensor or sequence of torch.Tensor, optional</span>
+<span class="sd">        Intervals used to build affine maps with ``grid_offset=&quot;left&quot;``.</span>
+<span class="sd">        Cannot be combined with grid points or prebuilt objects for that space.</span>
+<span class="sd">    in_grid_coordinates, out_grid_coordinates : torch.Tensor or sequence, optional</span>
+<span class="sd">        Domain grid points used to build explicit maps. A vector describes one</span>
+<span class="sd">        coordinate; a matrix or sequence of vectors describes multiple</span>
+<span class="sd">        coordinates. Grid sizes must match the corresponding ``base ** level``.</span>
+<span class="sd">    in_layout, out_layout : :class:`~tensorkrowch.formats.QuantizedLayout`, optional</span>
+<span class="sd">        Prebuilt digit layouts, each supplied with its corresponding map.</span>
+<span class="sd">        Each layout describes the digits at its corresponding ``in_sites``</span>
+<span class="sd">        or ``out_sites``; their numbers of digits may differ.</span>
+<span class="sd">    in_coordinate_map, out_coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional</span>
+<span class="sd">        Prebuilt maps, each with grid sizes matching its layout. Cannot be</span>
+<span class="sd">        combined with shorthand arguments for that coordinate space.</span>
+<span class="sd">    n_batches : int</span>
+<span class="sd">        Number of leading structural batch axes shared by the cores.</span>
+<span class="sd">        Independent of data batches during evaluation.</span>
+<span class="sd">    bonds : sequence of torch.Tensor or None, optional</span>
+<span class="sd">        Diagonal factors between cores, as in the corresponding plain format.</span>
+<span class="sd">    in_sites, out_sites : sequence[int], optional</span>
+<span class="sd">        Ordered core positions for all digits on each side. ``in_layout``</span>
+<span class="sd">        orders the input digits applied to ``in_sites``; ``out_layout``</span>
+<span class="sd">        orders the output digits applied to ``out_sites``. Positions need</span>
+<span class="sd">        not be increasing. Both default to all cores in increasing order.</span>
+<span class="sd">        Other axes remain open during evaluation and define ``out_shape``.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    First, discretize input and output coordinates on their respective grids:</span>
+
+<span class="sd">    &gt;&gt;&gt; in_map = tk.formats.AffineCoordinateMap(</span>
+<span class="sd">    ...     domain=torch.tensor([0., 1.]), grid_size=(4,))</span>
+<span class="sd">    &gt;&gt;&gt; out_map = tk.formats.AffineCoordinateMap(</span>
+<span class="sd">    ...     domain=torch.tensor([-1., 1.]), grid_size=(4,))</span>
+<span class="sd">    &gt;&gt;&gt; in_coordinates = torch.tensor([[0.], [0.5]])</span>
+<span class="sd">    &gt;&gt;&gt; out_coordinates = torch.tensor([[-1.], [0.5]])</span>
+<span class="sd">    &gt;&gt;&gt; in_indices = in_map.to_indices(in_coordinates)</span>
+<span class="sd">    &gt;&gt;&gt; out_indices = out_map.to_indices(out_coordinates)</span>
+<span class="sd">    &gt;&gt;&gt; in_indices.tolist(), out_indices.tolist()</span>
+<span class="sd">    ([[0], [2]], [[0], [3]])</span>
+
+<span class="sd">    Then, expand both sets of indices into the digits paired at each site:</span>
+
+<span class="sd">    &gt;&gt;&gt; in_layout = tk.formats.QuantizedLayout(1, base=2, level=2)</span>
+<span class="sd">    &gt;&gt;&gt; out_layout = tk.formats.QuantizedLayout(1, base=2, level=2)</span>
+<span class="sd">    &gt;&gt;&gt; in_layout.encode_indices(in_indices).tolist()</span>
+<span class="sd">    [[0, 0], [1, 0]]</span>
+<span class="sd">    &gt;&gt;&gt; out_layout.encode_indices(out_indices).tolist()</span>
+<span class="sd">    [[0, 0], [1, 1]]</span>
+
+<span class="sd">    Finally, construct an identity matrix on the grid indices and evaluate</span>
+<span class="sd">    entries:</span>
+
+<span class="sd">    &gt;&gt;&gt; cores = [torch.eye(2).unsqueeze(1), torch.eye(2).unsqueeze(0)]</span>
+<span class="sd">    &gt;&gt;&gt; matrix = tk.formats.QTTM(cores, 1, 1,</span>
+<span class="sd">    ...     in_layout=in_layout, out_layout=out_layout,</span>
+<span class="sd">    ...     in_coordinate_map=in_map, out_coordinate_map=out_map)</span>
+<span class="sd">    &gt;&gt;&gt; matrix.evaluate_coordinates(in_coordinates, out_coordinates).tolist()</span>
+<span class="sd">    [1.0, 0.0]</span>
+
+<span class="sd">    With two coordinates per space, interleave their digits in both layouts:</span>
+
+<span class="sd">    &gt;&gt;&gt; coordinate_map = tk.formats.AffineCoordinateMap(</span>
+<span class="sd">    ...     domain=torch.tensor([0., 1.]), grid_size=(4, 4))</span>
+<span class="sd">    &gt;&gt;&gt; layout = tk.formats.QuantizedLayout(2, base=2, level=2)</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.eye(2).unsqueeze(1),</span>
+<span class="sd">    ...          torch.eye(2).reshape(1, 2, 1, 2),</span>
+<span class="sd">    ...          torch.eye(2).reshape(1, 2, 1, 2), torch.eye(2).unsqueeze(0)]</span>
+<span class="sd">    &gt;&gt;&gt; matrix = tk.formats.QTTM(cores, 2, 2,</span>
+<span class="sd">    ...     in_layout=layout, out_layout=layout,</span>
+<span class="sd">    ...     in_coordinate_map=coordinate_map, out_coordinate_map=coordinate_map)</span>
+<span class="sd">    &gt;&gt;&gt; in_coordinates = torch.tensor([[0., 0.], [0.5, 0.25]])</span>
+<span class="sd">    &gt;&gt;&gt; out_coordinates = torch.tensor([[0., 0.], [0.5, 0.75]])</span>
+<span class="sd">    &gt;&gt;&gt; matrix.evaluate_coordinates(in_coordinates, out_coordinates).tolist()</span>
+<span class="sd">    [1.0, 0.0]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="QTTM.to_ttm"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTTM.to_ttm">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_ttm</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TTM</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Drops Quantics metadata while retaining the represented tensor.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TTM`</span>
+<span class="sd">            Plain raw-tensor format sharing tensor storage. Coordinate maps,</span>
+<span class="sd">            domains and digit-layout semantics are not retained.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_format</span><span class="p">(</span><span class="n">TTM</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="QTRM"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTRM">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">QTRM</span><span class="p">(</span><span class="n">_QuanticsMatrix</span><span class="p">,</span> <span class="n">TRM</span><span class="p">):</span>  <span class="c1"># MARK: QTRM</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Quantics tensor ring operator with a</span>
+<span class="sd">    :class:`~tensorkrowch.formats.QuantizedLayout` and a</span>
+<span class="sd">    :class:`~tensorkrowch.formats.CoordinateMap` for each input and output</span>
+<span class="sd">    space.</span>
+
+<span class="sd">    Each space independently accepts shorthand arguments or a prebuilt layout</span>
+<span class="sd">    and map, as in :class:`QTT`. Shorthand layouts are ``interleaved`` and</span>
+<span class="sd">    ``coarse_to_fine``; shorthand affine maps use ``grid_offset=&quot;left&quot;``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Core tensors with the shapes described in :class:`~tensorkrowch.formats.TRM`.</span>
+<span class="sd">        The container is copied; tensors retain storage and autograd.</span>
+<span class="sd">    in_n_coordinates, out_n_coordinates : int</span>
+<span class="sd">        Number of original input and output coordinates.</span>
+<span class="sd">    in_base, out_base : int or sequence of int, optional</span>
+<span class="sd">        Digit bases for shorthand construction of each coordinate space.</span>
+<span class="sd">        Each base requires its corresponding level and domain or grid points.</span>
+<span class="sd">    in_level, out_level : int or sequence of int, optional</span>
+<span class="sd">        Number of digits per coordinate in each space.</span>
+<span class="sd">    in_domain, out_domain : torch.Tensor or sequence of torch.Tensor, optional</span>
+<span class="sd">        Intervals used to build affine maps with ``grid_offset=&quot;left&quot;``.</span>
+<span class="sd">        Cannot be combined with grid points or prebuilt objects for that space.</span>
+<span class="sd">    in_grid_coordinates, out_grid_coordinates : torch.Tensor or sequence, optional</span>
+<span class="sd">        Domain grid points used to build explicit maps. A vector describes one</span>
+<span class="sd">        coordinate; a matrix or sequence of vectors describes multiple</span>
+<span class="sd">        coordinates. Grid sizes must match the corresponding ``base ** level``.</span>
+<span class="sd">    in_layout, out_layout : :class:`~tensorkrowch.formats.QuantizedLayout`, optional</span>
+<span class="sd">        Prebuilt digit layouts, each supplied with its corresponding map.</span>
+<span class="sd">        Each layout describes the digits at its corresponding ``in_sites``</span>
+<span class="sd">        or ``out_sites``; their numbers of digits may differ.</span>
+<span class="sd">    in_coordinate_map, out_coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional</span>
+<span class="sd">        Prebuilt maps, each with grid sizes matching its layout. Cannot be</span>
+<span class="sd">        combined with shorthand arguments for that coordinate space.</span>
+<span class="sd">    n_batches : int</span>
+<span class="sd">        Number of leading structural batch axes shared by the cores.</span>
+<span class="sd">        Independent of data batches during evaluation.</span>
+<span class="sd">    bonds : sequence of torch.Tensor or None, optional</span>
+<span class="sd">        Diagonal factors between cores, as in the corresponding plain format.</span>
+<span class="sd">    in_sites, out_sites : sequence[int], optional</span>
+<span class="sd">        Ordered core positions for all digits on each side. ``in_layout``</span>
+<span class="sd">        orders the input digits applied to ``in_sites``; ``out_layout``</span>
+<span class="sd">        orders the output digits applied to ``out_sites``. Positions need</span>
+<span class="sd">        not be increasing. Both default to all cores in increasing order.</span>
+<span class="sd">        Other axes remain open during evaluation and define ``out_shape``.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    First, discretize input and output coordinates on their respective grids:</span>
+
+<span class="sd">    &gt;&gt;&gt; in_map = tk.formats.AffineCoordinateMap(</span>
+<span class="sd">    ...     domain=torch.tensor([0., 1.]), grid_size=(4,))</span>
+<span class="sd">    &gt;&gt;&gt; out_map = tk.formats.AffineCoordinateMap(</span>
+<span class="sd">    ...     domain=torch.tensor([-1., 1.]), grid_size=(4,))</span>
+<span class="sd">    &gt;&gt;&gt; in_coordinates = torch.tensor([[0.], [0.5]])</span>
+<span class="sd">    &gt;&gt;&gt; out_coordinates = torch.tensor([[-1.], [0.5]])</span>
+<span class="sd">    &gt;&gt;&gt; in_indices = in_map.to_indices(in_coordinates)</span>
+<span class="sd">    &gt;&gt;&gt; out_indices = out_map.to_indices(out_coordinates)</span>
+<span class="sd">    &gt;&gt;&gt; in_indices.tolist(), out_indices.tolist()</span>
+<span class="sd">    ([[0], [2]], [[0], [3]])</span>
+
+<span class="sd">    Then, expand both sets of indices into the digits paired at each site:</span>
+
+<span class="sd">    &gt;&gt;&gt; in_layout = tk.formats.QuantizedLayout(1, base=2, level=2)</span>
+<span class="sd">    &gt;&gt;&gt; out_layout = tk.formats.QuantizedLayout(1, base=2, level=2)</span>
+<span class="sd">    &gt;&gt;&gt; in_layout.encode_indices(in_indices).tolist()</span>
+<span class="sd">    [[0, 0], [1, 0]]</span>
+<span class="sd">    &gt;&gt;&gt; out_layout.encode_indices(out_indices).tolist()</span>
+<span class="sd">    [[0, 0], [1, 1]]</span>
+
+<span class="sd">    Finally, construct an identity matrix on the grid indices and evaluate entries:</span>
+
+<span class="sd">    &gt;&gt;&gt; cores = [torch.eye(2).reshape(1, 2, 1, 2)] * 2</span>
+<span class="sd">    &gt;&gt;&gt; matrix = tk.formats.QTRM(cores, 1, 1,</span>
+<span class="sd">    ...     in_layout=in_layout, out_layout=out_layout,</span>
+<span class="sd">    ...     in_coordinate_map=in_map, out_coordinate_map=out_map)</span>
+<span class="sd">    &gt;&gt;&gt; matrix.evaluate_coordinates(in_coordinates, out_coordinates).tolist()</span>
+<span class="sd">    [1.0, 0.0]</span>
+
+<span class="sd">    With two coordinates per space, interleave their digits in both layouts:</span>
+
+<span class="sd">    &gt;&gt;&gt; coordinate_map = tk.formats.AffineCoordinateMap(</span>
+<span class="sd">    ...     domain=torch.tensor([0., 1.]), grid_size=(4, 4))</span>
+<span class="sd">    &gt;&gt;&gt; layout = tk.formats.QuantizedLayout(2, base=2, level=2)</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.eye(2).reshape(1, 2, 1, 2)] * 4</span>
+<span class="sd">    &gt;&gt;&gt; matrix = tk.formats.QTRM(cores, 2, 2,</span>
+<span class="sd">    ...     in_layout=layout, out_layout=layout,</span>
+<span class="sd">    ...     in_coordinate_map=coordinate_map, out_coordinate_map=coordinate_map)</span>
+<span class="sd">    &gt;&gt;&gt; in_coordinates = torch.tensor([[0., 0.], [0.5, 0.25]])</span>
+<span class="sd">    &gt;&gt;&gt; out_coordinates = torch.tensor([[0., 0.], [0.5, 0.75]])</span>
+<span class="sd">    &gt;&gt;&gt; matrix.evaluate_coordinates(in_coordinates, out_coordinates).tolist()</span>
+<span class="sd">    [1.0, 0.0]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="QTRM.to_trm"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTRM.to_trm">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_trm</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TRM</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Drops Quantics metadata while retaining the represented tensor.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TRM`</span>
+<span class="sd">            Plain raw-tensor format sharing tensor storage. Coordinate maps,</span>
+<span class="sd">            domains and digit-layout semantics are not retained.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_format</span><span class="p">(</span><span class="n">TRM</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="QTRM.to_qttm"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTRM.to_qttm">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_qttm</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QTTM</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Opens the ring while preserving its input and output layouts and maps.</span>
+
+<span class="sd">        Carries the closing index through the chain, as in</span>
+<span class="sd">        :meth:`~tensorkrowch.formats.TRM.to_ttm`, without truncation or dense</span>
+<span class="sd">        reconstruction.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :class:`~tensorkrowch.formats.QTTM`</span>
+<span class="sd">            Open Quantics matrix representing the same entries, with structural</span>
+<span class="sd">            batches preserved.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_ttm</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="QTRM.to_ttm"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTRM.to_ttm">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_ttm</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TTM</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Requires an explicit choice about retaining Quantics information.</span>
+
+<span class="sd">        Use :meth:`to_qttm` to open the ring while retaining Quantics, or</span>
+<span class="sd">        :meth:`to_trm` to remove Quantics while retaining the ring. To obtain</span>
+<span class="sd">        a plain TTM, call ``to_qttm().to_ttm()`` or ``to_trm().to_ttm()``.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        NotImplementedError</span>
+<span class="sd">            Direct conversion is disabled to make the intended format explicit.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="s1">&#39;Use `to_qttm()` to retain Quantics, or `to_qttm().to_ttm()` &#39;</span>
+            <span class="s1">&#39;or `to_trm().to_ttm()` to obtain a plain TTM&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="QTRM.rotate"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.QTRM.rotate">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">rotate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">first</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;QTRM&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Rotates ring cores and updates ``in_sites`` and ``out_sites``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        first : int</span>
+<span class="sd">            Site that becomes index zero, in ``[0, n_sites - 1]``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :class:`~tensorkrowch.formats.QTRM`</span>
+<span class="sd">            Rotated format preserving evaluations at coordinates in the</span>
+<span class="sd">            original domain. Axes outside ``in_sites`` and ``out_sites``</span>
+<span class="sd">            follow the new chain order on each side and may be permuted.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`first` should be int type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">first</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`first` should lie inside the format&#39;</span><span class="p">)</span>
+
+        <span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">[</span><span class="n">first</span><span class="p">:],</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">[:</span><span class="n">first</span><span class="p">]]</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">QTRM</span><span class="p">(</span><span class="n">cores</span><span class="o">=</span><span class="n">cores</span><span class="p">,</span>
+                      <span class="n">in_n_coordinates</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">in_layout</span><span class="o">.</span><span class="n">n_coordinates</span><span class="p">,</span>
+                      <span class="n">out_n_coordinates</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">out_layout</span><span class="o">.</span><span class="n">n_coordinates</span><span class="p">,</span>
+                      <span class="n">in_layout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">in_layout</span><span class="p">,</span>
+                      <span class="n">out_layout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">out_layout</span><span class="p">,</span>
+                      <span class="n">in_coordinate_map</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">in_coordinate_map</span><span class="p">,</span>
+                      <span class="n">out_coordinate_map</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">out_coordinate_map</span><span class="p">,</span>
+                      <span class="n">n_batches</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span><span class="p">,</span>
+                      <span class="n">in_sites</span><span class="o">=</span><span class="nb">tuple</span><span class="p">((</span><span class="n">site</span> <span class="o">-</span> <span class="n">first</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span>
+                                     <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites</span><span class="p">),</span>
+                      <span class="n">out_sites</span><span class="o">=</span><span class="nb">tuple</span><span class="p">((</span><span class="n">site</span> <span class="o">-</span> <span class="n">first</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span>
+                                      <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_sites</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bonds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">factors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bonds</span><span class="o">.</span><span class="n">factors</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">bonds</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="n">factors</span><span class="p">[</span><span class="n">first</span><span class="p">:],</span> <span class="o">*</span><span class="n">factors</span><span class="p">[:</span><span class="n">first</span><span class="p">]]</span>
+
+        <span class="k">return</span> <span class="n">result</span></div></div>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

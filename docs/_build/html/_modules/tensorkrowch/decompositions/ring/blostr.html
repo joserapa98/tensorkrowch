@@ -1,0 +1,1016 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.ring.blostr &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/clipboard.min.js"></script>
+    <script src="../../../../_static/copybutton.js"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.ring.blostr</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Public functions:</span>
+<span class="sd">        * tr_blostr</span>
+<span class="sd">        * tr_blostr_svd</span>
+
+<span class="sd">    Internal classes:</span>
+<span class="sd">        * _FirstCore</span>
+
+<span class="sd">    Internal functions:</span>
+<span class="sd">        * _balanced_order</span>
+<span class="sd">        * _spectral_order</span>
+<span class="sd">        * _first_core</span>
+<span class="sd">        * _recover_cores</span>
+<span class="sd">        * _fit_blostr</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">isfinite</span><span class="p">,</span> <span class="n">prod</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">safe_divide</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">_RuntimePolicy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._truncation</span><span class="w"> </span><span class="kn">import</span> <span class="n">_TruncationSpec</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">_normalize_positive_int</span><span class="p">,</span>
+                                              <span class="n">_normalize_rank</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">DecompositionMetrics</span><span class="p">,</span>
+                                               <span class="n">ErrorRecord</span><span class="p">,</span>
+                                               <span class="n">TimingRecord</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.observers</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">_normalize_verbosity</span><span class="p">,</span>
+                                                 <span class="n">_resolve_observer</span><span class="p">,</span>
+                                                 <span class="n">DecompositionEvent</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">TRDecomposition</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.ring.blocks</span><span class="w"> </span><span class="kn">import</span> <span class="n">_split_block</span>
+
+
+<span class="n">_Rank</span> <span class="o">=</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span>
+<span class="n">_Device</span> <span class="o">=</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]]</span>
+
+
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_FirstCore</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stores the first spectral core and the sampled projections.&quot;&quot;&quot;</span>
+
+    <span class="n">core</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">slices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="o">...</span><span class="p">]]</span>
+    <span class="n">cluster_error</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_balanced_order</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                    <span class="n">cluster_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                    <span class="n">n_clusters</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                    <span class="n">n_iters</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                    <span class="n">n_restarts</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                    <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span>
+                    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Groups complex values into equal-size clusters by balanced k-means.&quot;&quot;&quot;</span>
+    <span class="n">features</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">view_as_real</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+    <span class="n">n_values</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+    <span class="n">best_cost</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">best_labels</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_restarts</span><span class="p">):</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span> <span class="k">if</span> <span class="n">generator</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">generator</span><span class="o">.</span><span class="n">device</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randperm</span><span class="p">(</span><span class="n">n_values</span><span class="p">,</span> <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">,</span>
+                               <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">n_values</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_clusters</span><span class="p">):</span>
+            <span class="n">labels</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="n">cluster</span> <span class="o">*</span> <span class="n">cluster_size</span><span class="p">:</span>
+                         <span class="p">(</span><span class="n">cluster</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">cluster_size</span><span class="p">]]</span> <span class="o">=</span> <span class="n">cluster</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_iters</span><span class="p">):</span>
+            <span class="n">centers</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span>
+                <span class="n">features</span><span class="p">[</span><span class="n">labels</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_clusters</span><span class="p">)])</span>
+            <span class="n">distances</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cdist</span><span class="p">(</span><span class="n">features</span><span class="p">,</span> <span class="n">centers</span><span class="p">)</span>
+            <span class="n">new_labels</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+            <span class="n">capacity</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_clusters</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">distances</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">argsort</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">():</span>
+                <span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="n">distances</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">argsort</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">capacity</span><span class="p">[</span><span class="n">cluster</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">cluster_size</span><span class="p">:</span>
+                        <span class="n">new_labels</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">cluster</span>
+                        <span class="n">capacity</span><span class="p">[</span><span class="n">cluster</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="k">break</span>
+            <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">new_labels</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
+                <span class="k">break</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="n">new_labels</span>
+        <span class="n">centers</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span>
+            <span class="n">features</span><span class="p">[</span><span class="n">labels</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_clusters</span><span class="p">)])</span>
+        <span class="n">cost</span> <span class="o">=</span> <span class="p">(</span><span class="n">features</span> <span class="o">-</span> <span class="n">centers</span><span class="p">[</span><span class="n">labels</span><span class="p">])</span><span class="o">.</span><span class="n">square</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">best_cost</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">cost</span> <span class="o">&lt;</span> <span class="n">best_cost</span><span class="p">):</span>
+            <span class="n">best_cost</span><span class="p">,</span> <span class="n">best_labels</span> <span class="o">=</span> <span class="n">cost</span><span class="p">,</span> <span class="n">labels</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">best_labels</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_clusters</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">order</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">device</span><span class="p">),</span> <span class="n">best_cost</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_spectral_order</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                    <span class="n">ranks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]],</span>
+                    <span class="n">spectral_atol</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                    <span class="n">n_iters</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                    <span class="n">n_restarts</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                    <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span>
+                    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Finds balanced multiplicities, or orders prescribed spectral blocks.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">ranks</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">candidates</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">//</span> <span class="n">count</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span>
+                      <span class="k">for</span> <span class="n">count</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">%</span> <span class="n">count</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span><span class="n">ranks</span><span class="p">]</span>
+    <span class="n">scale</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">square</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">clamp_min</span><span class="p">(</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">tiny</span><span class="p">)</span>
+    <span class="n">tolerance</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span>
+        <span class="n">spectral_atol</span><span class="p">,</span> <span class="mi">10</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">cyclic</span><span class="p">,</span> <span class="n">adjacent</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">:</span>
+        <span class="n">order</span><span class="p">,</span> <span class="n">cost</span> <span class="o">=</span> <span class="n">_balanced_order</span><span class="p">(</span>
+            <span class="n">values</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">,</span> <span class="n">adjacent</span><span class="p">,</span> <span class="n">n_iters</span><span class="p">,</span> <span class="n">n_restarts</span><span class="p">,</span> <span class="n">generator</span><span class="p">)</span>
+        <span class="n">relative</span> <span class="o">=</span> <span class="p">(</span><span class="n">cost</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">ranks</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">relative</span> <span class="o">&lt;=</span> <span class="n">tolerance</span><span class="p">):</span>
+            <span class="c1"># Interleave equal-eigenvalue blocks to expose TR bond indices.</span>
+            <span class="n">interleave</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span>
+                <span class="n">cyclic</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">adjacent</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">+</span> <span class="n">offset</span>
+                <span class="k">for</span> <span class="n">offset</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">cyclic</span><span class="p">)])</span>
+            <span class="k">return</span> <span class="n">order</span><span class="p">[</span><span class="n">interleave</span><span class="p">],</span> <span class="n">cyclic</span><span class="p">,</span> <span class="n">adjacent</span><span class="p">,</span> <span class="n">relative</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;BLOSTR could not identify balanced spectral blocks&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_draw_slices</span><span class="p">(</span><span class="n">in_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span>
+                 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Draws distinct configurations for two independent slice ratios.&quot;&quot;&quot;</span>
+    <span class="n">dimensions</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">in_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">n_configurations</span> <span class="o">=</span> <span class="n">prod</span><span class="p">(</span><span class="n">dimensions</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_configurations</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s1">&#39;`projection=&quot;slices&quot;` requires three interior configurations&#39;</span><span class="p">)</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span> <span class="k">if</span> <span class="n">generator</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">generator</span><span class="o">.</span><span class="n">device</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randperm</span><span class="p">(</span><span class="n">n_configurations</span><span class="p">,</span> <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">,</span>
+                             <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)[:</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">configurations</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+        <span class="n">configuration</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">dimension</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">dimensions</span><span class="p">):</span>
+            <span class="n">configuration</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span> <span class="o">%</span> <span class="n">dimension</span><span class="p">)</span>
+            <span class="n">index</span> <span class="o">//=</span> <span class="n">dimension</span>
+        <span class="n">configurations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">configuration</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">configurations</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">configurations</span> <span class="o">=</span> <span class="p">[</span><span class="n">configurations</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">configurations</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                          <span class="n">configurations</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">configurations</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">configurations</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate_slices</span><span class="p">(</span><span class="n">slices</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+                     <span class="n">dimensions</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+                     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validates four interior index configurations.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">slices</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">slices</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`slices` should contain four index sequences&#39;</span><span class="p">)</span>
+    <span class="n">configurations</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">configuration</span> <span class="ow">in</span> <span class="n">slices</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">configuration</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                <span class="n">configuration</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`slices` should contain four index sequences&#39;</span><span class="p">)</span>
+        <span class="n">configuration</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">configuration</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">configuration</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dimensions</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Each entry of `slices` should index every &#39;</span>
+                             <span class="s1">&#39;interior axis&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">dimension</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">configuration</span><span class="p">,</span> <span class="n">dimensions</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Indices in `slices` should be integers&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">index</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">index</span> <span class="o">&gt;=</span> <span class="n">dimension</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;An index in `slices` is out of bounds&#39;</span><span class="p">)</span>
+        <span class="n">configurations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">configuration</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">configurations</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`slices` should contain four index sequences&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">configurations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">configurations</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="ow">or</span> \
+            <span class="p">(</span><span class="n">configurations</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">configurations</span><span class="p">[</span><span class="mi">3</span><span class="p">]):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s1">&#39;Each ratio in `slices` needs distinct configurations&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">configurations</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_first_core</span><span class="p">(</span><span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                <span class="n">ranks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+                <span class="n">slices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]],</span>
+                <span class="n">projection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                <span class="n">spectral_atol</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                <span class="n">n_iters</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                <span class="n">n_restarts</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">_FirstCore</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Recovers the first core by simultaneous block diagonalization.&quot;&quot;&quot;</span>
+    <span class="c1"># Both projection modes leave the first and last physical axes open.</span>
+    <span class="k">if</span> <span class="n">projection</span> <span class="o">==</span> <span class="s1">&#39;slices&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">slices</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">slices</span> <span class="o">=</span> <span class="n">_draw_slices</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">generator</span><span class="p">)</span>
+        <span class="n">matrices</span> <span class="o">=</span> <span class="p">[</span><span class="n">tensor</span><span class="p">[(</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="o">*</span><span class="n">index</span><span class="p">,</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">))]</span>
+                    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">slices</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">device</span> <span class="k">if</span> <span class="n">generator</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">generator</span><span class="o">.</span><span class="n">device</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">prod</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span>
+                              <span class="n">dtype</span><span class="o">=</span><span class="n">tensor</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+                              <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">matrices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+            <span class="s1">&#39;amb,sm-&gt;sab&#39;</span><span class="p">,</span> <span class="n">tensor</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                         <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="n">weights</span><span class="p">)</span>
+
+    <span class="c1"># Two independent ratios expose repeated spectral subspaces.</span>
+    <span class="n">ratios</span> <span class="o">=</span> <span class="p">(</span><span class="n">matrices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">matrices</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+              <span class="n">matrices</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">@</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">matrices</span><span class="p">[</span><span class="mi">3</span><span class="p">]))</span>
+    <span class="n">spaces</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">pair</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">ranks</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">ranks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">ranks</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">matrix</span> <span class="ow">in</span> <span class="n">ratios</span><span class="p">:</span>
+        <span class="n">values</span><span class="p">,</span> <span class="n">vectors</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eig</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">descending</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">threshold</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span>
+            <span class="n">spectral_atol</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span> <span class="o">*</span> <span class="n">values</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">selected</span><span class="p">[</span><span class="n">values</span><span class="p">[</span><span class="n">selected</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">pair</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="n">prod</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">size</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;BLOSTR found too few nonzero eigenvalues &#39;</span>
+                                   <span class="s1">&#39;for `rank`&#39;</span><span class="p">)</span>
+            <span class="n">selected</span> <span class="o">=</span> <span class="n">selected</span><span class="p">[:</span><span class="n">size</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;BLOSTR found no nonzero eigenvalues&#39;</span><span class="p">)</span>
+        <span class="n">order</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">,</span> <span class="n">adjacent</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">_spectral_order</span><span class="p">(</span>
+            <span class="n">values</span><span class="p">[</span><span class="n">selected</span><span class="p">],</span> <span class="n">pair</span><span class="p">,</span> <span class="n">spectral_atol</span><span class="p">,</span> <span class="n">n_iters</span><span class="p">,</span> <span class="n">n_restarts</span><span class="p">,</span>
+            <span class="n">generator</span><span class="p">)</span>
+        <span class="n">pair</span> <span class="o">=</span> <span class="n">cyclic</span><span class="p">,</span> <span class="n">adjacent</span>
+        <span class="n">spaces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vectors</span><span class="p">[:,</span> <span class="n">selected</span><span class="p">[</span><span class="n">order</span><span class="p">]])</span>
+    <span class="n">cyclic</span><span class="p">,</span> <span class="n">adjacent</span> <span class="o">=</span> <span class="n">pair</span>
+    <span class="k">if</span> <span class="nb">min</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="n">cyclic</span> <span class="o">*</span> <span class="n">adjacent</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The first and last axes of `tensor` should contain &#39;</span>
+                         <span class="s1">&#39;at least the product of the first two TR ranks&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Align the degenerate eigenspaces to separate cyclic and local indices.</span>
+    <span class="n">alignment</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">spaces</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">@</span> <span class="n">spaces</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">first_block</span> <span class="o">=</span> <span class="n">alignment</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="n">adjacent</span><span class="p">,</span> <span class="mi">0</span><span class="p">::</span><span class="n">adjacent</span><span class="p">]</span>
+    <span class="n">transform</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">alignment</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">adjacent</span><span class="p">):</span>
+        <span class="n">current</span> <span class="o">=</span> <span class="n">alignment</span><span class="p">[</span><span class="n">block</span><span class="p">::</span><span class="n">adjacent</span><span class="p">,</span> <span class="mi">0</span><span class="p">::</span><span class="n">adjacent</span><span class="p">]</span>
+        <span class="n">factor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">current</span><span class="o">.</span><span class="n">mT</span><span class="p">,</span> <span class="n">first_block</span><span class="o">.</span><span class="n">mT</span><span class="p">)</span><span class="o">.</span><span class="n">mT</span>
+        <span class="n">transform</span><span class="p">[</span><span class="n">block</span><span class="p">::</span><span class="n">adjacent</span><span class="p">,</span> <span class="n">block</span><span class="p">::</span><span class="n">adjacent</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">factor</span><span class="p">)</span>
+    <span class="n">matrix</span> <span class="o">=</span> <span class="n">spaces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="n">transform</span>
+    <span class="k">return</span> <span class="n">_FirstCore</span><span class="p">(</span>
+        <span class="n">matrix</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cyclic</span><span class="p">,</span> <span class="n">adjacent</span><span class="p">)</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="kc">None</span> <span class="k">if</span> <span class="n">slices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">slices</span><span class="p">),</span> <span class="n">error</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_recover_cores</span><span class="p">(</span><span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                   <span class="n">first</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                   <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span>
+                   <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Recovers uniform-rank cores using product Gaussian projections.&quot;&quot;&quot;</span>
+    <span class="n">rank</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">device</span> <span class="k">if</span> <span class="n">generator</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">generator</span><span class="o">.</span><span class="n">device</span>
+
+    <span class="c1"># Generic product projections avoid singular coordinate slices of otherwise</span>
+    <span class="c1"># injective physical cores.</span>
+    <span class="n">vectors</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">dimension</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tensor</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+                           <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+               <span class="k">for</span> <span class="n">dimension</span> <span class="ow">in</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">]</span>
+    <span class="n">vectors</span> <span class="o">=</span> <span class="p">[</span><span class="n">vector</span> <span class="o">/</span> <span class="n">vector</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="k">for</span> <span class="n">vector</span> <span class="ow">in</span> <span class="n">vectors</span><span class="p">]</span>
+    <span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="n">first</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">tensor</span><span class="o">.</span><span class="n">ndim</span><span class="p">):</span>
+        <span class="n">other_sites</span> <span class="o">=</span> <span class="p">[</span><span class="n">index</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
+                       <span class="k">if</span> <span class="n">index</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="n">site</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="n">matrix</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="n">site</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">other_sites</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">other_sites</span><span class="p">):</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">vectors</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">product</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tensor</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">tensor</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">site</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">projected</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;aib,i-&gt;ab&#39;</span><span class="p">,</span> <span class="n">cores</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">vectors</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+            <span class="n">product</span> <span class="o">=</span> <span class="n">product</span> <span class="o">@</span> <span class="n">projected</span>
+        <span class="n">previous</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ab,bic-&gt;iac&#39;</span><span class="p">,</span> <span class="n">product</span><span class="p">,</span> <span class="n">cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">previous</span> <span class="o">=</span> <span class="n">previous</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">rank</span> <span class="o">*</span> <span class="n">rank</span><span class="p">)</span><span class="o">.</span><span class="n">mT</span>
+        <span class="n">current</span> <span class="o">=</span> <span class="p">(</span><span class="n">matrix</span> <span class="o">@</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">previous</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">rank</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">cores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fit_blostr</span><span class="p">(</span><span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                <span class="n">rank</span><span class="p">:</span> <span class="n">_Rank</span><span class="p">,</span>
+                <span class="o">*</span><span class="p">,</span>
+                <span class="n">use_svd</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                <span class="n">slices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">projection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;slices&#39;</span><span class="p">,</span>
+                <span class="n">spectral_atol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-10</span><span class="p">,</span>
+                <span class="n">n_attempts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+                <span class="n">n_iters</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+                <span class="n">n_restarts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+                <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">truncation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">_TruncationSpec</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">out_device</span><span class="p">:</span> <span class="n">_Device</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span><span class="p">,</span>
+                <span class="n">collect_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="n">verbose</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TRDecomposition</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Runs spectral attempts and retains the smallest reconstruction error.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`tensor` should be torch.Tensor type&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tensor</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`tensor` should contain at least three axes&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">tensor</span><span class="o">.</span><span class="n">is_floating_point</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">tensor</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`tensor` should have floating or complex dtype&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`tensor` should contain finite values&#39;</span><span class="p">)</span>
+    <span class="n">ranks</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_normalize_rank</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">tensor</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ranks</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">use_svd</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">ranks</span><span class="p">))</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Full BLOSTR requires uniform `rank`&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">use_svd</span> <span class="ow">and</span> <span class="p">(</span><span class="n">ranks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">ranks</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;BLOSTR-SVD requires `rank[0] == rank[-2]`&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">projection</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;slices&#39;</span><span class="p">,</span> <span class="s1">&#39;gaussian&#39;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`projection` should be &quot;slices&quot; or &quot;gaussian&quot;&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">slices</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">projection</span> <span class="o">!=</span> <span class="s1">&#39;slices&#39;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Explicit `slices` require `projection=&quot;slices&quot;`&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">slices</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">slices</span> <span class="o">=</span> <span class="n">_validate_slices</span><span class="p">(</span><span class="n">slices</span><span class="p">,</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spectral_atol</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+            <span class="n">spectral_atol</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`spectral_atol` should be a non-negative number&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">spectral_atol</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">isfinite</span><span class="p">(</span><span class="n">spectral_atol</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`spectral_atol` should be finite and non-negative&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">((</span><span class="s1">&#39;n_attempts&#39;</span><span class="p">,</span> <span class="n">n_attempts</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;n_iters&#39;</span><span class="p">,</span> <span class="n">n_iters</span><span class="p">),</span>
+                        <span class="p">(</span><span class="s1">&#39;n_restarts&#39;</span><span class="p">,</span> <span class="n">n_restarts</span><span class="p">)):</span>
+        <span class="n">_normalize_positive_int</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">generator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">generator</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`generator` should be torch.Generator type or None&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">collect_metrics</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`collect_metrics` should be bool type&#39;</span><span class="p">)</span>
+    <span class="n">verbosity</span> <span class="o">=</span> <span class="n">_normalize_verbosity</span><span class="p">(</span><span class="n">verbose</span><span class="p">)</span>
+    <span class="n">observer</span> <span class="o">=</span> <span class="n">_resolve_observer</span><span class="p">(</span><span class="n">verbosity</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">if</span> <span class="n">verbosity</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">observer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">observer</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s1">&#39;start&#39;</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="s1">&#39;BLOSTR&#39;</span><span class="p">,</span>
+            <span class="n">values</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;rank&#39;</span><span class="p">:</span> <span class="n">rank</span><span class="p">,</span> <span class="s1">&#39;attempts&#39;</span><span class="p">:</span> <span class="n">n_attempts</span><span class="p">}))</span>
+    <span class="n">collect_metrics</span> <span class="o">=</span> <span class="n">collect_metrics</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">verbosity</span><span class="p">)</span>
+    <span class="n">runtime</span> <span class="o">=</span> <span class="n">_RuntimePolicy</span><span class="o">.</span><span class="n">from_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">out_device</span><span class="o">=</span><span class="n">out_device</span><span class="p">)</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">complex128</span> <span class="k">if</span> <span class="n">tensor</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">in</span> <span class="p">(</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span> <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">complex64</span>
+
+    <span class="c1"># Spectral factors may be complex even when the original tensor is real.</span>
+    <span class="n">active</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">metrics</span> <span class="o">=</span> <span class="n">DecompositionMetrics</span><span class="p">()</span>
+    <span class="n">failures</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">best</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">attempts</span> <span class="o">=</span> <span class="n">n_attempts</span> <span class="k">if</span> <span class="n">slices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="mi">1</span>
+    <span class="k">with</span> <span class="n">runtime</span><span class="o">.</span><span class="n">timer</span><span class="p">()</span> <span class="k">as</span> <span class="n">timer</span><span class="p">:</span>
+
+        <span class="c1"># Reject degenerate projections and keep the best full reconstruction.</span>
+        <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">attempts</span><span class="p">):</span>
+            <span class="n">local_metrics</span> <span class="o">=</span> <span class="n">DecompositionMetrics</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">first</span> <span class="o">=</span> <span class="n">_first_core</span><span class="p">(</span><span class="n">active</span><span class="p">,</span> <span class="n">ranks</span><span class="p">,</span> <span class="n">slices</span><span class="p">,</span> <span class="n">projection</span><span class="p">,</span>
+                                    <span class="n">spectral_atol</span><span class="p">,</span> <span class="n">n_iters</span><span class="p">,</span> <span class="n">n_restarts</span><span class="p">,</span>
+                                    <span class="n">generator</span><span class="p">)</span>
+                <span class="n">cyclic</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">adjacent</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span>
+                <span class="k">if</span> <span class="n">use_svd</span><span class="p">:</span>
+
+                    <span class="c1"># Remove the first factor and place its virtual axes at the</span>
+                    <span class="c1"># TT ends.</span>
+                    <span class="n">first_matrix</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                        <span class="n">active</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">tail</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">first_matrix</span><span class="p">)</span> <span class="o">@</span> <span class="n">active</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                        <span class="n">active</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">tail</span> <span class="o">=</span> <span class="n">tail</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">cyclic</span><span class="p">,</span> <span class="n">adjacent</span><span class="p">,</span> <span class="o">*</span><span class="n">active</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+                    <span class="n">tail</span> <span class="o">=</span> <span class="n">tail</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">options</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">truncation</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> \
+                        <span class="n">truncation</span><span class="o">.</span><span class="n">as_kwargs</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">ranks</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
+                            <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span>
+                            <span class="p">(</span><span class="s1">&#39;cutoff&#39;</span><span class="p">,</span> <span class="s1">&#39;atol&#39;</span><span class="p">,</span> <span class="s1">&#39;rtol&#39;</span><span class="p">,</span> <span class="s1">&#39;cum_percentage&#39;</span><span class="p">)):</span>
+                        <span class="n">precision</span> <span class="o">=</span> <span class="p">(</span><span class="mi">10</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="n">active</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span>
+                                     <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">active</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span> <span class="o">*</span>
+                                     <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cond</span><span class="p">(</span><span class="n">first_matrix</span><span class="p">))</span>
+                        <span class="n">options</span><span class="p">[</span><span class="s1">&#39;rtol&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span>
+                            <span class="nb">max</span><span class="p">(</span><span class="n">spectral_atol</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">precision</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="n">tail_cores</span> <span class="o">=</span> <span class="n">_split_block</span><span class="p">(</span>
+                        <span class="n">tail</span><span class="p">,</span> <span class="n">active</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
+                        <span class="n">rank</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">ranks</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ranks</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                        <span class="n">cutoff</span><span class="o">=</span><span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;cutoff&#39;</span><span class="p">),</span>
+                        <span class="n">atol</span><span class="o">=</span><span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;atol&#39;</span><span class="p">),</span> <span class="n">rtol</span><span class="o">=</span><span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;rtol&#39;</span><span class="p">),</span>
+                        <span class="n">cum_percentage</span><span class="o">=</span><span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;cum_percentage&#39;</span><span class="p">),</span>
+                        <span class="n">metrics</span><span class="o">=</span><span class="n">local_metrics</span> <span class="k">if</span> <span class="n">collect_metrics</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+                    <span class="n">cores</span> <span class="o">=</span> <span class="p">(</span><span class="n">first</span><span class="o">.</span><span class="n">core</span><span class="p">,</span> <span class="o">*</span><span class="n">tail_cores</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">min</span><span class="p">(</span><span class="n">active</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">cyclic</span> <span class="o">*</span> <span class="n">cyclic</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Full BLOSTR requires every physical &#39;</span>
+                                         <span class="s1">&#39;dimension to be at least rank**2&#39;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">cyclic</span> <span class="o">!=</span> <span class="n">adjacent</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Full BLOSTR requires uniform &#39;</span>
+                                         <span class="s1">&#39;discovered ranks&#39;</span><span class="p">)</span>
+                    <span class="n">cores</span> <span class="o">=</span> <span class="n">_recover_cores</span><span class="p">(</span><span class="n">active</span><span class="p">,</span> <span class="n">first</span><span class="o">.</span><span class="n">core</span><span class="p">,</span> <span class="n">generator</span><span class="p">)</span>
+                <span class="n">candidate</span> <span class="o">=</span> <span class="n">TRDecomposition</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+                <span class="n">approximation</span> <span class="o">=</span> <span class="n">candidate</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span>
+                <span class="n">absolute</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span><span class="n">approximation</span> <span class="o">-</span> <span class="n">active</span><span class="p">)</span>
+                <span class="n">denominator</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span><span class="n">active</span><span class="p">)</span>
+                <span class="n">relative</span> <span class="o">=</span> <span class="n">safe_divide</span><span class="p">(</span><span class="n">absolute</span><span class="p">,</span> <span class="n">denominator</span><span class="p">,</span>
+                                       <span class="n">zero_value</span><span class="o">=</span><span class="n">absolute</span><span class="p">)</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">best</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">relative</span> <span class="o">&lt;</span> <span class="n">best</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                    <span class="n">best</span> <span class="o">=</span> <span class="p">(</span><span class="n">relative</span><span class="p">,</span> <span class="n">candidate</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span>
+                            <span class="n">local_metrics</span><span class="o">.</span><span class="n">truncations</span><span class="p">,</span> <span class="n">absolute</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">observer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">observer</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">(</span>
+                        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;attempt_complete&#39;</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="s1">&#39;BLOSTR&#39;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="p">{</span>
+                            <span class="s1">&#39;attempt&#39;</span><span class="p">:</span> <span class="n">attempt</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;attempts&#39;</span><span class="p">:</span> <span class="n">attempts</span><span class="p">,</span>
+                            <span class="s1">&#39;relative_error&#39;</span><span class="p">:</span> <span class="n">relative</span><span class="o">.</span><span class="n">detach</span><span class="p">()}))</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">RuntimeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="n">failures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">best</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">detail</span> <span class="o">=</span> <span class="s1">&#39;; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">failures</span><span class="p">))</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Every BLOSTR spectral attempt failed. </span><span class="si">{</span><span class="n">detail</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Report the accepted attempt, not the final projection that was tried.</span>
+    <span class="n">relative</span><span class="p">,</span> <span class="n">candidate</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">records</span><span class="p">,</span> <span class="n">absolute</span> <span class="o">=</span> <span class="n">best</span>
+    <span class="k">if</span> <span class="n">collect_metrics</span><span class="p">:</span>
+        <span class="n">metrics</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ErrorRecord</span><span class="p">(</span>
+            <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;reconstruction&#39;</span><span class="p">,</span> <span class="n">absolute</span><span class="o">=</span><span class="n">absolute</span><span class="p">,</span> <span class="n">relative</span><span class="o">=</span><span class="n">relative</span><span class="p">,</span>
+            <span class="n">denominator</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span><span class="n">active</span><span class="p">)))</span>
+        <span class="n">metrics</span><span class="o">.</span><span class="n">truncations</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">records</span><span class="p">)</span>
+        <span class="n">metrics</span><span class="o">.</span><span class="n">timings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TimingRecord</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;fit&#39;</span><span class="p">,</span> <span class="n">elapsed</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed</span><span class="p">))</span>
+        <span class="n">metrics</span><span class="o">.</span><span class="n">warnings</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">failures</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">TRDecomposition</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">runtime</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">core</span><span class="p">)</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">candidate</span><span class="o">.</span><span class="n">cores</span><span class="p">],</span> <span class="n">metrics</span><span class="o">=</span><span class="n">metrics</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="s1">&#39;blostr_svd&#39;</span> <span class="k">if</span> <span class="n">use_svd</span> <span class="k">else</span> <span class="s1">&#39;blostr&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;requested_rank&#39;</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">ranks</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">ranks</span><span class="p">),</span>
+            <span class="s1">&#39;adaptive&#39;</span><span class="p">:</span> <span class="n">ranks</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;projection&#39;</span><span class="p">:</span> <span class="n">projection</span><span class="p">,</span>
+            <span class="s1">&#39;slices&#39;</span><span class="p">:</span> <span class="n">first</span><span class="o">.</span><span class="n">slices</span><span class="p">,</span> <span class="s1">&#39;attempts&#39;</span><span class="p">:</span> <span class="n">attempts</span><span class="p">,</span>
+            <span class="s1">&#39;cluster_error&#39;</span><span class="p">:</span> <span class="n">first</span><span class="o">.</span><span class="n">cluster_error</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span>
+        <span class="p">})</span>
+    <span class="k">if</span> <span class="n">observer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">observer</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s1">&#39;summary&#39;</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="s1">&#39;BLOSTR&#39;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;rank&#39;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="s1">&#39;absolute_error&#39;</span><span class="p">:</span> <span class="n">absolute</span><span class="p">,</span>
+                <span class="s1">&#39;relative_error&#39;</span><span class="p">:</span> <span class="n">relative</span><span class="p">,</span> <span class="s1">&#39;elapsed&#39;</span><span class="p">:</span> <span class="n">timer</span><span class="o">.</span><span class="n">elapsed</span><span class="p">}))</span>
+        <span class="k">for</span> <span class="n">site</span><span class="p">,</span> <span class="n">core</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">cores</span><span class="p">):</span>
+            <span class="n">observer</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;core&#39;</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="s1">&#39;BLOSTR&#39;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">,</span>
+                <span class="n">values</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;shape&#39;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="s1">&#39;tensor&#39;</span><span class="p">:</span> <span class="n">core</span><span class="p">}))</span>
+        <span class="n">observer</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">metrics</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<div class="viewcode-block" id="tr_blostr"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.tr_blostr">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">tr_blostr</span><span class="p">(</span><span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+              <span class="n">rank</span><span class="p">:</span> <span class="n">_Rank</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+              <span class="o">*</span><span class="p">,</span>
+              <span class="n">slices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+              <span class="n">projection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;slices&#39;</span><span class="p">,</span>
+              <span class="n">spectral_atol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-10</span><span class="p">,</span>
+              <span class="n">n_attempts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+              <span class="n">n_iters</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+              <span class="n">n_restarts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+              <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+              <span class="n">out_device</span><span class="p">:</span> <span class="n">_Device</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span><span class="p">,</span>
+              <span class="n">collect_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+              <span class="n">verbose</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TRDecomposition</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Recovers a dense tensor ring using spectral BLOSTR at every site.</span>
+
+<span class="sd">    Two pairs of interior slices identify the first core through blockwise</span>
+<span class="sd">    simultaneous diagonalization. Product Gaussian projections of all but</span>
+<span class="sd">    two physical axes then recover each remaining core by a linear solve.</span>
+<span class="sd">    These avoid singular coordinate slices of otherwise injective cores.</span>
+<span class="sd">    This is the uniform-rank construction of</span>
+<span class="sd">    Algorithm 1 in `A Provably Efficient Method for Tensor Ring Decomposition</span>
+<span class="sd">    and Its Applications &lt;https://arxiv.org/abs/2512.01016&gt;`_. It targets exact</span>
+<span class="sd">    tensors with injective physical unfoldings at every site and nondegenerate</span>
+<span class="sd">    projection ratios. Each physical dimension must therefore be at least the</span>
+<span class="sd">    squared TR rank. This differs from :func:`tr_blostr_svd`, which needs</span>
+<span class="sd">    injectivity only at its two external physical axes. No accuracy guarantee</span>
+<span class="sd">    is made for approximate inputs or rank-deficient recovery environments.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tensor : torch.Tensor</span>
+<span class="sd">        Dense tensor with one physical axis per future TR core.</span>
+<span class="sd">    rank : int or sequence[int], optional</span>
+<span class="sd">        Prescribed right-link ranks, including the cyclic last entry. Full</span>
+<span class="sd">        BLOSTR requires equal ranks. With ``None``, balanced k-means discovers</span>
+<span class="sd">        the multiplicities of the nonzero spectrum and requires them to imply</span>
+<span class="sd">        equal cyclic and adjacent ranks.</span>
+<span class="sd">    slices : sequence of four index sequences, optional</span>
+<span class="sd">        Configurations fixing every interior axis for the two spectral ratios.</span>
+<span class="sd">        With ``None``, configurations are drawn using ``generator``.</span>
+<span class="sd">    projection : {&quot;slices&quot;, &quot;gaussian&quot;}</span>
+<span class="sd">        Coordinate slices or contractions against four independent dense</span>
+<span class="sd">        Gaussian tensors over all interior axes. The latter can span matrix</span>
+<span class="sd">        directions absent from any single coordinate slice. Explicit</span>
+<span class="sd">        ``slices`` require ``&quot;slices&quot;``.</span>
+<span class="sd">    spectral_atol : float</span>
+<span class="sd">        Absolute eigenvalue cutoff and relative within-cluster tolerance used</span>
+<span class="sd">        when discovering balanced spectral multiplicities. A machine-precision</span>
+<span class="sd">        floor is applied to both tests. Default is 1e-10.</span>
+<span class="sd">    n_attempts : int</span>
+<span class="sd">        Number of independent spectral attempts. Default is 8; explicit</span>
+<span class="sd">        ``slices`` use one attempt. The smallest reconstruction error is kept.</span>
+<span class="sd">    n_iters, n_restarts : int</span>
+<span class="sd">        Balanced k-means iteration and restart budgets. Defaults are 50 and 10.</span>
+<span class="sd">    generator : torch.Generator, optional</span>
+<span class="sd">        Controls spectral projections, balanced clustering and recovery</span>
+<span class="sd">        projections.</span>
+<span class="sd">    out_device : str or torch.device, optional</span>
+<span class="sd">        Final core storage device. ``None`` keeps the input device.</span>
+<span class="sd">    collect_metrics : bool</span>
+<span class="sd">        Whether to retain reconstruction, truncation and timing diagnostics.</span>
+<span class="sd">    verbose : bool or int</span>
+<span class="sd">        Console verbosity from 0 (silent) to 3.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    TRDecomposition</span>
+<span class="sd">        Recovered TR cores and construction metadata. Spectral factors use a</span>
+<span class="sd">        complex dtype even for real input tensors.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.randn(1, 3, 1, dtype=torch.float64) for _ in range(3)]</span>
+<span class="sd">    &gt;&gt;&gt; tensor = tk.formats.TR(cores).contract_dense()</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.tr_blostr(tensor, rank=1)</span>
+<span class="sd">    &gt;&gt;&gt; torch.allclose(result.contract_dense(), tensor.to(torch.complex128))</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_fit_blostr</span><span class="p">(</span>
+        <span class="n">tensor</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">use_svd</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">slices</span><span class="o">=</span><span class="n">slices</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">,</span>
+        <span class="n">spectral_atol</span><span class="o">=</span><span class="n">spectral_atol</span><span class="p">,</span> <span class="n">n_attempts</span><span class="o">=</span><span class="n">n_attempts</span><span class="p">,</span> <span class="n">n_iters</span><span class="o">=</span><span class="n">n_iters</span><span class="p">,</span>
+        <span class="n">n_restarts</span><span class="o">=</span><span class="n">n_restarts</span><span class="p">,</span> <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">,</span> <span class="n">out_device</span><span class="o">=</span><span class="n">out_device</span><span class="p">,</span>
+        <span class="n">collect_metrics</span><span class="o">=</span><span class="n">collect_metrics</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="tr_blostr_svd"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.tr_blostr_svd">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">tr_blostr_svd</span><span class="p">(</span><span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                  <span class="n">rank</span><span class="p">:</span> <span class="n">_Rank</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="o">*</span><span class="p">,</span>
+                  <span class="n">slices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="n">projection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;slices&#39;</span><span class="p">,</span>
+                  <span class="n">spectral_atol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-10</span><span class="p">,</span>
+                  <span class="n">n_attempts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+                  <span class="n">n_iters</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+                  <span class="n">n_restarts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+                  <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="n">atol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="n">rtol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="n">out_device</span><span class="p">:</span> <span class="n">_Device</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span><span class="p">,</span>
+                  <span class="n">collect_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                  <span class="n">verbose</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TRDecomposition</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Recovers the first TR core spectrally and splits the rest with TT-SVD.</span>
+
+<span class="sd">    Unlike :func:`tr_blostr`, interior ranks may differ. The two ranks bounding</span>
+<span class="sd">    the projected interior chain must coincide: ``rank[0] == rank[-2]``.</span>
+<span class="sd">    The cyclic rank may differ. Gaussian joint projections can retain full</span>
+<span class="sd">    matrix rank even when an intermediate bond makes each coordinate slice</span>
+<span class="sd">    deficient. The physical first and last axes must both have dimension at</span>
+<span class="sd">    least ``rank[-1] * rank[0]``. These conditions permit spectral recovery;</span>
+<span class="sd">    they do not guarantee spectral separation for a particular projection.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tensor : torch.Tensor</span>
+<span class="sd">        Dense tensor with one physical axis per future TR core.</span>
+<span class="sd">    rank : int or sequence[int], optional</span>
+<span class="sd">        Prescribed right-link ranks, including the cyclic last entry. With</span>
+<span class="sd">        ``None``, balanced k-means discovers the first cyclic and adjacent</span>
+<span class="sd">        ranks; TT-SVD discovers the remaining bonds numerically.</span>
+<span class="sd">    slices : sequence of four index sequences, optional</span>
+<span class="sd">        Configurations fixing every interior axis for the two spectral ratios.</span>
+<span class="sd">        With ``None``, configurations are drawn using ``generator``.</span>
+<span class="sd">    projection : {&quot;slices&quot;, &quot;gaussian&quot;}</span>
+<span class="sd">        Coordinate slices or contractions against four independent dense</span>
+<span class="sd">        Gaussian tensors over all interior axes. The latter can span matrix</span>
+<span class="sd">        directions absent from any single coordinate slice. Explicit</span>
+<span class="sd">        ``slices`` require ``&quot;slices&quot;``.</span>
+<span class="sd">    spectral_atol : float</span>
+<span class="sd">        Absolute eigenvalue cutoff and relative within-cluster tolerance used</span>
+<span class="sd">        when discovering balanced spectral multiplicities. A machine-precision</span>
+<span class="sd">        floor is applied to both tests. Default is 1e-10.</span>
+<span class="sd">    n_attempts : int</span>
+<span class="sd">        Number of independent spectral attempts. Default is 8; explicit</span>
+<span class="sd">        ``slices`` use one attempt. The smallest reconstruction error is kept.</span>
+<span class="sd">    n_iters, n_restarts : int</span>
+<span class="sd">        Balanced k-means iteration and restart budgets. Defaults are 50 and 10.</span>
+<span class="sd">    generator : torch.Generator, optional</span>
+<span class="sd">        Controls spectral projections, balanced clustering and recovery</span>
+<span class="sd">        projections.</span>
+<span class="sd">    cutoff : float, optional</span>
+<span class="sd">        Singular values at or below this value are discarded in tail TT-SVD.</span>
+<span class="sd">    atol, rtol, cum_percentage : float, optional</span>
+<span class="sd">        Absolute or relative discarded-energy tolerance, or retained squared</span>
+<span class="sd">        singular-value fraction, in tail TT-SVD. With no rank or tolerance,</span>
+<span class="sd">        a numerical threshold accounts for the precision and conditioning of</span>
+<span class="sd">        the recovered first core. A supplied rank is an upper bound; smaller</span>
+<span class="sd">        retained ranks are returned without zero padding.</span>
+<span class="sd">    out_device : str or torch.device, optional</span>
+<span class="sd">        Final core storage device. ``None`` keeps the input device.</span>
+<span class="sd">    collect_metrics : bool</span>
+<span class="sd">        Whether to retain reconstruction, truncation and timing diagnostics.</span>
+<span class="sd">    verbose : bool or int</span>
+<span class="sd">        Console verbosity from 0 (silent) to 3.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    TRDecomposition</span>
+<span class="sd">        Recovered TR cores and construction metadata. Spectral factors use a</span>
+<span class="sd">        complex dtype even for real input tensors.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.randn(1, 3, 1, dtype=torch.float64) for _ in range(3)]</span>
+<span class="sd">    &gt;&gt;&gt; tensor = tk.formats.TR(cores).contract_dense()</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.tr_blostr_svd(tensor, rank=1)</span>
+<span class="sd">    &gt;&gt;&gt; torch.allclose(result.contract_dense(), tensor.to(torch.complex128))</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">truncation</span> <span class="o">=</span> <span class="n">_TruncationSpec</span><span class="p">(</span><span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="n">atol</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">,</span>
+                                 <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_fit_blostr</span><span class="p">(</span>
+        <span class="n">tensor</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">use_svd</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slices</span><span class="o">=</span><span class="n">slices</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">,</span>
+        <span class="n">spectral_atol</span><span class="o">=</span><span class="n">spectral_atol</span><span class="p">,</span> <span class="n">n_attempts</span><span class="o">=</span><span class="n">n_attempts</span><span class="p">,</span> <span class="n">n_iters</span><span class="o">=</span><span class="n">n_iters</span><span class="p">,</span>
+        <span class="n">n_restarts</span><span class="o">=</span><span class="n">n_restarts</span><span class="p">,</span> <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">,</span> <span class="n">truncation</span><span class="o">=</span><span class="n">truncation</span><span class="p">,</span>
+        <span class="n">out_device</span><span class="o">=</span><span class="n">out_device</span><span class="p">,</span> <span class="n">collect_metrics</span><span class="o">=</span><span class="n">collect_metrics</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span></div>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;tr_blostr&#39;</span><span class="p">,</span> <span class="s1">&#39;tr_blostr_svd&#39;</span><span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

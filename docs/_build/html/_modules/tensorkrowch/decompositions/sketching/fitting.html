@@ -1,0 +1,1106 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.sketching.fitting &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/clipboard.min.js"></script>
+    <script src="../../../../_static/copybutton.js"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.sketching.fitting</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Classes:</span>
+<span class="sd">        * InputFitter</span>
+<span class="sd">        * FixedEmbeddingFitter</span>
+<span class="sd">        * BasisFitter</span>
+<span class="sd">        * TrainableEmbeddingFitter</span>
+
+<span class="sd">    Functions:</span>
+<span class="sd">        * _phi_shape</span>
+<span class="sd">        * _normalize_axis</span>
+<span class="sd">        * _phi_device</span>
+<span class="sd">        * _collect_phi_target</span>
+<span class="sd">        * _restore_fitted_axis</span>
+<span class="sd">        * _store_fit</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">prod</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">Any</span><span class="p">,</span>
+                    <span class="n">Callable</span><span class="p">,</span>
+                    <span class="n">Mapping</span><span class="p">,</span>
+                    <span class="n">Optional</span><span class="p">,</span>
+                    <span class="n">Protocol</span><span class="p">,</span>
+                    <span class="n">Sequence</span><span class="p">,</span>
+                    <span class="n">Tuple</span><span class="p">,</span>
+                    <span class="n">Union</span><span class="p">,</span>
+                    <span class="n">runtime_checkable</span><span class="p">)</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">_INTEGER_DTYPES</span><span class="p">,</span> <span class="n">safe_divide</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">_normalize_dims</span><span class="p">,</span>
+                                                <span class="n">_unravel_indices</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.als.solvers</span><span class="w"> </span><span class="kn">import</span> <span class="n">LeastSquaresSolver</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">InputFitRecord</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sketching.phi</span><span class="w"> </span><span class="kn">import</span> <span class="n">PhiOperator</span><span class="p">,</span> <span class="n">PhiView</span>
+
+
+<span class="n">_Phi</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">PhiView</span><span class="p">]</span>
+
+
+<span class="n">Embedding</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_phi_shape</span><span class="p">(</span><span class="n">phi_view</span><span class="p">:</span> <span class="n">_Phi</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns and validates the shape required for input-axis fitting.&quot;&quot;&quot;</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">phi_view</span><span class="p">,</span> <span class="s1">&#39;shape&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`phi_view` should expose its complete `shape`&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_normalize_dims</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="s1">&#39;phi_view.shape&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_axis</span><span class="p">(</span><span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalizes one possibly-negative Phi ``axis``.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`axis` should be int type&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">axis</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">axis</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">axis</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">axis</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`axis` is out of bounds for Phi&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">axis</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_phi_device</span><span class="p">(</span><span class="n">phi_view</span><span class="p">:</span> <span class="n">_Phi</span><span class="p">,</span> <span class="n">domain</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Infers a device for fixed-index batches without evaluating Phi.&quot;&quot;&quot;</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">phi_view</span><span class="p">,</span> <span class="s1">&#39;source&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s1">&#39;device&#39;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">source</span><span class="o">.</span><span class="n">device</span>
+    <span class="n">tensor</span> <span class="o">=</span> <span class="n">phi_view</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phi_view</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> \
+        <span class="k">else</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">phi_view</span><span class="p">,</span> <span class="s1">&#39;tensor&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">tensor</span><span class="o">.</span><span class="n">device</span>
+    <span class="k">return</span> <span class="n">domain</span><span class="o">.</span><span class="n">device</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_collect_phi_target</span><span class="p">(</span><span class="n">phi_view</span><span class="p">:</span> <span class="n">_Phi</span><span class="p">,</span>
+                        <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                        <span class="n">domain</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                        <span class="n">fiber_batch_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
+                            <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+        <span class="nb">bool</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns Phi as ``domain_size x n_fibers`` using one selected path.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phi_view</span><span class="p">,</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">PhiView</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`phi_view` should be a tensor or implement PhiView&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`domain` should be torch.Tensor type&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">domain</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">domain</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`domain` should have a non-empty values dimension&#39;</span><span class="p">)</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="n">_phi_shape</span><span class="p">(</span><span class="n">phi_view</span><span class="p">)</span>
+    <span class="n">axis</span> <span class="o">=</span> <span class="n">_normalize_axis</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">!=</span> <span class="n">domain</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s1">&#39;`domain` should contain one value per selected Phi-axis entry&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fiber_batch_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">fiber_batch_size</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span>
+            <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fiber_batch_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span>
+            <span class="p">(</span><span class="n">fiber_batch_size</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s1">&#39;`fiber_batch_size` should be a positive integer or None&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">fiber_batch_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phi_view</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="n">phi_view</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phi_view</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> \
+            <span class="k">else</span> <span class="n">phi_view</span><span class="o">.</span><span class="n">materialize</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="n">shape</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`phi_view.materialize()` should preserve the declared shape&#39;</span><span class="p">)</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">target</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="kc">False</span>
+
+    <span class="n">fixed_shape</span> <span class="o">=</span> <span class="n">shape</span><span class="p">[:</span><span class="n">axis</span><span class="p">]</span> <span class="o">+</span> <span class="n">shape</span><span class="p">[(</span><span class="n">axis</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):]</span>
+    <span class="n">n_fibers</span> <span class="o">=</span> <span class="n">prod</span><span class="p">(</span><span class="n">fixed_shape</span><span class="p">)</span> <span class="k">if</span> <span class="n">fixed_shape</span> <span class="k">else</span> <span class="mi">1</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">_phi_device</span><span class="p">(</span><span class="n">phi_view</span><span class="p">,</span> <span class="n">domain</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_fibers</span><span class="p">,</span> <span class="n">fiber_batch_size</span><span class="p">):</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">fiber_batch_size</span><span class="p">,</span> <span class="n">n_fibers</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fixed_shape</span><span class="p">:</span>
+            <span class="n">ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">fixed_indices</span> <span class="o">=</span> <span class="n">_unravel_indices</span><span class="p">(</span><span class="n">ids</span><span class="p">,</span> <span class="n">fixed_shape</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fixed_indices</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">fibers</span> <span class="o">=</span> <span class="n">phi_view</span><span class="o">.</span><span class="n">fiber</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">fixed_indices</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fibers</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`phi_view.fiber()` should return a torch.Tensor&#39;</span><span class="p">)</span>
+        <span class="n">expected</span> <span class="o">=</span> <span class="p">(</span><span class="n">stop</span> <span class="o">-</span> <span class="n">start</span><span class="p">,</span> <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span> <span class="k">if</span> <span class="n">fixed_shape</span> \
+            <span class="k">else</span> <span class="p">(</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">],)</span>
+        <span class="k">if</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">fibers</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="n">expected</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`phi_view.fiber()` returned an incompatible shape&#39;</span><span class="p">)</span>
+        <span class="n">fibers</span> <span class="o">=</span> <span class="n">fibers</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">stop</span> <span class="o">-</span> <span class="n">start</span><span class="p">,</span> <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">target</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="n">fibers</span><span class="o">.</span><span class="n">new_empty</span><span class="p">((</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="n">n_fibers</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">fibers</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">target</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="n">fibers</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">target</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;All Phi fibers should share a device and dtype&#39;</span><span class="p">)</span>
+        <span class="n">target</span><span class="p">[:,</span> <span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span> <span class="o">=</span> <span class="n">fibers</span>
+    <span class="k">return</span> <span class="n">target</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="kc">True</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_restore_fitted_axis</span><span class="p">(</span><span class="n">solution</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                         <span class="n">shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                         <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Restores a solved ``in_dim x n_fibers`` table to Phi layout.&quot;&quot;&quot;</span>
+    <span class="n">other_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">[:</span><span class="n">axis</span><span class="p">])</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">[(</span><span class="n">axis</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):])</span>
+    <span class="k">return</span> <span class="n">solution</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">solution</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">*</span><span class="n">other_shape</span><span class="p">)</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_store_fit</span><span class="p">(</span><span class="n">phi_view</span><span class="p">:</span> <span class="n">_Phi</span><span class="p">,</span> <span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+               <span class="n">domain_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+               <span class="n">record</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">InputFitRecord</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">model_state</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">metadata</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PhiOperator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Updates the original Phi, or wraps a standalone fitter input once.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phi_view</span><span class="p">,</span> <span class="n">PhiOperator</span><span class="p">):</span>
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">phi_view</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">original</span> <span class="o">=</span> <span class="n">phi_view</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phi_view</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">else</span> <span class="n">tensor</span>
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">PhiOperator</span><span class="o">.</span><span class="n">from_tensor</span><span class="p">(</span><span class="n">original</span><span class="p">)</span>
+    <span class="n">phi</span><span class="o">.</span><span class="n">coefficients</span> <span class="o">=</span> <span class="n">tensor</span>
+    <span class="n">phi</span><span class="o">.</span><span class="n">axis</span><span class="p">,</span> <span class="n">phi</span><span class="o">.</span><span class="n">domain_size</span><span class="p">,</span> <span class="n">phi</span><span class="o">.</span><span class="n">in_dim</span> <span class="o">=</span> <span class="n">axis</span><span class="p">,</span> <span class="n">domain_size</span><span class="p">,</span> <span class="n">in_dim</span>
+    <span class="n">phi</span><span class="o">.</span><span class="n">record</span> <span class="o">=</span> <span class="n">record</span>
+    <span class="n">phi</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">phi</span><span class="o">.</span><span class="n">model_state</span> <span class="o">=</span> <span class="n">model</span><span class="p">,</span> <span class="n">model_state</span>
+    <span class="n">phi</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">metadata</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">dict</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">phi</span>
+
+
+<div class="viewcode-block" id="InputFitter"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.InputFitter">[docs]</a><span class="nd">@runtime_checkable</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">InputFitter</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>  <span class="c1"># MARK: InputFitter</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Replaces one finite-domain Phi axis by input-basis coefficients.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="InputFitter.fit"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.InputFitter.fit">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">phi_view</span><span class="p">:</span> <span class="n">_Phi</span><span class="p">,</span>
+            <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+            <span class="n">domain</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+            <span class="n">return_info</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PhiOperator</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fits one Phi axis in a physical input basis.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        phi_view : torch.Tensor or PhiView</span>
+<span class="sd">            Local tensor or functional Phi supporting entries and fibers.</span>
+<span class="sd">        axis : int</span>
+<span class="sd">            Physical axis to replace by embedding coefficients.</span>
+<span class="sd">        domain : torch.Tensor</span>
+<span class="sd">            Coordinate values for this axis, with shape</span>
+<span class="sd">            ``(domain_size, *coordinate_shape)``.</span>
+<span class="sd">        return_info : bool</span>
+<span class="sd">            Whether to collect fitting diagnostics. Default is ``False``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        PhiOperator</span>
+<span class="sd">            Operator retaining the fitted ``coefficients`` and optional</span>
+<span class="sd">            diagnostics. A ``PhiOperator`` input is updated and returned.</span>
+<span class="sd">        &quot;&quot;&quot;</span></div></div>
+
+
+<div class="viewcode-block" id="FixedEmbeddingFitter"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.FixedEmbeddingFitter">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">FixedEmbeddingFitter</span><span class="p">:</span>  <span class="c1"># MARK: FixedEmbeddingFitter</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fits Phi values in a fixed finite-domain embedding by least squares.</span>
+
+<span class="sd">    All fibers are solved against the same embedding matrix. The fitted</span>
+<span class="sd">    physical axis contains basis coefficients, and may have a different size</span>
+<span class="sd">    from the evaluated domain.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    embedding : torch.Tensor or callable</span>
+<span class="sd">        Matrix with shape ``(domain_size, in_dim)``, or callable returning</span>
+<span class="sd">        that matrix when evaluated on ``domain``.</span>
+<span class="sd">    solver : LeastSquaresSolver, optional</span>
+<span class="sd">        Local least-squares solver. Defaults to :class:`LeastSquaresSolver`.</span>
+<span class="sd">    fiber_batch_size : int, optional</span>
+<span class="sd">        Number of functional Phi fibers collected together. ``None``</span>
+<span class="sd">        materializes the complete Phi; an existing tensor is used directly.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; fitter = tk.decompositions.FixedEmbeddingFitter(torch.eye(2))</span>
+<span class="sd">    &gt;&gt;&gt; fitter.fit(torch.arange(4.).reshape(2, 2), 0,</span>
+<span class="sd">    ...            torch.arange(2)).tensor</span>
+<span class="sd">    tensor([[0., 1.],</span>
+<span class="sd">            [2., 3.]])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">embedding</span><span class="p">:</span> <span class="n">Embedding</span><span class="p">,</span>
+                 <span class="n">solver</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LeastSquaresSolver</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">fiber_batch_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">embedding</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">callable</span><span class="p">(</span><span class="n">embedding</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`embedding` should be a tensor or callable&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">solver</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">solver</span><span class="p">,</span> <span class="n">LeastSquaresSolver</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`solver` should be LeastSquaresSolver type or None&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">fiber_batch_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">fiber_batch_size</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fiber_batch_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="p">(</span><span class="n">fiber_batch_size</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`fiber_batch_size` should be a positive integer or None&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embedding</span> <span class="o">=</span> <span class="n">embedding</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">=</span> <span class="n">LeastSquaresSolver</span><span class="p">()</span> <span class="k">if</span> <span class="n">solver</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fiber_batch_size</span> <span class="o">=</span> <span class="n">fiber_batch_size</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_embedding_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evaluates and validates the fixed embedding on one ``domain``.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embedding</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span> <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">embedding</span><span class="p">)</span> \
+                <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">embedding</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`embedding` failed on `domain`&#39;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`embedding` should produce a torch.Tensor&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">domain</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`embedding` should produce shape (domain_size, in_dim)&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">is_floating_point</span><span class="p">()</span> <span class="ow">or</span> <span class="n">matrix</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`embedding` should be floating or complex&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`embedding` should contain finite values&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">matrix</span>
+
+<div class="viewcode-block" id="FixedEmbeddingFitter.fit"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.FixedEmbeddingFitter.fit">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">phi_view</span><span class="p">:</span> <span class="n">_Phi</span><span class="p">,</span>
+            <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+            <span class="n">domain</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+            <span class="n">return_info</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PhiOperator</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Solves all Phi fibers against the fixed embedding matrix.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        phi_view : torch.Tensor or PhiView</span>
+<span class="sd">            Local tensor or functional Phi supporting entries and fibers.</span>
+<span class="sd">        axis : int</span>
+<span class="sd">            Physical axis to replace by embedding coefficients.</span>
+<span class="sd">        domain : torch.Tensor</span>
+<span class="sd">            Coordinate values for this axis, with shape</span>
+<span class="sd">            ``(domain_size, *coordinate_shape)``.</span>
+<span class="sd">        return_info : bool</span>
+<span class="sd">            Whether to collect fitting diagnostics. Default is ``False``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        PhiOperator</span>
+<span class="sd">            Operator retaining the fitted ``coefficients`` and optional</span>
+<span class="sd">            diagnostics. A ``PhiOperator`` input is updated and returned.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">return_info</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`return_info` should be bool type&#39;</span><span class="p">)</span>
+        <span class="n">target</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">used_fibers</span> <span class="o">=</span> <span class="n">_collect_phi_target</span><span class="p">(</span>
+            <span class="n">phi_view</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fiber_batch_size</span><span class="p">)</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="n">_normalize_axis</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
+        <span class="n">matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_embedding_matrix</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">target</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">matrix</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">target</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">solution</span><span class="p">,</span> <span class="n">local_record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span>
+            <span class="n">matrix</span><span class="p">,</span>
+            <span class="n">target</span><span class="p">,</span>
+            <span class="n">site</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span>
+            <span class="n">return_record</span><span class="o">=</span><span class="n">return_info</span><span class="p">)</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">return_info</span><span class="p">:</span>
+            <span class="n">singular_values</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svdvals</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span>
+            <span class="n">smallest</span> <span class="o">=</span> <span class="n">singular_values</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">condition</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                <span class="n">smallest</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">singular_values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">smallest</span><span class="p">,</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">smallest</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">inf</span><span class="p">))</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="n">InputFitRecord</span><span class="p">(</span>
+                <span class="n">method</span><span class="o">=</span><span class="s1">&#39;fixed_embedding&#39;</span><span class="p">,</span>
+                <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span>
+                <span class="n">domain_size</span><span class="o">=</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">in_dim</span><span class="o">=</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">abs_residual</span><span class="o">=</span><span class="n">local_record</span><span class="o">.</span><span class="n">abs_residual</span><span class="p">,</span>
+                <span class="n">rel_residual</span><span class="o">=</span><span class="n">local_record</span><span class="o">.</span><span class="n">rel_residual</span><span class="p">,</span>
+                <span class="n">condition_number</span><span class="o">=</span><span class="n">condition</span><span class="p">,</span>
+                <span class="n">used_fibers</span><span class="o">=</span><span class="n">used_fibers</span><span class="p">,</span>
+                <span class="n">local_solve</span><span class="o">=</span><span class="n">local_record</span><span class="p">)</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="n">_restore_fitted_axis</span><span class="p">(</span><span class="n">solution</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_store_fit</span><span class="p">(</span>
+            <span class="n">phi_view</span><span class="p">,</span> <span class="n">tensor</span><span class="o">=</span><span class="n">tensor</span><span class="p">,</span>
+            <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span>
+            <span class="n">domain_size</span><span class="o">=</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">in_dim</span><span class="o">=</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">record</span><span class="o">=</span><span class="n">record</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="BasisFitter"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.BasisFitter">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">BasisFitter</span><span class="p">:</span>  <span class="c1"># MARK: BasisFitter</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Places an integer-labelled Phi axis in the corresponding input basis.</span>
+
+<span class="sd">    Unobserved labels receive zero coefficients. This operation performs no</span>
+<span class="sd">    least-squares solve or averaging.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    in_dim : int, optional</span>
+<span class="sd">        Full input-basis dimension. Defaults to the largest domain label</span>
+<span class="sd">        plus one.</span>
+<span class="sd">    fiber_batch_size : int, optional</span>
+<span class="sd">        Number of functional Phi fibers collected together. ``None``</span>
+<span class="sd">        materializes the complete Phi; an existing tensor is used directly.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">in_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">fiber_batch_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">in_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+                <span class="ow">or</span> <span class="p">(</span><span class="n">in_dim</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`in_dim` should be a positive integer or None&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">fiber_batch_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">fiber_batch_size</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fiber_batch_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="p">(</span><span class="n">fiber_batch_size</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`fiber_batch_size` should be a positive integer or None&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span> <span class="o">=</span> <span class="n">in_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fiber_batch_size</span> <span class="o">=</span> <span class="n">fiber_batch_size</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_labels</span><span class="p">(</span><span class="n">domain</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                <span class="n">in_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validates basis labels and resolves the complete input dimension.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`domain` should be torch.Tensor type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">domain</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">domain</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="n">domain</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_INTEGER_DTYPES</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`domain` should be a non-empty vector of integer labels&#39;</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">domain</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Basis labels in `domain` should be unique&#39;</span><span class="p">)</span>
+        <span class="n">resolved_dim</span> <span class="o">=</span> <span class="n">in_dim</span>
+        <span class="k">if</span> <span class="n">resolved_dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">resolved_dim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">())</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">labels</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="n">torch</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">labels</span> <span class="o">&gt;=</span> <span class="n">resolved_dim</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Basis labels in `domain` should lie inside `in_dim`&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">labels</span><span class="p">,</span> <span class="n">resolved_dim</span>
+
+<div class="viewcode-block" id="BasisFitter.fit"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.BasisFitter.fit">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">phi_view</span><span class="p">:</span> <span class="n">_Phi</span><span class="p">,</span>
+            <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+            <span class="n">domain</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+            <span class="n">return_info</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PhiOperator</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Places Phi values at their basis labels without solving.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        phi_view : torch.Tensor or PhiView</span>
+<span class="sd">            Local tensor or functional Phi supporting entries and fibers.</span>
+<span class="sd">        axis : int</span>
+<span class="sd">            Physical axis to replace by embedding coefficients.</span>
+<span class="sd">        domain : torch.Tensor</span>
+<span class="sd">            Coordinate values for this axis, with shape</span>
+<span class="sd">            ``(domain_size, *coordinate_shape)``.</span>
+<span class="sd">        return_info : bool</span>
+<span class="sd">            Whether to collect fitting diagnostics. Default is ``False``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        PhiOperator</span>
+<span class="sd">            Operator retaining the fitted ``coefficients`` and optional</span>
+<span class="sd">            diagnostics. A ``PhiOperator`` input is updated and returned.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">return_info</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`return_info` should be bool type&#39;</span><span class="p">)</span>
+        <span class="n">labels</span><span class="p">,</span> <span class="n">in_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_labels</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)</span>
+        <span class="n">target</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">used_fibers</span> <span class="o">=</span> <span class="n">_collect_phi_target</span><span class="p">(</span>
+            <span class="n">phi_view</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fiber_batch_size</span><span class="p">)</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="n">_normalize_axis</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
+        <span class="n">solution</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">new_zeros</span><span class="p">((</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">solution</span><span class="o">.</span><span class="n">index_copy_</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">solution</span><span class="o">.</span><span class="n">device</span><span class="p">),</span> <span class="n">target</span><span class="p">)</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="n">InputFitRecord</span><span class="p">(</span>
+            <span class="n">method</span><span class="o">=</span><span class="s1">&#39;basis&#39;</span><span class="p">,</span>
+            <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span>
+            <span class="n">domain_size</span><span class="o">=</span><span class="n">domain</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">in_dim</span><span class="o">=</span><span class="n">in_dim</span><span class="p">,</span>
+            <span class="n">abs_residual</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span>
+            <span class="n">rel_residual</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span>
+            <span class="n">condition_number</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span>
+            <span class="n">used_fibers</span><span class="o">=</span><span class="n">used_fibers</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_info</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="n">_restore_fitted_axis</span><span class="p">(</span><span class="n">solution</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_store_fit</span><span class="p">(</span>
+            <span class="n">phi_view</span><span class="p">,</span> <span class="n">tensor</span><span class="o">=</span><span class="n">tensor</span><span class="p">,</span>
+            <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span>
+            <span class="n">domain_size</span><span class="o">=</span><span class="n">domain</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">in_dim</span><span class="o">=</span><span class="n">in_dim</span><span class="p">,</span>
+            <span class="n">record</span><span class="o">=</span><span class="n">record</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="TrainableEmbeddingFitter"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.TrainableEmbeddingFitter">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">TrainableEmbeddingFitter</span><span class="p">:</span>  <span class="c1"># MARK: TrainableEmbeddingFitter</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fits a Phi axis with a locally trained embedding model.</span>
+
+<span class="sd">    ``model(domain)`` must return a matrix with shape</span>
+<span class="sd">    ``(domain_size, in_dim)``. Training jointly optimizes the model and one</span>
+<span class="sd">    temporary coefficient table against functional Phi fibers. A final shared</span>
+<span class="sd">    least-squares solve removes optimizer error from the returned coefficients.</span>
+<span class="sd">    Gradients and random state are confined to this fitter; the surrounding</span>
+<span class="sd">    decomposition remains an ordinary numerical routine.</span>
+
+<span class="sd">    The trained model and a detached CPU state dictionary are attached to</span>
+<span class="sd">    :class:`PhiOperator` only when ``return_info=True``. Otherwise the</span>
+<span class="sd">    result contains only the fitted tensor and the model remains accessible as</span>
+<span class="sd">    ``fitter.model``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model : torch.nn.Module</span>
+<span class="sd">        Embedding model returning shape ``(domain_size, in_dim)``.</span>
+<span class="sd">    in_dim : int, optional</span>
+<span class="sd">        Expected model output dimension. Inferred from the model if omitted.</span>
+<span class="sd">    optimizer_factory : callable, optional</span>
+<span class="sd">        Optimizer constructor. Defaults to :class:`torch.optim.Adam`.</span>
+<span class="sd">    optimizer_kwargs : mapping, optional</span>
+<span class="sd">        Optimizer arguments. Defaults to ``{&#39;lr&#39;: 1e-2}``.</span>
+<span class="sd">    solver : LeastSquaresSolver, optional</span>
+<span class="sd">        Solver for the final coefficient fit. Defaults to</span>
+<span class="sd">        :class:`LeastSquaresSolver`.</span>
+<span class="sd">    max_steps : int</span>
+<span class="sd">        Maximum optimizer steps. Default is ``500``.</span>
+<span class="sd">    tolerance : float</span>
+<span class="sd">        Relative residual at which training stops. Default is ``1e-6``.</span>
+<span class="sd">    patience : int</span>
+<span class="sd">        Consecutive steps without loss improvement before stopping.</span>
+<span class="sd">        Default is ``50``.</span>
+<span class="sd">    fiber_batch_size : int, optional</span>
+<span class="sd">        Number of functional Phi fibers collected together. ``None``</span>
+<span class="sd">        materializes the complete Phi; an existing tensor is used directly.</span>
+<span class="sd">        Default is ``64``.</span>
+<span class="sd">    seed : int</span>
+<span class="sd">        Seed for the local coefficient initialization. The caller&#39;s random</span>
+<span class="sd">        state is restored after training. Default is ``0``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">model</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+                 <span class="n">in_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">optimizer_factory</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">optimizer_kwargs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">solver</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LeastSquaresSolver</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">max_steps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">500</span><span class="p">,</span>
+                 <span class="n">tolerance</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-06</span><span class="p">,</span>
+                 <span class="n">patience</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+                 <span class="n">fiber_batch_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
+                 <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`model` should be torch.nn.Module type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">in_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`in_dim` should be int type or None&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">in_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">in_dim</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`in_dim` should be positive&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">optimizer_factory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">optimizer_factory</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`optimizer_factory` should be callable or None&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">optimizer_kwargs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                <span class="n">optimizer_kwargs</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`optimizer_kwargs` should be a mapping or None&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">solver</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">solver</span><span class="p">,</span> <span class="n">LeastSquaresSolver</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`solver` should be LeastSquaresSolver type or None&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">minimum</span> <span class="ow">in</span> <span class="p">(</span>
+                <span class="p">(</span><span class="s1">&#39;max_steps&#39;</span><span class="p">,</span> <span class="n">max_steps</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                <span class="p">(</span><span class="s1">&#39;patience&#39;</span><span class="p">,</span> <span class="n">patience</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                <span class="p">(</span><span class="s1">&#39;seed&#39;</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="mi">0</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be int type&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">minimum</span><span class="p">:</span>
+                <span class="n">qualifier</span> <span class="o">=</span> <span class="s1">&#39;positive&#39;</span> <span class="k">if</span> <span class="n">minimum</span> <span class="k">else</span> <span class="s1">&#39;non-negative&#39;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be </span><span class="si">{</span><span class="n">qualifier</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tolerance</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                <span class="n">tolerance</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`tolerance` should be a real scalar&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tolerance</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`tolerance` should be non-negative&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">fiber_batch_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">fiber_batch_size</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fiber_batch_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`fiber_batch_size` should be int type or None&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">fiber_batch_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">fiber_batch_size</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`fiber_batch_size` should be positive&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span> <span class="o">=</span> <span class="n">in_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_factory</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span> \
+            <span class="k">if</span> <span class="n">optimizer_factory</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">optimizer_factory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;lr&#39;</span><span class="p">:</span> <span class="mf">1e-2</span><span class="p">}</span> \
+            <span class="k">if</span> <span class="n">optimizer_kwargs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">dict</span><span class="p">(</span><span class="n">optimizer_kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="o">=</span> <span class="n">LeastSquaresSolver</span><span class="p">()</span> <span class="k">if</span> <span class="n">solver</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span> <span class="o">=</span> <span class="n">max_steps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">tolerance</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">patience</span> <span class="o">=</span> <span class="n">patience</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fiber_batch_size</span> <span class="o">=</span> <span class="n">fiber_batch_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seed</span> <span class="o">=</span> <span class="n">seed</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_embedding_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                          <span class="n">domain</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                          <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evaluates and validates the current trainable embedding.&quot;&quot;&quot;</span>
+        <span class="n">matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">domain</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`model` should return a torch.Tensor&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">domain</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`model` should return shape (domain_size, in_dim)&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`model` output does not match `in_dim`&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">is_floating_point</span><span class="p">()</span> <span class="ow">or</span> <span class="n">matrix</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`model` output should be floating or complex&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`model` output should contain finite values&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">matrix</span>
+
+<div class="viewcode-block" id="TrainableEmbeddingFitter.fit"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.TrainableEmbeddingFitter.fit">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">phi_view</span><span class="p">:</span> <span class="n">_Phi</span><span class="p">,</span>
+            <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+            <span class="n">domain</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+            <span class="n">return_info</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PhiOperator</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Trains the embedding on Phi fibers and returns coefficients.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        phi_view : torch.Tensor or PhiView</span>
+<span class="sd">            Local tensor or functional Phi supporting entries and fibers.</span>
+<span class="sd">        axis : int</span>
+<span class="sd">            Physical axis to replace by embedding coefficients.</span>
+<span class="sd">        domain : torch.Tensor</span>
+<span class="sd">            Coordinate values for this axis, with shape</span>
+<span class="sd">            ``(domain_size, *coordinate_shape)``.</span>
+<span class="sd">        return_info : bool</span>
+<span class="sd">            Whether to collect fitting diagnostics. Default is ``False``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        PhiOperator</span>
+<span class="sd">            Operator retaining the fitted ``coefficients`` and optional</span>
+<span class="sd">            diagnostics. A ``PhiOperator`` input is updated and returned.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">return_info</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`return_info` should be bool type&#39;</span><span class="p">)</span>
+        <span class="n">target</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">used_fibers</span> <span class="o">=</span> <span class="n">_collect_phi_target</span><span class="p">(</span>
+            <span class="n">phi_view</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fiber_batch_size</span><span class="p">)</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="n">_normalize_axis</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">parameter</span> <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">parameter</span><span class="o">.</span><span class="n">requires_grad</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">parameters</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`model` should expose at least one trainable parameter&#39;</span><span class="p">)</span>
+        <span class="n">model_device</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">device</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">parameter</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">model_device</span> <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;All model parameters should share a device&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">model_device</span> <span class="o">!=</span> <span class="n">target</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">target</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">model_device</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">device</span>
+
+        <span class="n">cuda_devices</span> <span class="o">=</span> <span class="p">[</span><span class="n">model_device</span><span class="p">]</span> <span class="k">if</span> <span class="n">model_device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="n">best_loss</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+        <span class="n">stale_steps</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">converged</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">fork_rng</span><span class="p">(</span><span class="n">devices</span><span class="o">=</span><span class="n">cuda_devices</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">enable_grad</span><span class="p">():</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_embedding_matrix</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">model_device</span><span class="p">)</span>
+            <span class="n">in_dim</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">target</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">coefficient</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span>
+                <span class="n">in_dim</span><span class="p">,</span>
+                <span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">device</span><span class="o">=</span><span class="n">model_device</span><span class="p">,</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">)</span>
+            <span class="n">optimizer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_factory</span><span class="p">(</span>
+                <span class="p">[</span><span class="o">*</span><span class="n">parameters</span><span class="p">,</span> <span class="n">coefficient</span><span class="p">],</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer_kwargs</span><span class="p">)</span>
+            <span class="n">denominator</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span>
+                <span class="n">target</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">model_device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">))</span><span class="o">.</span><span class="n">clamp_min</span><span class="p">(</span>
+                    <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">tiny</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">(</span><span class="n">set_to_none</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_embedding_matrix</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">model_device</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+                    <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+                <span class="n">promoted_target</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">model_device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+                <span class="n">residual</span> <span class="o">=</span> <span class="n">matrix</span> <span class="o">@</span> <span class="n">coefficient</span> <span class="o">-</span> <span class="n">promoted_target</span>
+                <span class="n">loss</span> <span class="o">=</span> <span class="n">residual</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">square</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+                <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+                <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+                <span class="n">relative</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span><span class="n">residual</span><span class="p">)</span> <span class="o">/</span> <span class="n">denominator</span>
+                <span class="n">loss_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">loss</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">())</span>
+                <span class="n">relative_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">relative</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">())</span>
+                <span class="k">if</span> <span class="n">relative_value</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span><span class="p">:</span>
+                    <span class="n">converged</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span>
+                <span class="n">improvement</span> <span class="o">=</span> <span class="n">best_loss</span> <span class="o">-</span> <span class="n">loss_value</span>
+                <span class="n">threshold</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">best_loss</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e-12</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">best_loss</span> <span class="o">==</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">))</span> <span class="ow">or</span> <span class="p">(</span><span class="n">improvement</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">):</span>
+                    <span class="n">best_loss</span> <span class="o">=</span> <span class="n">loss_value</span>
+                    <span class="n">stale_steps</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">stale_steps</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">stale_steps</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">patience</span><span class="p">:</span>
+                        <span class="k">break</span>
+
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_embedding_matrix</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">model_device</span><span class="p">)</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">target</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">model_device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">solution</span><span class="p">,</span> <span class="n">local_record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span>
+                <span class="n">matrix</span><span class="p">,</span>
+                <span class="n">target</span><span class="p">,</span>
+                <span class="n">site</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span>
+                <span class="n">return_record</span><span class="o">=</span><span class="n">return_info</span><span class="p">)</span>
+            <span class="n">prediction</span> <span class="o">=</span> <span class="n">matrix</span> <span class="o">@</span> <span class="n">solution</span>
+            <span class="n">absolute</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span><span class="n">prediction</span> <span class="o">-</span> <span class="n">target</span><span class="p">)</span>
+            <span class="n">denominator</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+            <span class="n">relative</span> <span class="o">=</span> <span class="n">safe_divide</span><span class="p">(</span>
+                <span class="n">absolute</span><span class="p">,</span> <span class="n">denominator</span><span class="p">,</span>
+                <span class="n">zero_value</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">absolute</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">inf</span><span class="p">))</span>
+
+            <span class="n">record</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">model_state</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">return_info</span><span class="p">:</span>
+                <span class="n">singular_values</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svdvals</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span>
+                <span class="n">smallest</span> <span class="o">=</span> <span class="n">singular_values</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">condition</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                    <span class="n">smallest</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="n">singular_values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">smallest</span><span class="p">,</span>
+                    <span class="n">torch</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">smallest</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">inf</span><span class="p">))</span>
+                <span class="n">record</span> <span class="o">=</span> <span class="n">InputFitRecord</span><span class="p">(</span>
+                    <span class="n">method</span><span class="o">=</span><span class="s1">&#39;trainable_embedding&#39;</span><span class="p">,</span>
+                    <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span>
+                    <span class="n">domain_size</span><span class="o">=</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="n">in_dim</span><span class="o">=</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="n">abs_residual</span><span class="o">=</span><span class="n">absolute</span><span class="p">,</span>
+                    <span class="n">rel_residual</span><span class="o">=</span><span class="n">relative</span><span class="p">,</span>
+                    <span class="n">condition_number</span><span class="o">=</span><span class="n">condition</span><span class="p">,</span>
+                    <span class="n">used_fibers</span><span class="o">=</span><span class="n">used_fibers</span><span class="p">,</span>
+                    <span class="n">local_solve</span><span class="o">=</span><span class="n">local_record</span><span class="p">)</span>
+                <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span>
+                <span class="n">model_state</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">name</span><span class="p">:</span> <span class="n">value</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+                    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="p">}</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="n">_restore_fitted_axis</span><span class="p">(</span><span class="n">solution</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_store_fit</span><span class="p">(</span>
+            <span class="n">phi_view</span><span class="p">,</span> <span class="n">tensor</span><span class="o">=</span><span class="n">tensor</span><span class="p">,</span>
+            <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span>
+            <span class="n">domain_size</span><span class="o">=</span><span class="n">domain</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">in_dim</span><span class="o">=</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">record</span><span class="o">=</span><span class="n">record</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">model_state</span><span class="o">=</span><span class="n">model_state</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;steps&#39;</span><span class="p">:</span> <span class="n">step</span><span class="p">,</span>
+                <span class="s1">&#39;converged&#39;</span><span class="p">:</span> <span class="n">converged</span><span class="p">,</span>
+                <span class="s1">&#39;final_relative_residual&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">relative</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()),</span>
+            <span class="p">})</span></div></div>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;InputFitter&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;FixedEmbeddingFitter&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;BasisFitter&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;TrainableEmbeddingFitter&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

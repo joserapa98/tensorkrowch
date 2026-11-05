@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
     <title>TensorKrowch documentation &#8212; TensorKrowch 1.1.6 documentation</title>
     
@@ -217,9 +217,31 @@
      Embeddings
     </a>
    </li>
-   <li class="toctree-l2">
+   <li class="toctree-l2 has-children">
     <a class="reference internal" href="decompositions.html">
      Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="utils.html">
+     Utilities
     </a>
    </li>
   </ul>
@@ -543,8 +565,8 @@ rerunning the tests to ascertain if the errors persist.</p>
 <section id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">#</a></h2>
 <p>With <strong>TensorKrowch</strong> you can experiment building Tensor Networks:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">tensorkrowch</span> <span class="k">as</span> <span class="nn">tk</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tensorkrowch</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tk</span>
 
 <span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
 
@@ -573,7 +595,7 @@ rerunning the tests to ascertain if the errors persist.</p>
 </div>
 <p>In <strong>TensorKrowch</strong> <code class="docutils literal notranslate"><span class="pre">TensorNetworks</span></code> work like <strong>PyTorch</strong> layers. Thus
 creating hybrid neural-tensor network models is straightforward:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
 
 <span class="n">my_model</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
    <span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPSLayer</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>

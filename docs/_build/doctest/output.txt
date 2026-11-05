@@ -1,445 +1,61 @@
-Results of doctest builder run on 2025-01-10 20:09:25
+Results of doctest builder run on 2026-11-05 16:20:58
 =====================================================
-
-Document: components
---------------------
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.tensor
-Expected:
-    tensor([[-0.2799, -0.4383, -0.8387],
-            [ 1.6225, -0.3370, -1.2316]])
-Got:
-    tensor([[ 0.2603,  0.3087,  2.7771],
-            [-1.0597,  1.7696,  0.6593]])
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.sum()
-Expected:
-    tensor(-1.5029)
-Got:
-    tensor(4.7152)
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.sum('left')
-Expected:
-    tensor([ 1.3427, -0.7752, -2.0704])
-Got:
-    tensor([-0.7994,  2.0783,  3.4364])
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.tensor
-Expected:
-    tensor([[ 1.4005, -0.0521, -1.2091],
-            [ 1.9844,  0.3513, -0.5920]])
-Got:
-    tensor([[-1.0329, -0.8983, -1.2115],
-            [ 0.1858,  0.1249, -0.3229]])
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.mean()
-Expected:
-    tensor(0.3139)
-Got:
-    tensor(-0.5258)
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.mean('left')
-Expected:
-    tensor([ 1.6925,  0.1496, -0.9006])
-Got:
-    tensor([-0.4235, -0.3867, -0.7672])
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.tensor
-Expected:
-    tensor([[ 0.2111, -0.9551, -0.7812],
-            [ 0.2254,  0.3381, -0.2461]])
-Got:
-    tensor([[ 0.4849,  0.0744, -0.9506],
-            [ 0.7637,  1.4461,  0.6661]])
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.std()
-Expected:
-    tensor(0.5567)
-Got:
-    tensor(0.8042)
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.std('left')
-Expected:
-    tensor([0.0101, 0.9145, 0.3784])
-Got:
-    tensor([0.1972, 0.9699, 1.1432])
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.tensor
-Expected:
-    tensor([[ 1.5570,  1.8441, -0.0743],
-            [ 0.4572,  0.7592,  0.6356]])
-Got:
-    tensor([[ 1.3423, -0.3696,  1.1172],
-            [ 0.0423,  1.0842, -0.4732]])
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.norm()
-Expected:
-    tensor(2.6495)
-Got:
-    tensor(2.1419)
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.norm(axis='left')
-Expected:
-    tensor([1.6227, 1.9942, 0.6399])
-Got:
-    tensor([1.3430, 1.1455, 1.2132])
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node
-Expected:
-    Node(
-        name: my_node
-        tensor:
-                tensor([[[-1.2517, -1.8147],
-                         [-0.7997, -0.0440],
-                         [-0.2808,  0.3508],
-                         [-1.2380,  0.8859],
-                         [-0.3585,  0.8815]],
-                        [[-0.2898, -2.2775],
-                         [ 1.2856, -0.3222],
-                         [-0.8911, -0.4216],
-                         [ 0.0086,  0.2449],
-                         [-2.1998, -1.6295]]])
-        axes:
-                [left
-                 input
-                 right]
-        edges:
-                [my_node[left] <-> None
-                 my_node[input] <-> None
-                 my_node[right] <-> None])
-Got:
-    Node(
-     	name: my_node
-    	tensor:
-    		tensor([[[-0.6412,  0.4923],
-    		         [ 1.7848, -1.6822],
-    		         [ 0.4131, -1.3781],
-    		         [ 1.5177,  0.9308],
-    		         [ 0.4636, -1.8164]],
-    		
-    		        [[-1.9535, -0.0422],
-    		         [ 0.9362,  0.8344],
-    		         [-0.8951, -2.2192],
-    		         [ 1.7804,  0.2322],
-    		         [-0.1301, -0.7288]]])
-    	axes:
-    		[left
-    		 input
-    		 right]
-    	edges:
-    		[my_node[left] <-> None
-    		 my_node[input] <-> None
-    		 my_node[right] <-> None])
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node
-Expected:
-    Node(
-        name: node
-        tensor:
-                tensor([[[ 0.6545, -0.0445],
-                         [-0.9265, -0.2730],
-                         [-0.5069, -0.6524],
-                         [-0.8227, -1.1211],
-                         [ 0.2390,  0.9432]],
-                        [[ 0.8633,  0.4402],
-                         [-0.6982,  0.4461],
-                         [-0.0633, -0.9320],
-                         [ 1.6023,  0.5406],
-                         [ 0.3489, -0.3088]]])
-        axes:
-                [axis_0
-                 axis_1
-                 axis_2]
-        edges:
-                [node[axis_0] <-> None
-                 node[axis_1] <-> None
-                 node[axis_2] <-> None])
-Got:
-    Node(
-     	name: node
-    	tensor:
-    		tensor([[[ 0.0944,  1.2896],
-    		         [ 0.5289, -0.9209],
-    		         [-1.0531, -0.9694],
-    		         [-0.2508, -0.3574],
-    		         [ 2.2588, -0.2990]],
-    		
-    		        [[ 2.0319,  0.4257],
-    		         [ 0.3088, -0.6899],
-    		         [-1.0230, -0.4280],
-    		         [-2.6503, -0.1893],
-    		         [-0.0591,  0.2086]]])
-    	axes:
-    		[axis_0
-    		 axis_1
-    		 axis_2]
-    	edges:
-    		[node[axis_0] <-> None
-    		 node[axis_1] <-> None
-    		 node[axis_2] <-> None])
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    nodeA = nodeA.parameterize()
-Exception raised:
-    Traceback (most recent call last):
-      File "/home/jose/anaconda3/envs/test_tk2/lib/python3.11/doctest.py", line 1355, in __run
-        exec(compile(example.source, filename, "single",
-      File "<doctest default[0]>", line 1, in <module>
-        nodeA = nodeA.parameterize()
-                ^^^^^
-    NameError: name 'nodeA' is not defined
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node
-Expected:
-    ParamNode(
-        name: my_paramnode
-        tensor:
-                Parameter containing:
-                tensor([[[ 1.8090, -0.1371],
-                         [-0.0501, -1.0371],
-                         [ 1.4588, -0.8361],
-                         [-0.4974, -1.9957],
-                         [ 0.3760, -1.0412]],
-                        [[ 0.3393, -0.2503],
-                         [ 1.7752, -0.0188],
-                         [-0.9561, -0.0806],
-                         [-1.0465, -0.5731],
-                         [ 1.5021,  0.4181]]], requires_grad=True)
-        axes:
-                [left
-                 input
-                 right]
-        edges:
-                [my_paramnode[left] <-> None
-                 my_paramnode[input] <-> None
-                 my_paramnode[right] <-> None])
-Got:
-    ParamNode(
-     	name: my_paramnode
-    	tensor:
-    		Parameter containing:
-    		tensor([[[-0.1524,  0.9135],
-    		         [-0.4521,  0.4675],
-    		         [ 0.3167,  1.8207],
-    		         [ 0.2988, -0.3254],
-    		         [-0.1398,  0.7279]],
-    		
-    		        [[ 2.2042,  0.1113],
-    		         [ 0.0608,  0.5786],
-    		         [ 0.3100, -0.6458],
-    		         [ 2.1140,  0.2385],
-    		         [-0.6696,  0.1362]]], requires_grad=True)
-    	axes:
-    		[left
-    		 input
-    		 right]
-    	edges:
-    		[my_paramnode[left] <-> None
-    		 my_paramnode[input] <-> None
-    		 my_paramnode[right] <-> None])
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node
-Expected:
-    ParamNode(
-        name: paramnode
-        tensor:
-                Parameter containing:
-                tensor([[[-0.8442,  1.4184],
-                         [ 0.4431, -1.4385],
-                         [-0.5161, -0.6492],
-                         [ 0.2095,  0.5760],
-                         [-0.9925, -1.5797]],
-                        [[-0.8649, -0.5401],
-                         [-0.1091,  1.1654],
-                         [-0.3821, -0.2477],
-                         [-0.7688, -2.4731],
-                         [-0.0234,  0.9618]]], requires_grad=True)
-        axes:
-                [axis_0
-                 axis_1
-                 axis_2]
-        edges:
-                [paramnode[axis_0] <-> None
-                 paramnode[axis_1] <-> None
-                 paramnode[axis_2] <-> None])
-Got:
-    ParamNode(
-     	name: paramnode
-    	tensor:
-    		Parameter containing:
-    		tensor([[[-0.4612,  0.3834],
-    		         [-0.7543,  0.9377],
-    		         [ 1.4902, -0.3369],
-    		         [-0.7997,  0.4276],
-    		         [ 0.0731,  0.7018]],
-    		
-    		        [[-0.6183,  0.6803],
-    		         [-0.4826, -0.1625],
-    		         [-0.6169, -0.1792],
-    		         [ 0.5951,  0.1267],
-    		         [-2.5441, -2.1222]]], requires_grad=True)
-    	axes:
-    		[axis_0
-    		 axis_1
-    		 axis_2]
-    	edges:
-    		[paramnode[axis_0] <-> None
-    		 paramnode[axis_1] <-> None
-    		 paramnode[axis_2] <-> None])
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    paramnode.tensor
-Expected:
-    Parameter containing:
-    tensor([[-0.3340,  0.6811, -0.2866],
-            [ 1.3371,  1.4761,  0.6551]], requires_grad=True)
-Got:
-    Parameter containing:
-    tensor([[ 0.6375,  0.6476, -0.9238],
-            [ 0.3201,  0.2477,  0.8141]], requires_grad=True)
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    paramnodeA = paramnodeA.parameterize()
-Exception raised:
-    Traceback (most recent call last):
-      File "/home/jose/anaconda3/envs/test_tk2/lib/python3.11/doctest.py", line 1355, in __run
-        exec(compile(example.source, filename, "single",
-      File "<doctest default[0]>", line 1, in <module>
-        paramnodeA = paramnodeA.parameterize()
-                     ^^^^^^^^^^
-    NameError: name 'paramnodeA' is not defined
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node = node.copy()  # .copy() calls to .delete_node()
-Exception raised:
-    Traceback (most recent call last):
-      File "/home/jose/anaconda3/envs/test_tk2/lib/python3.11/doctest.py", line 1355, in __run
-        exec(compile(example.source, filename, "single",
-      File "<doctest default[0]>", line 1, in <module>
-        node = node.copy()  # .copy() calls to .delete_node()
-               ^^^^
-    NameError: name 'node' is not defined
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    net['data_0']
-Expected:
-    Node(
-        name: data_0
-        tensor:
-                None
-        axes:
-                [batch
-                 feature]
-        edges:
-                [data_0[batch] <-> None
-                 data_0[feature] <-> nodeA[input]])
-Got:
-    Node(
-     	name: data_0
-    	tensor:
-    		None
-    	axes:
-    		[batch
-    		 feature]
-    	edges:
-    		[data_0[batch] <-> None
-    		 data_0[feature] <-> nodeA[input]])
-**********************************************************************
-1 items had failures:
-  21 of 401 in default
-401 tests in 1 items.
-380 passed and 21 failed.
-***Test Failed*** 21 failures.
-
-Document: embeddings
---------------------
-**********************************************************************
-File "../tensorkrowch/embeddings.py", line ?, in default
-Failed example:
-    a
-Expected:
-    tensor([0.1916, 0.9719, 0.7613, 0.6427, 0.6945])
-Got:
-    tensor([1., 1., 1., 1., 1.])
-**********************************************************************
-File "../tensorkrowch/embeddings.py", line ?, in default
-Failed example:
-    emb_a
-Expected:
-    tensor([[ 1.0000,  0.5074,  1.3200, -1.0501,  0.9473, -1.2610],
-            [ 1.0000,  1.3922, -0.2486,  1.3268, -0.4895,  1.2201],
-            [ 1.0000,  0.1000, -1.4107, -1.4001, -0.1994, -0.2979],
-            [ 1.0000, -0.8827, -1.1049, -0.3123,  1.3793,  1.2726],
-            [ 1.0000, -0.4829, -1.3292, -1.0845,  0.9077,  1.2234]])
-Got:
-    tensor([[1.0000e+00, 1.4142e+00, 2.4727e-07, 1.4142e+00, 4.9454e-07, 1.4142e+00],
-            [1.0000e+00, 1.4142e+00, 2.4727e-07, 1.4142e+00, 4.9454e-07, 1.4142e+00],
-            [1.0000e+00, 1.4142e+00, 2.4727e-07, 1.4142e+00, 4.9454e-07, 1.4142e+00],
-            [1.0000e+00, 1.4142e+00, 2.4727e-07, 1.4142e+00, 4.9454e-07, 1.4142e+00],
-            [1.0000e+00, 1.4142e+00, 2.4727e-07, 1.4142e+00, 4.9454e-07, 1.4142e+00]])
-**********************************************************************
-1 items had failures:
-   2 of  52 in default
-52 tests in 1 items.
-50 passed and 2 failed.
-***Test Failed*** 2 failures.
-
-Document: models
-----------------
-1 items passed all tests:
- 118 tests in default
-118 tests in 1 items.
-118 passed and 0 failed.
-Test passed.
 
 Document: operations
 --------------------
 1 items passed all tests:
- 217 tests in default
-217 tests in 1 items.
-217 passed and 0 failed.
+ 235 tests in default
+235 tests in 1 items.
+235 passed and 0 failed.
+Test passed.
+
+Document: decompositions_api
+----------------------------
+1 items passed all tests:
+ 303 tests in default
+303 tests in 1 items.
+303 passed and 0 failed.
+Test passed.
+
+Document: components
+--------------------
+5 items passed all tests:
+ 473 tests in default
+   1 tests in delete_node_reference
+   1 tests in node_parameterize_override
+   1 tests in paramnode_parameterize_override
+   1 tests in replace_node_reference
+477 tests in 5 items.
+477 passed and 0 failed.
+Test passed.
+
+Document: utils
+---------------
+1 items passed all tests:
+  19 tests in default
+19 tests in 1 items.
+19 passed and 0 failed.
+Test passed.
+
+Document: embeddings
+--------------------
+1 items passed all tests:
+  50 tests in default
+50 tests in 1 items.
+50 passed and 0 failed.
+Test passed.
+
+Document: models
+----------------
+1 items passed all tests:
+ 150 tests in default
+150 tests in 1 items.
+150 passed and 0 failed.
 Test passed.
 
 Doctest summary
 ===============
-  788 tests
-   23 failures in tests
+ 1234 tests
+    0 failures in tests
     0 failures in setup code
     0 failures in cleanup code

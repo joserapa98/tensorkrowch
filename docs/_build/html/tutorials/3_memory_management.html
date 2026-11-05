@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
     <title>How to save Memory and Time with TensorKrowch (ADVANCED) &#8212; TensorKrowch 1.1.6 documentation</title>
     
@@ -219,9 +219,31 @@
      Embeddings
     </a>
    </li>
-   <li class="toctree-l2">
+   <li class="toctree-l2 has-children">
     <a class="reference internal" href="../decompositions.html">
      Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../utils.html">
+     Utilities
     </a>
    </li>
   </ul>
@@ -490,8 +512,8 @@ other information that helps to access the correct tensor.</p>
 node. That is where its tensor will be stored. Even if the node is empty, that
 place is reserved in case we set a tensor in the empty node.</p>
 <p>We can check the memory address of our nodes via:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">tensorkrowch</span> <span class="k">as</span> <span class="nn">tk</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tensorkrowch</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tk</span>
 
 <span class="n">node1</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
                 <span class="n">name</span><span class="o">=</span><span class="s1">&#39;my_node&#39;</span><span class="p">)</span>

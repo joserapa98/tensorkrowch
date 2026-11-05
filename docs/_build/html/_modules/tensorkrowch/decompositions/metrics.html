@@ -1,0 +1,1169 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.metrics &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/clipboard.min.js"></script>
+    <script src="../../../_static/copybutton.js"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.metrics</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Metric records:</span>
+<span class="sd">        * ErrorRecord</span>
+<span class="sd">        * TruncationRecord</span>
+<span class="sd">        * TimingRecord</span>
+<span class="sd">        * FidelityRecord</span>
+<span class="sd">        * LocalSolveRecord</span>
+<span class="sd">        * GaugeRecord</span>
+<span class="sd">        * SweepRecord</span>
+<span class="sd">        * EvaluationStats</span>
+<span class="sd">        * InputFitRecord</span>
+<span class="sd">        * RangeProjectionRecord</span>
+
+<span class="sd">    Class for decomposition metrics:</span>
+<span class="sd">        * DecompositionMetrics</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">fields</span><span class="p">,</span> <span class="n">is_dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">isfinite</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">norm_from_log</span><span class="p">,</span> <span class="n">ratio_from_log</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_scalar_float</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Converts a real scalar to a Python float.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be a scalar&#39;</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be a real scalar&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_cpu_tensor</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Converts a numerical metric to a detached CPU tensor.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be torch.Tensor type&#39;</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_record_as_dict</span><span class="p">(</span><span class="n">record</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns dataclass fields without deep-copying diagnostic tensors.&quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">(</span><span class="n">record</span><span class="p">):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">_record_as_dict</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">_record_as_dict</span><span class="p">(</span><span class="n">element</span><span class="p">)</span> <span class="k">if</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">element</span><span class="p">)</span> <span class="k">else</span> <span class="n">element</span>
+                <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">value</span>
+            <span class="p">]</span>
+        <span class="n">result</span><span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<div class="viewcode-block" id="ErrorRecord"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.ErrorRecord">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ErrorRecord</span><span class="p">:</span>  <span class="c1"># MARK: ErrorRecord</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Stores an ``absolute``/``relative`` error measured on a specified target.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># Target or mechanism on which the error was measured</span>
+    <span class="n">absolute</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>  <span class="c1"># Absolute error, optionally resolved by batch</span>
+    <span class="n">relative</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Relative error with same shape</span>
+    <span class="n">size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Number of contributions represented</span>
+    <span class="n">denominator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Norm used for relative error</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`kind` should be str type&#39;</span><span class="p">)</span>
+
+        <span class="n">absolute</span> <span class="o">=</span> <span class="n">_cpu_tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">absolute</span><span class="p">,</span> <span class="s1">&#39;absolute&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">absolute</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`absolute` should be non-negative&#39;</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;absolute&#39;</span><span class="p">,</span> <span class="n">absolute</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">relative</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">relative</span> <span class="o">=</span> <span class="n">_cpu_tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relative</span><span class="p">,</span> <span class="s1">&#39;relative&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">relative</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">absolute</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`relative` should have the same shape as `absolute`&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">relative</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`relative` should be non-negative&#39;</span><span class="p">)</span>
+            <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;relative&#39;</span><span class="p">,</span> <span class="n">relative</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`size` should be int type&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`size` should be non-negative&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">denominator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">denominator</span> <span class="o">=</span> <span class="n">_cpu_tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">denominator</span><span class="p">,</span> <span class="s1">&#39;denominator&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">denominator</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">absolute</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`denominator` should have the same shape as `absolute`&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">denominator</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`denominator` should be non-negative&#39;</span><span class="p">)</span>
+            <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;denominator&#39;</span><span class="p">,</span> <span class="n">denominator</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TruncationRecord"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.TruncationRecord">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">TruncationRecord</span><span class="p">:</span>  <span class="c1"># MARK: TruncationRecord</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stores ranks and discarded energy for one truncation cut.&quot;&quot;&quot;</span>
+
+    <span class="n">site</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># Site immediately to the left of the truncation cut</span>
+    <span class="n">full_rank</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># Rank available before truncation</span>
+    <span class="n">selected_rank</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># Rank retained after truncation</span>
+    <span class="n">local_abs_error</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>  <span class="c1"># Discarded norm at the local cut</span>
+    <span class="n">local_rel_error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Error over local norm</span>
+    <span class="n">singular_values</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Optional retained spectrum</span>
+    <span class="n">local_norm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Norm entering the local SVD</span>
+    <span class="n">discarded_sq_norm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Discarded SVD energy</span>
+    <span class="n">log_scale</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Restored logarithmic scale</span>
+    <span class="n">global_rel_contribution</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Global error term</span>
+    <span class="n">svd_method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Compact SVD implementation used</span>
+    <span class="n">phase</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Algorithmic phase containing this cut</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;site&#39;</span><span class="p">,</span> <span class="s1">&#39;full_rank&#39;</span><span class="p">,</span> <span class="s1">&#39;selected_rank&#39;</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be int type&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">site</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`site` should be non-negative&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">full_rank</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`full_rank` should be positive&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_rank</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">selected_rank</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">full_rank</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`selected_rank` should be between 1 and `full_rank`&#39;</span><span class="p">)</span>
+
+        <span class="n">non_negative_fields</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s1">&#39;local_abs_error&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;local_rel_error&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;singular_values&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;local_norm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;global_rel_contribution&#39;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">non_negative_fields</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">_cpu_tensor</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be non-negative&#39;</span><span class="p">)</span>
+            <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="n">discarded_sq_norm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">discarded_sq_norm</span>
+        <span class="k">if</span> <span class="n">discarded_sq_norm</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">discarded_sq_norm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_abs_error</span><span class="o">.</span><span class="n">square</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">discarded_sq_norm</span> <span class="o">=</span> <span class="n">_cpu_tensor</span><span class="p">(</span>
+                <span class="n">discarded_sq_norm</span><span class="p">,</span> <span class="s1">&#39;discarded_sq_norm&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">discarded_sq_norm</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`discarded_sq_norm` should be non-negative&#39;</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;discarded_sq_norm&#39;</span><span class="p">,</span> <span class="n">discarded_sq_norm</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_scale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">log_scale</span> <span class="o">=</span> <span class="n">_cpu_tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_scale</span><span class="p">,</span> <span class="s1">&#39;log_scale&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">log_scale</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`log_scale` should be finite&#39;</span><span class="p">)</span>
+            <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;log_scale&#39;</span><span class="p">,</span> <span class="n">log_scale</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">svd_method</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">svd_method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;svd&#39;</span><span class="p">,</span> <span class="s1">&#39;qr_svd&#39;</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`svd_method` should be &quot;svd&quot; or &quot;qr_svd&quot;&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phase</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phase</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`phase` should be str type&#39;</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_svd_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
+                      <span class="n">info</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                      <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                      <span class="n">log_scale</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                      <span class="n">global_norm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                      <span class="n">singular_values</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                      <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TruncationRecord&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Builds a high-level record from ``_TruncatedSVDInfo``.&quot;&quot;&quot;</span>
+        <span class="n">local_log_norm</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">total_sq_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">discarded_log_norm</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">discarded_sq_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="n">log_scale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">log_scale_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">local_log_norm</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">log_scale</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`log_scale` should be torch.Tensor type&#39;</span><span class="p">)</span>
+            <span class="n">log_scale_tensor</span> <span class="o">=</span> <span class="n">log_scale</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+                <span class="n">device</span><span class="o">=</span><span class="n">local_log_norm</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">local_log_norm</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">log_scale_tensor</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">local_log_norm</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`log_scale` should match the SVD batch shape&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">log_scale_tensor</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`log_scale` should be finite&#39;</span><span class="p">)</span>
+
+        <span class="n">local_log_norm</span> <span class="o">=</span> <span class="n">local_log_norm</span> <span class="o">+</span> <span class="n">log_scale_tensor</span>
+        <span class="n">discarded_log_norm</span> <span class="o">=</span> <span class="n">discarded_log_norm</span> <span class="o">+</span> <span class="n">log_scale_tensor</span>
+
+        <span class="k">if</span> <span class="n">global_norm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">global_norm</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`global_norm` should be torch.Tensor type&#39;</span><span class="p">)</span>
+            <span class="n">global_norm</span> <span class="o">=</span> <span class="n">global_norm</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+                <span class="n">device</span><span class="o">=</span><span class="n">local_log_norm</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">local_log_norm</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">global_norm</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">local_log_norm</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`global_norm` should match the SVD batch shape&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">global_norm</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> \
+                    <span class="p">(</span><span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">global_norm</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`global_norm` should be finite and non-negative&#39;</span><span class="p">)</span>
+
+        <span class="n">local_norm</span> <span class="o">=</span> <span class="n">norm_from_log</span><span class="p">(</span><span class="n">local_log_norm</span><span class="p">,</span> <span class="n">global_norm</span><span class="p">)</span>
+        <span class="n">local_abs_error</span> <span class="o">=</span> <span class="n">norm_from_log</span><span class="p">(</span><span class="n">discarded_log_norm</span><span class="p">,</span> <span class="n">global_norm</span><span class="p">)</span>
+        <span class="n">local_rel_error</span> <span class="o">=</span> <span class="n">ratio_from_log</span><span class="p">(</span>
+            <span class="n">discarded_log_norm</span><span class="p">,</span> <span class="n">local_log_norm</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">singular_values</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">singular_values</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`singular_values` should be torch.Tensor type&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">singular_values</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">local_log_norm</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`singular_values` should match the SVD batch shape&#39;</span><span class="p">)</span>
+            <span class="n">singular_values</span> <span class="o">=</span> <span class="n">singular_values</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+                <span class="n">device</span><span class="o">=</span><span class="n">local_log_norm</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">local_log_norm</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">singular_log</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">singular_values</span><span class="o">.</span><span class="n">log</span><span class="p">()</span> <span class="o">+</span> <span class="n">log_scale_tensor</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">singular_reference</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">global_norm</span> <span class="ow">is</span> <span class="kc">None</span> \
+                <span class="k">else</span> <span class="n">global_norm</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">singular_values</span> <span class="o">=</span> <span class="n">norm_from_log</span><span class="p">(</span>
+                <span class="n">singular_log</span><span class="p">,</span> <span class="n">singular_reference</span><span class="p">)</span>
+
+        <span class="n">global_rel_contribution</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">global_norm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">global_rel_contribution</span> <span class="o">=</span> <span class="n">ratio_from_log</span><span class="p">(</span>
+                <span class="n">discarded_log_norm</span><span class="p">,</span> <span class="n">global_norm</span><span class="o">.</span><span class="n">log</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+                <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">,</span>
+                <span class="n">full_rank</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">full_rank</span><span class="p">,</span>
+                <span class="n">selected_rank</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">selected_rank</span><span class="p">,</span>
+                <span class="n">local_abs_error</span><span class="o">=</span><span class="n">local_abs_error</span><span class="p">,</span>
+                <span class="n">local_rel_error</span><span class="o">=</span><span class="n">local_rel_error</span><span class="p">,</span>
+                <span class="n">singular_values</span><span class="o">=</span><span class="n">singular_values</span><span class="p">,</span>
+                <span class="n">local_norm</span><span class="o">=</span><span class="n">local_norm</span><span class="p">,</span>
+                <span class="n">log_scale</span><span class="o">=</span><span class="p">(</span><span class="n">log_scale_tensor</span> <span class="k">if</span> <span class="n">log_scale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
+                <span class="n">global_rel_contribution</span><span class="o">=</span><span class="n">global_rel_contribution</span><span class="p">,</span>
+                <span class="n">svd_method</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">svd_method</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LocalSolveRecord"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.LocalSolveRecord">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">LocalSolveRecord</span><span class="p">:</span>  <span class="c1"># MARK: LocalSolveRecord</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Stores the outcome of one local least-squares solve.</span>
+
+<span class="sd">    Residuals describe the original local data equations, before numerical</span>
+<span class="sd">    scaling and without the regularization penalty. Scalar tensors are</span>
+<span class="sd">    detached and stored on CPU. Fixed solver configuration belongs to the</span>
+<span class="sd">    solver; this record retains effective choices that can vary between solves.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    environment_shape : tuple[int, int]</span>
+<span class="sd">        Shape ``(n_rows, n_parameters)`` of the local design matrix.</span>
+<span class="sd">    target_shape : tuple[int, ...]</span>
+<span class="sd">        Right-hand-side shape ``(n_rows,)`` or ``(n_rows, n_targets)``.</span>
+<span class="sd">    driver : str</span>
+<span class="sd">        Effective least-squares driver, including any CPU retry.</span>
+<span class="sd">    abs_residual : torch.Tensor</span>
+<span class="sd">        Norm of the local residual.</span>
+<span class="sd">    rel_residual : torch.Tensor</span>
+<span class="sd">        Residual norm divided by the target norm. A zero target gives zero</span>
+<span class="sd">        for an exact fit and infinity otherwise.</span>
+<span class="sd">    effective_l2_reg : torch.Tensor</span>
+<span class="sd">        Regularization coefficient after relative or environment rescaling.</span>
+<span class="sd">        Defaults to zero.</span>
+<span class="sd">    column_scaling : bool</span>
+<span class="sd">        Whether this solve balanced its columns. Defaults to ``False``.</span>
+<span class="sd">    site : int or tuple[int, ...], optional</span>
+<span class="sd">        Site or block identifier.</span>
+<span class="sd">    sweep : int, optional</span>
+<span class="sd">        Directional sweep identifier.</span>
+<span class="sd">    sampling_exact : bool, optional</span>
+<span class="sd">        Whether the sampling proposal matches the current local design.</span>
+<span class="sd">    sample_generation : int, optional</span>
+<span class="sd">        Generation of the sampled rows.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">environment_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+    <span class="n">target_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">driver</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">abs_residual</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">rel_residual</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">effective_l2_reg</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">column_scaling</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">site</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">sweep</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">sampling_exact</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">sample_generation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">environment_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">environment_shape</span><span class="p">)</span>
+        <span class="n">target_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target_shape</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">environment_shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">dim</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">environment_shape</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`environment_shape` should contain two positive integers&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">target_shape</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">dim</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">target_shape</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`target_shape` should describe a vector or matrix&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">target_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">environment_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`target_shape` and `environment_shape` should share rows&#39;</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;environment_shape&#39;</span><span class="p">,</span> <span class="n">environment_shape</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;target_shape&#39;</span><span class="p">,</span> <span class="n">target_shape</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`driver` should be str type&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;abs_residual&#39;</span><span class="p">,</span> <span class="s1">&#39;rel_residual&#39;</span><span class="p">,</span> <span class="s1">&#39;effective_l2_reg&#39;</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">_cpu_tensor</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">ndim</span> <span class="ow">or</span> <span class="n">value</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be a real scalar tensor&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="n">torch</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be non-negative and not NaN&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">name</span> <span class="o">!=</span> <span class="s1">&#39;rel_residual&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be finite&#39;</span><span class="p">)</span>
+            <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">column_scaling</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`column_scaling` should be bool type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">site</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sites</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">site</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">site</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">site</span><span class="p">,)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">sites</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span>
+                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                        <span class="n">site</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">site</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">sites</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`site` should be a non-negative int or tuple of ints&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sweep</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sweep</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sweep</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+                <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sweep</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`sweep` should be a non-negative integer&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sampling_exact</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sampling_exact</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`sampling_exact` should be bool type or None&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_generation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_generation</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_generation</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_generation</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`sample_generation` should be non-negative&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="InputFitRecord"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.InputFitRecord">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">InputFitRecord</span><span class="p">:</span>  <span class="c1"># MARK: InputFitRecord</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stores diagnostics for fitting one sampled Phi input ``axis``.&quot;&quot;&quot;</span>
+
+    <span class="n">method</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">domain_size</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">in_dim</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">abs_residual</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">rel_residual</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">condition_number</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">used_fibers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">local_solve</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LocalSolveRecord</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`method` should be a non-empty string&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;axis&#39;</span><span class="p">,</span> <span class="s1">&#39;domain_size&#39;</span><span class="p">,</span> <span class="s1">&#39;in_dim&#39;</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be int type&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">0</span> <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;axis&#39;</span> <span class="k">else</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">qualifier</span> <span class="o">=</span> <span class="s1">&#39;non-negative&#39;</span> <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;axis&#39;</span> <span class="k">else</span> <span class="s1">&#39;positive&#39;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be </span><span class="si">{</span><span class="n">qualifier</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span>
+                <span class="s1">&#39;abs_residual&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;rel_residual&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;condition_number&#39;</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">_scalar_float</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">value</span> <span class="o">!=</span> <span class="n">value</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be non-negative and not NaN&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;abs_residual&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`abs_residual` should be finite&#39;</span><span class="p">)</span>
+            <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">used_fibers</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`used_fibers` should be bool type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_solve</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> \
+                <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">local_solve</span><span class="p">,</span> <span class="n">LocalSolveRecord</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`local_solve` should be LocalSolveRecord type or None&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="RangeProjectionRecord"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.RangeProjectionRecord">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">RangeProjectionRecord</span><span class="p">:</span>  <span class="c1"># MARK: RangeProjectionRecord</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Stores dimensions, approximation error and cost of a range projection.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">method</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">input_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+    <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">requested_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+    <span class="n">projection_dim</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">range_dim</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">oversampling</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">n_power_iter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">error_absolute</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">error_relative</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">elapsed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;identity&#39;</span><span class="p">,</span> <span class="s1">&#39;randomized&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;`method` should be &#39;identity&#39; or &#39;randomized&#39;&quot;</span><span class="p">)</span>
+        <span class="n">input_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_shape</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">dim</span> <span class="o">&lt;</span> <span class="mi">1</span>
+                <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">input_shape</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`input_shape` should contain two positive integers&#39;</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;input_shape&#39;</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;axis&#39;</span><span class="p">,</span> <span class="s1">&#39;projection_dim&#39;</span><span class="p">,</span> <span class="s1">&#39;range_dim&#39;</span><span class="p">,</span> <span class="s1">&#39;oversampling&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;n_power_iter&#39;</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be int type&#39;</span><span class="p">)</span>
+            <span class="n">minimum</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;projection_dim&#39;</span><span class="p">,</span> <span class="s1">&#39;range_dim&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">minimum</span><span class="p">:</span>
+                <span class="n">qualifier</span> <span class="o">=</span> <span class="s1">&#39;positive&#39;</span> <span class="k">if</span> <span class="n">minimum</span> <span class="k">else</span> <span class="s1">&#39;non-negative&#39;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be </span><span class="si">{</span><span class="n">qualifier</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">requested_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">requested_dim</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> \
+                    <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">requested_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`requested_dim` should be int type or None&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">requested_dim</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`requested_dim` should be positive&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;error_absolute&#39;</span><span class="p">,</span> <span class="s1">&#39;error_relative&#39;</span><span class="p">,</span> <span class="s1">&#39;elapsed&#39;</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">_scalar_float</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">value</span> <span class="o">!=</span> <span class="n">value</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be finite and non-negative&#39;</span><span class="p">)</span>
+            <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GaugeRecord"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.GaugeRecord">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GaugeRecord</span><span class="p">:</span>  <span class="c1"># MARK: GaugeRecord</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stores rank, conditioning and cancellation diagnostics for one gauge.&quot;&quot;&quot;</span>
+
+    <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># Left or right interpretation of the gauge axes</span>
+    <span class="n">shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>  <span class="c1"># Shape of the original matricized gauge</span>
+    <span class="n">numerical_rank</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># Numerical rank at the specified tolerance</span>
+    <span class="n">cancellable_rank</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># Number of columns required for exact cancellation</span>
+    <span class="n">condition_number</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>  <span class="c1"># Estimated spectral condition number</span>
+    <span class="n">cancellation_error</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>  <span class="c1"># Relative error of the directional cancellation</span>
+    <span class="n">projective</span><span class="p">:</span> <span class="nb">bool</span>  <span class="c1"># Whether the map cancels only a projected subspace</span>
+    <span class="n">inverse_method</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># Effective method used to construct the directional dual</span>
+    <span class="n">tolerance</span><span class="p">:</span> <span class="nb">float</span>  <span class="c1"># Configured cancellation-error tolerance</span>
+    <span class="c1"># Absolute singular-value threshold used for numerical rank</span>
+    <span class="n">rank_tolerance</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">site</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Optional zero-based active site</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orientation</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`orientation` should be &#39;left&#39; or &#39;right&#39;&quot;</span><span class="p">)</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">shape</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`shape` should contain two positive integers&#39;</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;shape&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;numerical_rank&#39;</span><span class="p">,</span> <span class="s1">&#39;cancellable_rank&#39;</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be int type&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be non-negative&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">numerical_rank</span> <span class="o">&gt;</span> <span class="nb">min</span><span class="p">(</span><span class="n">shape</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`numerical_rank` exceeds the matrix dimensions&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cancellable_rank</span> <span class="o">!=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`cancellable_rank` should equal the number of columns&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span>
+                <span class="s1">&#39;condition_number&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;cancellation_error&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;rank_tolerance&#39;</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">_cpu_tensor</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">ndim</span> <span class="ow">or</span> <span class="n">value</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be a real scalar tensor&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">value</span> <span class="o">!=</span> <span class="n">value</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be non-negative and not NaN&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="s1">&#39;condition_number&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be finite&#39;</span><span class="p">)</span>
+            <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="n">tolerance</span> <span class="o">=</span> <span class="n">_scalar_float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span><span class="p">,</span> <span class="s1">&#39;tolerance&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tolerance</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">isfinite</span><span class="p">(</span><span class="n">tolerance</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`tolerance` should be finite and non-negative&#39;</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;tolerance&#39;</span><span class="p">,</span> <span class="n">tolerance</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">projective</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`projective` should be bool type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inverse_method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;solve&#39;</span><span class="p">,</span> <span class="s1">&#39;inverse&#39;</span><span class="p">,</span> <span class="s1">&#39;pinv&#39;</span><span class="p">,</span> <span class="s1">&#39;adjoint&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;`inverse_method` should be &#39;solve&#39;, &#39;inverse&#39;, &#39;pinv&#39; or &quot;</span>
+                <span class="s2">&quot;&#39;adjoint&#39;&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">site</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">site</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">site</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`site` should be int type or None&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">site</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`site` should be non-negative&#39;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cancellable</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Whether the measured cancellation lies within its tolerance.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cancellation_error</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SweepRecord"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.SweepRecord">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SweepRecord</span><span class="p">:</span>  <span class="c1"># MARK: SweepRecord</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Stores objective metrics measured once at the end of an ALS ``sweep``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">sweep</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># Zero-based directional sweep index</span>
+    <span class="c1"># Absolute fixed-objective error at the end of the sweep</span>
+    <span class="n">abs_error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1"># Relative fixed-objective error at the end of the sweep</span>
+    <span class="n">rel_error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1"># Relative change since the preceding complete sweep</span>
+    <span class="n">rel_change</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">elapsed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Elapsed wall-clock time in seconds</span>
+    <span class="n">sample_generation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Generation of the sampled rows</span>
+    <span class="n">stop_reason</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Normalized reason for stopping</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sweep</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sweep</span><span class="p">,</span> <span class="nb">int</span><span class="p">))</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sweep</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`sweep` should be a non-negative integer&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span>
+                <span class="s1">&#39;abs_error&#39;</span><span class="p">,</span> <span class="s1">&#39;rel_error&#39;</span><span class="p">,</span> <span class="s1">&#39;rel_change&#39;</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">_cpu_tensor</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">ndim</span> <span class="ow">or</span> <span class="n">value</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be a real scalar tensor&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">value</span> <span class="o">!=</span> <span class="n">value</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be non-negative and not NaN&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;rel_change&#39;</span><span class="p">)</span> <span class="ow">and</span> \
+                    <span class="p">(</span><span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be finite&#39;</span><span class="p">)</span>
+            <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">elapsed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">elapsed</span> <span class="o">=</span> <span class="n">_scalar_float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elapsed</span><span class="p">,</span> <span class="s1">&#39;elapsed&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">elapsed</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">isfinite</span><span class="p">(</span><span class="n">elapsed</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`elapsed` should be finite and non-negative&#39;</span><span class="p">)</span>
+            <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;elapsed&#39;</span><span class="p">,</span> <span class="n">elapsed</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_generation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_generation</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> \
+                    <span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_generation</span><span class="p">,</span> <span class="nb">int</span><span class="p">))</span> <span class="ow">or</span> \
+                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_generation</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`sample_generation` should be a non-negative integer&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stop_reason</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> \
+                <span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stop_reason</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`stop_reason` should be str type&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TimingRecord"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.TimingRecord">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">TimingRecord</span><span class="p">:</span>  <span class="c1"># MARK: TimingRecord</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stores ``elapsed`` time for a decomposition phase or ``site``.&quot;&quot;&quot;</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># Timed phase or operation</span>
+    <span class="n">elapsed</span><span class="p">:</span> <span class="nb">float</span>  <span class="c1"># Elapsed wall-clock time in seconds</span>
+    <span class="n">site</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Optional zero-based site or cut position</span>
+    <span class="n">worker</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Optional distributed worker index</span>
+    <span class="n">children</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="s1">&#39;TimingRecord&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">)</span>  <span class="c1"># Nested timings</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`name` should be str type&#39;</span><span class="p">)</span>
+        <span class="n">elapsed</span> <span class="o">=</span> <span class="n">_scalar_float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elapsed</span><span class="p">,</span> <span class="s1">&#39;elapsed&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">elapsed</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`elapsed` should be non-negative&#39;</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;elapsed&#39;</span><span class="p">,</span> <span class="n">elapsed</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;site&#39;</span><span class="p">,</span> <span class="s1">&#39;worker&#39;</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be int type&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be non-negative&#39;</span><span class="p">)</span>
+
+        <span class="n">children</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">TimingRecord</span><span class="p">)</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">children</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`children` should contain TimingRecord objects&#39;</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;children&#39;</span><span class="p">,</span> <span class="n">children</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="EvaluationStats"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.EvaluationStats">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">EvaluationStats</span><span class="p">:</span>  <span class="c1"># MARK: EvaluationStats</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Counts point evaluations performed by a tensor source or session.&quot;&quot;&quot;</span>
+
+    <span class="n">requested_points</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1"># Total configurations requested</span>
+    <span class="n">unique_points</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># Sum of unique configurations per query</span>
+    <span class="n">batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># Batches used to evaluate queries</span>
+    <span class="n">cache_hits</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># Requested values retrieved from a cache</span>
+    <span class="n">source_calls</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># Successful source queries recorded</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;requested_points&#39;</span><span class="p">,</span> <span class="s1">&#39;unique_points&#39;</span><span class="p">,</span> <span class="s1">&#39;batches&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;cache_hits&#39;</span><span class="p">,</span> <span class="s1">&#39;source_calls&#39;</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be int type&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be non-negative&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">delta</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">previous</span><span class="p">:</span> <span class="s1">&#39;EvaluationStats&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;EvaluationStats&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the non-negative counter increment from ``previous``.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">previous</span><span class="p">,</span> <span class="n">EvaluationStats</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`previous` should be EvaluationStats type&#39;</span><span class="p">)</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;requested_points&#39;</span><span class="p">,</span> <span class="s1">&#39;unique_points&#39;</span><span class="p">,</span> <span class="s1">&#39;batches&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;cache_hits&#39;</span><span class="p">,</span> <span class="s1">&#39;source_calls&#39;</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="o">-</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">previous</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`previous` counters should not exceed current counters&#39;</span><span class="p">)</span>
+            <span class="n">values</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="n">EvaluationStats</span><span class="p">(</span><span class="o">**</span><span class="n">values</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FidelityRecord"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.FidelityRecord">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">FidelityRecord</span><span class="p">:</span>  <span class="c1"># MARK: FidelityRecord</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stores a phase-aware normalized overlap and its ``fidelity``.&quot;&quot;&quot;</span>
+
+    <span class="c1"># Complex normalized overlap with its original phase</span>
+    <span class="n">normalized_overlap</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ErrorRecord</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Optional final reconstruction error</span>
+    <span class="c1"># Squared magnitude of the normalized overlap</span>
+    <span class="n">fidelity</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">overlap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalized_overlap</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">overlap</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">overlap</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">complex</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`normalized_overlap` should be a numeric tensor&#39;</span><span class="p">)</span>
+            <span class="n">overlap</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">overlap</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+        <span class="n">overlap</span> <span class="o">=</span> <span class="n">overlap</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">overlap</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`normalized_overlap` should be a scalar tensor&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">overlap</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`normalized_overlap` should be finite&#39;</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;normalized_overlap&#39;</span><span class="p">,</span> <span class="n">overlap</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;fidelity&#39;</span><span class="p">,</span> <span class="n">overlap</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">square</span><span class="p">())</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">error</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> \
+                <span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="n">ErrorRecord</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`error` should be ErrorRecord type&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DecompositionMetrics"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.DecompositionMetrics">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DecompositionMetrics</span><span class="p">:</span>  <span class="c1"># MARK: DecompositionMetrics</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Collects structured records produced during a decomposition fit.&quot;&quot;&quot;</span>
+
+    <span class="n">errors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">ErrorRecord</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>  <span class="c1"># Global errors</span>
+    <span class="c1"># Local SVD truncations</span>
+    <span class="n">truncations</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">TruncationRecord</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">timings</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">TimingRecord</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>  <span class="c1"># Runtime data</span>
+    <span class="c1"># Tensor-source evaluations</span>
+    <span class="n">evaluations</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">EvaluationStats</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="c1"># Normalized overlaps and fidelities</span>
+    <span class="n">fidelities</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">FidelityRecord</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">warnings</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>  <span class="c1"># Diagnostic warnings</span>
+    <span class="c1"># Local ALS solve diagnostics</span>
+    <span class="n">local_solves</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">LocalSolveRecord</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="c1"># Input-axis fitting diagnostics</span>
+    <span class="n">input_fits</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">InputFitRecord</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="c1"># Recursive range-projection diagnostics</span>
+    <span class="n">range_projections</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">RangeProjectionRecord</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span>
+        <span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">gauges</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">GaugeRecord</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>  <span class="c1"># Gauge data</span>
+    <span class="n">sweeps</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">SweepRecord</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>  <span class="c1"># ALS sweeps</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">truncations</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">truncations</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timings</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timings</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">evaluations</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">evaluations</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warnings</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">warnings</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">local_solves</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">local_solves</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_fits</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_fits</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_projections</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range_projections</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gauges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gauges</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sweeps</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sweeps</span><span class="p">)</span>
+
+        <span class="n">collections</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span><span class="s1">&#39;errors&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">,</span> <span class="n">ErrorRecord</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;truncations&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">truncations</span><span class="p">,</span> <span class="n">TruncationRecord</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;timings&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">timings</span><span class="p">,</span> <span class="n">TimingRecord</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;evaluations&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">EvaluationStats</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;fidelities&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span><span class="p">,</span> <span class="n">FidelityRecord</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;local_solves&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_solves</span><span class="p">,</span> <span class="n">LocalSolveRecord</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;input_fits&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_fits</span><span class="p">,</span> <span class="n">InputFitRecord</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;range_projections&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_projections</span><span class="p">,</span>
+             <span class="n">RangeProjectionRecord</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;gauges&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gauges</span><span class="p">,</span> <span class="n">GaugeRecord</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;sweeps&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sweeps</span><span class="p">,</span> <span class="n">SweepRecord</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">records</span><span class="p">,</span> <span class="n">record_type</span> <span class="ow">in</span> <span class="n">collections</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">record_type</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">records</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should contain </span><span class="si">{</span><span class="n">record_type</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1"> objects&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">message</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">warnings</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`warnings` should contain strings&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DecompositionMetrics.as_info"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.DecompositionMetrics.as_info">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">as_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a dictionary suitable for functional ``return_info`` APIs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;errors&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">_record_as_dict</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">],</span>
+            <span class="s1">&#39;truncations&#39;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="n">_record_as_dict</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">truncations</span>
+            <span class="p">],</span>
+            <span class="s1">&#39;timings&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">_record_as_dict</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">timings</span><span class="p">],</span>
+            <span class="s1">&#39;fidelities&#39;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="n">_record_as_dict</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span>
+            <span class="p">],</span>
+            <span class="s1">&#39;warnings&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">warnings</span><span class="p">),</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_solves</span><span class="p">:</span>
+            <span class="n">info</span><span class="p">[</span><span class="s1">&#39;local_solves&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">_record_as_dict</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_solves</span>
+            <span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_fits</span><span class="p">:</span>
+            <span class="n">info</span><span class="p">[</span><span class="s1">&#39;input_fits&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">_record_as_dict</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_fits</span>
+            <span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_projections</span><span class="p">:</span>
+            <span class="n">info</span><span class="p">[</span><span class="s1">&#39;range_projections&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">_record_as_dict</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_projections</span>
+            <span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluations</span><span class="p">:</span>
+            <span class="n">info</span><span class="p">[</span><span class="s1">&#39;evaluations&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">_record_as_dict</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluations</span>
+            <span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gauges</span><span class="p">:</span>
+            <span class="n">info</span><span class="p">[</span><span class="s1">&#39;gauges&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">_record_as_dict</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">gauges</span>
+            <span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sweeps</span><span class="p">:</span>
+            <span class="n">info</span><span class="p">[</span><span class="s1">&#39;sweeps&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">_record_as_dict</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sweeps</span>
+            <span class="p">]</span>
+        <span class="k">return</span> <span class="n">info</span></div></div>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;ErrorRecord&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;TruncationRecord&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;LocalSolveRecord&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;InputFitRecord&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;RangeProjectionRecord&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;GaugeRecord&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;SweepRecord&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;TimingRecord&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;EvaluationStats&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;FidelityRecord&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;DecompositionMetrics&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

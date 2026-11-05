@@ -1,0 +1,724 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.sketching.evaluations &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/clipboard.min.js"></script>
+    <script src="../../../../_static/copybutton.js"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.sketching.evaluations</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Classes:</span>
+<span class="sd">        * ConfigurationMap</span>
+
+<span class="sd">    Functions:</span>
+<span class="sd">        * _input_values</span>
+<span class="sd">        * _concatenate_configurations</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">EvaluationStats</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sketching.regions</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">SiteRegion</span><span class="p">,</span>
+                                                           <span class="n">_SamplePool</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">BaseSource</span><span class="p">,</span>
+                                                 <span class="n">ConfigurationBatch</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_input_values</span><span class="p">(</span><span class="n">configurations</span><span class="p">:</span> <span class="n">ConfigurationBatch</span>
+                  <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns one tensor per configuration input.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">configurations</span><span class="o">.</span><span class="n">packed</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">configurations</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">site</span><span class="p">]</span>
+                     <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">configurations</span><span class="o">.</span><span class="n">n_inputs</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">configurations</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_concatenate_configurations</span><span class="p">(</span><span class="n">batches</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ConfigurationBatch</span><span class="p">]</span>
+                                <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConfigurationBatch</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Concatenates compatible configuration batches along their row axis.&quot;&quot;&quot;</span>
+    <span class="n">batches</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">batches</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">batches</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`batches` should contain a configuration batch&#39;</span><span class="p">)</span>
+    <span class="n">first</span> <span class="o">=</span> <span class="n">batches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">ConfigurationBatch</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`batches` should contain ConfigurationBatch objects&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">ConfigurationBatch</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`batches` should contain ConfigurationBatch objects&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">batch</span><span class="o">.</span><span class="n">n_inputs</span> <span class="o">!=</span> <span class="n">first</span><span class="o">.</span><span class="n">n_inputs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`batches` should have the same input count&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">batch</span><span class="o">.</span><span class="n">kind</span> <span class="o">!=</span> <span class="n">first</span><span class="o">.</span><span class="n">kind</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`batches` should use the same value kind&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">batch</span><span class="o">.</span><span class="n">feature_shape</span> <span class="o">!=</span> <span class="n">first</span><span class="o">.</span><span class="n">feature_shape</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`batches` should have matching feature shapes&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">batch</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">first</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`batches` should share a device&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">batch</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">first</span><span class="o">.</span><span class="n">dtype</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`batches` should share a dtype&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">batch</span><span class="o">.</span><span class="n">packed</span> <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span><span class="p">):</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">batch</span><span class="o">.</span><span class="n">values</span> <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">split</span> <span class="o">=</span> <span class="p">[</span><span class="n">_input_values</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span><span class="p">]</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">items</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="k">for</span> <span class="n">items</span> <span class="ow">in</span> <span class="n">split</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                       <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">first</span><span class="o">.</span><span class="n">n_inputs</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">ConfigurationBatch</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="n">first</span><span class="o">.</span><span class="n">kind</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ConfigurationMap"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">ConfigurationMap</span><span class="p">:</span>  <span class="c1"># MARK: ConfigurationMap</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Source values shared by all RSS queries and a global transformation.</span>
+
+<span class="sd">    RSS passes this object to ``transform(configuration_map)`` after evaluating</span>
+<span class="sd">    the unique configurations needed by the local Phis. :attr:`configurations`</span>
+<span class="sd">    contains these inputs directly, and :attr:`values` contains the aligned raw</span>
+<span class="sd">    source values. Both tables keep their original shape and order while the</span>
+<span class="sd">    callback runs. The callback returns transformed values with the same shape.</span>
+
+<span class="sd">    :meth:`evaluate` can query additional configurations. It returns raw source</span>
+<span class="sd">    values, preserving the requested order and repetitions, and evaluates only</span>
+<span class="sd">    points absent from the shared cache. These auxiliary points do not change</span>
+<span class="sd">    the initial tables or the sketch samples. Evaluation never recursively</span>
+<span class="sd">    applies the transformation.</span>
+
+<span class="sd">    Instances are created by RSS; callbacks normally only read these properties</span>
+<span class="sd">    and call :meth:`evaluate`. Source input columns follow ``source.in_sites``.</span>
+<span class="sd">    Treat the exposed tables as read-only so cached raw evaluations remain</span>
+<span class="sd">    available throughout the callback.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    A symmetry average can evaluate new configurations in the callback::</span>
+
+<span class="sd">        def transform(configuration_map):</span>
+<span class="sd">            inputs = configuration_map.configurations</span>
+<span class="sd">            reflected = inputs.flip(1)</span>
+<span class="sd">            return (configuration_map.values +</span>
+<span class="sd">                    configuration_map.evaluate(reflected)) / 2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">BaseSource</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
+                 <span class="n">transform</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">BaseSource</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`source` should inherit from BaseSource&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">batch_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+                <span class="ow">or</span> <span class="p">(</span><span class="n">batch_size</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`batch_size` should be positive or None&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">transform</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">transform</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`transform` should be callable or None&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="n">source</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_batch_size</span> <span class="o">=</span> <span class="n">batch_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transform</span> <span class="o">=</span> <span class="n">transform</span>
+        <span class="c1"># Requests and gather indices share one frozen configuration table.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_incidences</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_configurations</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Raw evaluations remain available after the global transformation.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_values</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transformed_values</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache_configurations</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache_values</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_stats</span> <span class="o">=</span> <span class="n">EvaluationStats</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ConfigurationMap.register"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap.register">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">phi</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
+                 <span class="n">index_selection</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Registers one Phi query before evaluation freezes the table.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        phi : PhiOperator</span>
+<span class="sd">            Local operator sharing this map&#39;s source.</span>
+<span class="sd">        index_selection : torch.Tensor, optional</span>
+<span class="sd">            Selected Phi entries; omitted to register the complete tensor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sketching.phi</span><span class="w"> </span><span class="kn">import</span> <span class="n">PhiOperator</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">PhiOperator</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`phi` should be PhiOperator type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_configurations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;The configuration map is already frozen&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">phi</span><span class="o">.</span><span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The map and Phi should share a source&#39;</span><span class="p">)</span>
+        <span class="n">configurations</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">phi</span><span class="o">.</span><span class="n">_request</span><span class="p">(</span><span class="n">index_selection</span><span class="p">)</span>
+        <span class="n">handle</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">configurations</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">phi</span><span class="o">.</span><span class="n">output_spec</span><span class="p">,</span> <span class="n">labels</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">handle</span></div>
+
+<div class="viewcode-block" id="ConfigurationMap.freeze"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap.freeze">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">freeze</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Deduplicates all registered queries once before evaluation.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_configurations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The map should contain a registered Phi&#39;</span><span class="p">)</span>
+        <span class="n">configurations</span> <span class="o">=</span> <span class="n">_concatenate_configurations</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">request</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">request</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="p">])</span>
+        <span class="n">pool</span> <span class="o">=</span> <span class="n">_SamplePool</span><span class="p">(</span><span class="n">configurations</span><span class="p">)</span>
+        <span class="n">unique</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">SiteRegion</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">configurations</span><span class="o">.</span><span class="n">n_inputs</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_configurations</span> <span class="o">=</span> <span class="n">configurations</span><span class="o">.</span><span class="n">index_select</span><span class="p">(</span>
+            <span class="n">unique</span><span class="o">.</span><span class="n">representative_row_ids</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache_configurations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_configurations</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">batch</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">output_spec</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="p">:</span>
+            <span class="n">stop</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">batch</span><span class="o">.</span><span class="n">batch_size</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_incidences</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">unique</span><span class="o">.</span><span class="n">inverse_ids</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">stop</span><span class="p">],</span>
+                                     <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">),</span> <span class="n">output_spec</span><span class="p">,</span> <span class="n">labels</span><span class="p">))</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="n">stop</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_stats</span> <span class="o">=</span> <span class="n">EvaluationStats</span><span class="p">(</span>
+            <span class="n">requested_points</span><span class="o">=</span><span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span>
+            <span class="n">unique_points</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_configurations</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span>
+            <span class="n">cache_hits</span><span class="o">=</span><span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">-</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_configurations</span><span class="o">.</span><span class="n">batch_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_requests</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">configurations</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">...</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initial packed inputs or one tensor per input, in query order.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_configurations</span><span class="o">.</span><span class="n">values</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">values</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Raw source values aligned with the initial configurations.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluate_source</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stats</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EvaluationStats</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Source calls and cache reuse, including auxiliary evaluations.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stats</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_evaluate_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configurations</span><span class="p">:</span> <span class="n">ConfigurationBatch</span>
+                          <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evaluates missing points in contiguous batches.&quot;&quot;&quot;</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch_size</span> <span class="ow">or</span> <span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span>
+        <span class="n">before</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">evaluation_stats</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">n_calls</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">):</span>
+            <span class="n">ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">,</span>
+                                          <span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span><span class="p">),</span>
+                               <span class="n">device</span><span class="o">=</span><span class="n">configurations</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span>
+                <span class="n">configurations</span><span class="o">.</span><span class="n">index_select</span><span class="p">(</span><span class="n">ids</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">ids</span><span class="o">.</span><span class="n">numel</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;Source values should preserve the configuration batch&#39;</span><span class="p">)</span>
+            <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">n_calls</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">chunks</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">evaluation_stats</span><span class="o">.</span><span class="n">delta</span><span class="p">(</span><span class="n">before</span><span class="p">)</span>
+        <span class="c1"># Custom sources may not maintain counters, but each call still counts.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_stats</span> <span class="o">=</span> <span class="n">EvaluationStats</span><span class="p">(</span>
+            <span class="n">requested_points</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_stats</span><span class="o">.</span><span class="n">requested_points</span><span class="p">,</span>
+            <span class="n">unique_points</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_stats</span><span class="o">.</span><span class="n">unique_points</span><span class="p">,</span>
+            <span class="n">batches</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_stats</span><span class="o">.</span><span class="n">batches</span> <span class="o">+</span> <span class="p">(</span><span class="n">delta</span><span class="o">.</span><span class="n">batches</span> <span class="ow">or</span> <span class="n">n_calls</span><span class="p">),</span>
+            <span class="n">cache_hits</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_stats</span><span class="o">.</span><span class="n">cache_hits</span><span class="p">,</span>
+            <span class="n">source_calls</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_stats</span><span class="o">.</span><span class="n">source_calls</span> <span class="o">+</span>
+                          <span class="p">(</span><span class="n">delta</span><span class="o">.</span><span class="n">source_calls</span> <span class="ow">or</span> <span class="n">n_calls</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">values</span>
+
+<div class="viewcode-block" id="ConfigurationMap.evaluate_source"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap.evaluate_source">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate_source</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evaluates and retains the initial raw source table once.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_evaluate_batches</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_configurations</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cache_values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span></div>
+
+<div class="viewcode-block" id="ConfigurationMap.evaluate"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap.evaluate">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configurations</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">ConfigurationBatch</span><span class="p">]</span>
+                 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluates raw source values using the shared configuration cache.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        configurations : torch.Tensor or sequence of torch.Tensor</span>
+<span class="sd">            Packed inputs with shape ``(batch, n_inputs, *feature_shape)``, or</span>
+<span class="sd">            one tensor per input with a common leading batch dimension. Use</span>
+<span class="sd">            the same input order, feature shapes, device and dtype as</span>
+<span class="sd">            :attr:`configurations`. Discrete inputs contain scalar indices.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Raw source values with shape ``(batch, *out_shape)``, in requested</span>
+<span class="sd">            order. Repeated configurations produce repeated rows.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">evaluate_source</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">configurations</span><span class="p">,</span> <span class="n">ConfigurationBatch</span><span class="p">):</span>
+            <span class="n">configurations</span> <span class="o">=</span> <span class="n">ConfigurationBatch</span><span class="p">(</span>
+                <span class="n">configurations</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_configurations</span><span class="o">.</span><span class="n">kind</span><span class="p">)</span>
+        <span class="n">combined</span> <span class="o">=</span> <span class="n">_concatenate_configurations</span><span class="p">(</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache_configurations</span><span class="p">,</span> <span class="n">configurations</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_values</span><span class="p">[:</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">pool</span> <span class="o">=</span> <span class="n">_SamplePool</span><span class="p">(</span><span class="n">combined</span><span class="p">)</span>
+        <span class="n">unique</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">SiteRegion</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">combined</span><span class="o">.</span><span class="n">n_inputs</span><span class="p">)))</span>
+        <span class="n">n_cached</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_configurations</span><span class="o">.</span><span class="n">batch_size</span>
+        <span class="n">representatives</span> <span class="o">=</span> <span class="n">unique</span><span class="o">.</span><span class="n">representative_row_ids</span>
+        <span class="n">missing_ids</span> <span class="o">=</span> <span class="n">representatives</span><span class="p">[</span><span class="n">representatives</span> <span class="o">&gt;=</span> <span class="n">n_cached</span><span class="p">]</span>
+        <span class="n">n_missing</span> <span class="o">=</span> <span class="n">missing_ids</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span>
+        <span class="n">lookup</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">unique</span><span class="o">.</span><span class="n">n_unique</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">,</span>
+                             <span class="n">device</span><span class="o">=</span><span class="n">combined</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">lookup</span><span class="p">[</span><span class="n">unique</span><span class="o">.</span><span class="n">inverse_ids</span><span class="p">[:</span><span class="n">n_cached</span><span class="p">]]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span>
+            <span class="n">n_cached</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">combined</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n_missing</span><span class="p">:</span>
+            <span class="n">missing</span> <span class="o">=</span> <span class="n">combined</span><span class="o">.</span><span class="n">index_select</span><span class="p">(</span><span class="n">missing_ids</span><span class="p">)</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_evaluate_batches</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cache_configurations</span> <span class="o">=</span> <span class="n">_concatenate_configurations</span><span class="p">(</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache_configurations</span><span class="p">,</span> <span class="n">missing</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cache_values</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache_values</span><span class="p">,</span> <span class="n">values</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">lookup</span><span class="p">[</span><span class="n">unique</span><span class="o">.</span><span class="n">inverse_ids</span><span class="p">[</span><span class="n">missing_ids</span><span class="p">]]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span>
+                <span class="n">n_cached</span><span class="p">,</span> <span class="n">n_cached</span> <span class="o">+</span> <span class="n">n_missing</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">combined</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_stats</span> <span class="o">=</span> <span class="n">EvaluationStats</span><span class="p">(</span>
+            <span class="n">requested_points</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_stats</span><span class="o">.</span><span class="n">requested_points</span> <span class="o">+</span>
+                              <span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span><span class="p">),</span>
+            <span class="n">unique_points</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_stats</span><span class="o">.</span><span class="n">unique_points</span> <span class="o">+</span> <span class="n">n_missing</span><span class="p">,</span>
+            <span class="n">batches</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_stats</span><span class="o">.</span><span class="n">batches</span><span class="p">,</span>
+            <span class="n">cache_hits</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_stats</span><span class="o">.</span><span class="n">cache_hits</span> <span class="o">+</span>
+                        <span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">-</span> <span class="n">n_missing</span><span class="p">),</span>
+            <span class="n">source_calls</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_stats</span><span class="o">.</span><span class="n">source_calls</span><span class="p">)</span>
+        <span class="n">ids</span> <span class="o">=</span> <span class="n">lookup</span><span class="p">[</span><span class="n">unique</span><span class="o">.</span><span class="n">inverse_ids</span><span class="p">[</span><span class="n">n_cached</span><span class="p">:]]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_values</span><span class="o">.</span><span class="n">index_select</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">ids</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cache_values</span><span class="o">.</span><span class="n">device</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="ConfigurationMap.prepare_values"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap.prepare_values">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_values</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Applies the callback once to the stable initial raw table.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transformed_values</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">raw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluate_source</span><span class="p">()</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">raw</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`transform` should return a torch.Tensor&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">raw</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`transform` should preserve the value shape&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">raw</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`transform` should preserve the value device&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">is_floating_point</span><span class="p">()</span> <span class="ow">or</span> <span class="n">values</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s1">&#39;`transform` should return floating or complex values&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`transform` should return finite values&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transformed_values</span> <span class="o">=</span> <span class="n">values</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transformed_values</span></div>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handle</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                <span class="n">index_selection</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Scatters one planned Phi without retaining another tensor cache.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`handle` should be int type&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">handle</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">handle</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_incidences</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`handle` is outside the evaluation plan&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+        <span class="n">ids</span><span class="p">,</span> <span class="n">result_shape</span><span class="p">,</span> <span class="n">output_spec</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_incidences</span><span class="p">[</span><span class="n">handle</span><span class="p">]</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prepare_values</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">index_selection</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">selection</span> <span class="o">=</span> <span class="n">index_selection</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">ids</span><span class="o">.</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">result_shape</span><span class="p">))</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">selection</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">ids</span> <span class="o">=</span> <span class="n">ids</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">result_shape</span><span class="p">)[</span><span class="n">indices</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">result_shape</span><span class="p">)[</span><span class="n">indices</span><span class="p">]</span>
+            <span class="n">result_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">index_selection</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">index_select</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">ids</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">device</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">output_spec</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">selected</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="p">(</span><span class="o">*</span><span class="n">result_shape</span><span class="p">,</span> <span class="o">*</span><span class="n">selected</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">output_spec</span><span class="o">.</span><span class="n">validate_values</span><span class="p">(</span><span class="n">selected</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">output_spec</span><span class="o">.</span><span class="n">scalar</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">selected</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">result_shape</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">selected</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">selected</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
+            <span class="mi">1</span><span class="p">,</span> <span class="n">labels</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">selected</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">result_shape</span><span class="p">)</span></div>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;ConfigurationMap&#39;</span><span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

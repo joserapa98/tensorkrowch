@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
     <title>First Steps with TensorKrowch &#8212; TensorKrowch 1.1.6 documentation</title>
     
@@ -219,9 +219,31 @@
      Embeddings
     </a>
    </li>
-   <li class="toctree-l2">
+   <li class="toctree-l2 has-children">
     <a class="reference internal" href="../decompositions.html">
      Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../utils.html">
+     Utilities
     </a>
    </li>
   </ul>
@@ -537,10 +559,10 @@ also serve to test your installation of <code class="docutils literal notranslat
 <section id="import-libraries">
 <h3>1. Import Libraries<a class="headerlink" href="#import-libraries" title="Permalink to this headline">#</a></h3>
 <p>First of all, we need to import the necessary libraries:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">from</span> <span class="nn">torchvision</span> <span class="kn">import</span> <span class="n">transforms</span><span class="p">,</span> <span class="n">datasets</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torchvision</span><span class="w"> </span><span class="kn">import</span> <span class="n">transforms</span><span class="p">,</span> <span class="n">datasets</span>
 
-<span class="kn">import</span> <span class="nn">tensorkrowch</span> <span class="k">as</span> <span class="nn">tk</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tensorkrowch</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tk</span>
 </pre></div>
 </div>
 </section>
@@ -574,7 +596,7 @@ also serve to test your installation of <code class="docutils literal notranslat
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># We embed each pixel value into a vector space of dimension 3,</span>
 <span class="c1"># where the first component is always a 1 (useful for a good</span>
 <span class="c1"># initialization of the model)</span>
-<span class="k">def</span> <span class="nf">embedding</span><span class="p">(</span><span class="n">image</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">embedding</span><span class="p">(</span><span class="n">image</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">image</span><span class="p">),</span> <span class="n">image</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">image</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
 <span class="n">transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span><span class="n">transforms</span><span class="o">.</span><span class="n">Resize</span><span class="p">(</span><span class="n">image_size</span><span class="p">),</span>

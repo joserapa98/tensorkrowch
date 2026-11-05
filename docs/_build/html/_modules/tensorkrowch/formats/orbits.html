@@ -1,0 +1,696 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.formats.orbits &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/clipboard.min.js"></script>
+    <script src="../../../_static/copybutton.js"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.formats.orbits</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Public classes:</span>
+<span class="sd">        * MinimalCanonicalInfo</span>
+<span class="sd">        * GaugeOrbit</span>
+<span class="sd">        * TensorRingOrbit</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats.formats1d</span><span class="w"> </span><span class="kn">import</span> <span class="n">TR</span><span class="p">,</span> <span class="n">TRM</span>
+
+
+<div class="viewcode-block" id="MinimalCanonicalInfo"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.MinimalCanonicalInfo">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MinimalCanonicalInfo</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convergence information returned by minimal canonicalization.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    iterations : int</span>
+<span class="sd">        Number of gauge optimization iterations; zero for TT/TTM.</span>
+<span class="sd">    converged : bool</span>
+<span class="sd">        Whether a relative imbalance or stagnation criterion was met;</span>
+<span class="sd">        ``True`` for TT/TTM. Stagnation need not imply a small imbalance.</span>
+<span class="sd">    gram_imbalance : torch.Tensor or None</span>
+<span class="sd">        Final relative ring Gram imbalance, as returned by</span>
+<span class="sd">        :meth:`GaugeOrbit.gram_imbalance` with ``relative=True``;</span>
+<span class="sd">        ``None`` for TT/TTM.</span>
+<span class="sd">    stop_reason : str or None</span>
+<span class="sd">        ``&#39;tolerance&#39;``, ``&#39;stagnation&#39;``, ``&#39;max_iter&#39;`` or</span>
+<span class="sd">        ``&#39;numerical_failure&#39;`` for rings; ``&#39;vidal&#39;`` for TT/TTM.</span>
+<span class="sd">        ``None`` when no reason is supplied.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">iterations</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># Number of optimization iterations executed</span>
+    <span class="n">converged</span><span class="p">:</span> <span class="nb">bool</span>  <span class="c1"># Whether a stopping criterion was met</span>
+    <span class="n">gram_imbalance</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span>  <span class="c1"># Final relative imbalance for rings</span>
+    <span class="n">stop_reason</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="GaugeOrbit"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.GaugeOrbit">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">GaugeOrbit</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Tensor representations related by invertible virtual gauge transforms.</span>
+
+<span class="sd">    Each bond identifies two tensor axes joined in the represented contraction.</span>
+<span class="sd">    A gauge multiplies the first core and its inverse acts on the second, so</span>
+<span class="sd">    the contracted tensor stays unchanged. Cores and gauges may be real or</span>
+<span class="sd">    complex. The action accepts arbitrary tensor axes, allowing geometries</span>
+<span class="sd">    beyond chains.</span>
+
+<span class="sd">    Each bond is described by ``(left_site, left_axis, right_site, right_axis)``.</span>
+<span class="sd">    ``left_site`` and ``right_site`` index the two cores, while ``left_axis``</span>
+<span class="sd">    and ``right_axis`` select their connected axes. For cores shaped</span>
+<span class="sd">    ``(left_rank, in_dim, right_rank)``, the bond ``(0, -1, 1, -3)`` connects</span>
+<span class="sd">    the right rank of core 0 to the left rank of core 1.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Nonempty collection of tensors. Containers are copied and tensor</span>
+<span class="sd">        references retained.</span>
+<span class="sd">    bonds : sequence of tuple[int, int, int, int]</span>
+<span class="sd">        Connections ``(left_site, left_axis, right_site, right_axis)``.</span>
+<span class="sd">        Joined axis dimensions should match. Negative axes are accepted.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                 <span class="n">bonds</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`cores` should be a nonempty tensor sequence&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bonds</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bonds</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bonds` should be a sequence of axis connections&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bonds</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">bonds</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">core</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span>
+                                     <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`cores` should be a nonempty tensor sequence&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">left_site</span><span class="p">,</span> <span class="n">left_axis</span><span class="p">,</span> <span class="n">right_site</span><span class="p">,</span> <span class="n">right_axis</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bonds</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">site</span><span class="p">,</span> <span class="n">axis</span> <span class="ow">in</span> <span class="p">[(</span><span class="n">left_site</span><span class="p">,</span> <span class="n">left_axis</span><span class="p">),</span> <span class="p">(</span><span class="n">right_site</span><span class="p">,</span> <span class="n">right_axis</span><span class="p">)]:</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="p">(</span>
+                    <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">site</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">)):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s1">&#39;Gauge bonds should select valid tensor sites&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="p">(</span>
+                        <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&lt;=</span> <span class="n">axis</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s1">&#39;Gauge bonds should select valid tensor axes&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">left_site</span> <span class="o">==</span> <span class="n">right_site</span><span class="p">:</span>
+                <span class="n">ndim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">left_site</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">left_axis</span> <span class="o">%</span> <span class="n">ndim</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="n">right_axis</span> <span class="o">%</span> <span class="n">ndim</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s1">&#39;A gauge bond should connect two distinct tensor axes&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">left_site</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">left_axis</span><span class="p">]</span> <span class="o">!=</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">right_site</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">right_axis</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Gauge bond dimensions should match&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GaugeOrbit.apply"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.GaugeOrbit.apply">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gauges</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Applies invertible gauges at the configured bonds.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        gauges : sequence of torch.Tensor</span>
+<span class="sd">            One square invertible gauge per configured bond, matching its rank</span>
+<span class="sd">            and core dtype/device. The first core is multiplied by the gauge;</span>
+<span class="sd">            its inverse acts on the second core through a linear solve.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list[torch.Tensor]</span>
+<span class="sd">            Transformed cores. Multiplication and inverse solve preserve the</span>
+<span class="sd">            contracted tensor. Gauges must be invertible. Singular gauges may</span>
+<span class="sd">            cause ``torch.linalg.solve`` to raise ``torch.linalg.LinAlgError``.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; orbit = tk.formats.GaugeOrbit([torch.eye(2), torch.eye(2)],</span>
+<span class="sd">        ...                               [(0, 1, 1, 0)])</span>
+<span class="sd">        &gt;&gt;&gt; cores = orbit.apply([2 * torch.eye(2)])</span>
+<span class="sd">        &gt;&gt;&gt; torch.allclose(cores[0] @ cores[1], torch.eye(2))</span>
+<span class="sd">        True</span>
+<span class="sd">        &gt;&gt;&gt; identity = torch.eye(2, dtype=torch.complex128)</span>
+<span class="sd">        &gt;&gt;&gt; orbit = tk.formats.GaugeOrbit([identity, identity], [(0, 1, 1, 0)])</span>
+<span class="sd">        &gt;&gt;&gt; gauge = torch.matrix_exp(1j * identity)</span>
+<span class="sd">        &gt;&gt;&gt; cores = orbit.apply([gauge])</span>
+<span class="sd">        &gt;&gt;&gt; torch.allclose(cores[0] @ cores[1], identity)</span>
+<span class="sd">        True</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">gauges</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">gauges</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`gauges` should be a sequence of tensors&#39;</span><span class="p">)</span>
+        <span class="n">gauges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">gauges</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">gauges</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bonds</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;There should be one gauge per virtual bond&#39;</span><span class="p">)</span>
+
+        <span class="n">cores</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">gauge</span><span class="p">,</span> <span class="p">(</span><span class="n">left_site</span><span class="p">,</span> <span class="n">left_axis</span><span class="p">,</span>
+                    <span class="n">right_site</span><span class="p">,</span> <span class="n">right_axis</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">gauges</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bonds</span><span class="p">):</span>
+            <span class="n">rank</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="n">left_site</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">left_axis</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">gauge</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Gauges should be tensors&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">gauge</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">rank</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;Gauge dimensions should match the virtual bond&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">gauge</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">cores</span><span class="p">[</span><span class="n">left_site</span><span class="p">]</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+                <span class="n">gauge</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">cores</span><span class="p">[</span><span class="n">left_site</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;Gauges and cores should share device and dtype&#39;</span><span class="p">)</span>
+
+            <span class="c1"># Apply the gauge and its inverse at the joined virtual axes.</span>
+            <span class="n">left_core</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="n">left_site</span><span class="p">]</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="n">left_axis</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">cores</span><span class="p">[</span><span class="n">left_site</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">left_core</span> <span class="o">@</span> <span class="n">gauge</span><span class="p">)</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">left_axis</span><span class="p">)</span>
+
+            <span class="n">right_core</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="n">right_site</span><span class="p">]</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="n">right_axis</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">transformed</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">gauge</span><span class="p">,</span> <span class="n">right_core</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">cores</span><span class="p">[</span><span class="n">right_site</span><span class="p">]</span> <span class="o">=</span> <span class="n">transformed</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">right_core</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span>\
+                <span class="n">movedim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">right_axis</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">cores</span></div>
+
+<div class="viewcode-block" id="GaugeOrbit.objective"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.GaugeOrbit.objective">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">objective</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gauges</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes the objective used for minimal canonicalization: half the sum</span>
+<span class="sd">        of the squared Frobenius norms of the cores after applying the gauges.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        gauges : sequence of torch.Tensor</span>
+<span class="sd">            One square invertible gauge per configured bond, matching its rank</span>
+<span class="sd">            and core dtype/device, as in :meth:`apply`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Real scalar objective retaining gradients through gauges.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">square</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">gauges</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="GaugeOrbit.gram_matrices"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.GaugeOrbit.gram_matrices">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">gram_matrices</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructs the left and right Gram matrices at each configured bond.</span>
+
+<span class="sd">        For each bond, the left core is reshaped into :math:`L_b` with the</span>
+<span class="sd">        bond axis in its columns; the right core becomes :math:`R_b` with</span>
+<span class="sd">        that axis in its rows. All other axes, including structural batches,</span>
+<span class="sd">        are contracted to form :math:`L_b^\dagger L_b` and</span>
+<span class="sd">        :math:`R_b R_b^\dagger`. These are individual-core contractions,</span>
+<span class="sd">        not contracted subchains.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list[tuple[torch.Tensor, torch.Tensor]]</span>
+<span class="sd">            One ``(left_gram, right_gram)`` pair per bond, in the order of</span>
+<span class="sd">            ``bonds``. Both matrices have shape ``(rank, rank)`` and retain</span>
+<span class="sd">            gradients through the cores. Returns an empty list without bonds.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; orbit = tk.formats.GaugeOrbit([2 * torch.eye(2), torch.eye(2)],</span>
+<span class="sd">        ...                               [(0, 1, 1, 0)])</span>
+<span class="sd">        &gt;&gt;&gt; left, right = orbit.gram_matrices()[0]</span>
+<span class="sd">        &gt;&gt;&gt; left</span>
+<span class="sd">        tensor([[4., 0.],</span>
+<span class="sd">                [0., 4.]])</span>
+<span class="sd">        &gt;&gt;&gt; right</span>
+<span class="sd">        tensor([[1., 0.],</span>
+<span class="sd">                [0., 1.]])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">grams</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">left_site</span><span class="p">,</span> <span class="n">left_axis</span><span class="p">,</span> <span class="n">right_site</span><span class="p">,</span> <span class="n">right_axis</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bonds</span><span class="p">:</span>
+            <span class="n">left_core</span><span class="p">,</span> <span class="n">right_core</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">left_site</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">right_site</span><span class="p">]</span>
+
+            <span class="n">left_matrix</span> <span class="o">=</span> <span class="n">left_core</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="n">left_axis</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">left_core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">left_axis</span><span class="p">])</span>
+            <span class="n">right_matrix</span> <span class="o">=</span> <span class="n">right_core</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="n">right_axis</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="n">right_core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">right_axis</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">left_gram</span> <span class="o">=</span> <span class="n">left_matrix</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span> <span class="o">@</span> <span class="n">left_matrix</span>
+            <span class="n">right_gram</span> <span class="o">=</span> <span class="n">right_matrix</span> <span class="o">@</span> <span class="n">right_matrix</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span>
+            <span class="n">grams</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">left_gram</span><span class="p">,</span> <span class="n">right_gram</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">grams</span></div>
+
+<div class="viewcode-block" id="GaugeOrbit.gram_imbalance"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.GaugeOrbit.gram_imbalance">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">gram_imbalance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relative</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Measures the joint Gram-matrix imbalance across the bonds.</span>
+
+<span class="sd">        Uses the left and right Gram matrices from :meth:`gram_matrices`</span>
+<span class="sd">        to compute</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            D = \sqrt{\sum_b</span>
+<span class="sd">                \left\|L_b^\dagger L_b - R_b R_b^\dagger\right\|_F^2}.</span>
+
+<span class="sd">        With ``relative=True``, returns :math:`D / \sum_i\|A_i\|_F^2`,</span>
+<span class="sd">        where :math:`A_i` are the current cores. This is the norm of the</span>
+<span class="sd">        gradient of their joint log-norm along Hermitian gauge directions,</span>
+<span class="sd">        following Definition 5.9 of `The minimal canonical form of a tensor</span>
+<span class="sd">        network &lt;https://arxiv.org/pdf/2209.14358&gt;`_. The denominator is twice</span>
+<span class="sd">        :meth:`objective` at identity gauges, not the squared norm of the</span>
+<span class="sd">        contracted tensor. The relative measure is unchanged by a common</span>
+<span class="sd">        rescaling of all cores; all-zero cores have zero imbalance.</span>
+
+<span class="sd">        Equality of these matrices at every bond is necessary and sufficient</span>
+<span class="sd">        for minimizing :meth:`objective` over the gauge orbit, that is, for</span>
+<span class="sd">        being in minimal canonical form. Structural batch axes are summed</span>
+<span class="sd">        in these contractions, so the condition concerns the total objective.</span>
+
+<span class="sd">        This method compares individual cores. The open-chain minimal</span>
+<span class="sd">        canonical condition instead compares contracted left/right subchains;</span>
+<span class="sd">        its implicit Vidal representation need not have zero local imbalance.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        relative : bool</span>
+<span class="sd">            Whether to divide by the sum of squared core norms.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Joint absolute or relative Gram imbalance. This measures</span>
+<span class="sd">            stationarity of the core-norm objective, not reconstruction error</span>
+<span class="sd">            or distance to a minimal canonical form.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">relative</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`relative` should be bool type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">bonds</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">new_zeros</span><span class="p">(())</span>
+
+        <span class="n">imbalances</span> <span class="o">=</span> <span class="p">[(</span><span class="n">left</span> <span class="o">-</span> <span class="n">right</span><span class="p">)</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+                      <span class="k">for</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">gram_matrices</span><span class="p">()]</span>
+
+        <span class="n">imbalance</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">imbalances</span><span class="p">)</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">relative</span><span class="p">:</span>
+            <span class="n">norm_squared</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">square</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">norm_squared</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">imbalance</span>
+            <span class="n">imbalance</span> <span class="o">=</span> <span class="n">imbalance</span> <span class="o">/</span> <span class="n">norm_squared</span>
+        <span class="k">return</span> <span class="n">imbalance</span></div></div>
+
+
+<div class="viewcode-block" id="TensorRingOrbit"><a class="viewcode-back" href="../../../formats.html#tensorkrowch.formats.TensorRingOrbit">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">TensorRingOrbit</span><span class="p">(</span><span class="n">GaugeOrbit</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gauge-related representations of a finite tensor ring.</span>
+
+<span class="sd">    Gauges act on adjacent virtual axes, including the closing bond. The</span>
+<span class="sd">    objective and Gram imbalance support both real and complex cores.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    format : TR or TRM</span>
+<span class="sd">        Cyclic format supplying cores with explicit bond factors absorbed.</span>
+<span class="sd">        Matrix input/output axes are combined for the gauge action.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;TR&#39;</span><span class="p">,</span> <span class="s1">&#39;TRM&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">format</span><span class="o">.</span><span class="n">_cyclic</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;TensorRingOrbit requires a cyclic format&#39;</span><span class="p">)</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="nb">format</span><span class="o">.</span><span class="n">_effective_cores</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="p">[(</span><span class="n">site</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">site</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">cores</span><span class="p">),</span> <span class="o">-</span><span class="mi">3</span><span class="p">)</span>
+                                 <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cores</span><span class="p">))])</span></div>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

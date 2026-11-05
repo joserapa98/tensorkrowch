@@ -1,0 +1,1222 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.ring.tt2tr &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/clipboard.min.js"></script>
+    <script src="../../../../_static/copybutton.js"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.ring.tt2tr</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Classes:</span>
+<span class="sd">        * _TTCoreProvider</span>
+<span class="sd">        * _CanonicalTTCoreProvider</span>
+<span class="sd">        * _VidalCoreProvider</span>
+<span class="sd">        * TT2TR</span>
+
+<span class="sd">    Functions:</span>
+<span class="sd">        * _as_tt</span>
+<span class="sd">        * _schmidt_power</span>
+<span class="sd">        * _weight_rows</span>
+<span class="sd">        * _resolve_recursion</span>
+<span class="sd">        * _fidelity_error</span>
+<span class="sd">        * tt2tr</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">replace</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">sqrt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">Any</span><span class="p">,</span>
+                    <span class="n">Mapping</span><span class="p">,</span>
+                    <span class="n">Optional</span><span class="p">,</span>
+                    <span class="n">Sequence</span><span class="p">,</span>
+                    <span class="n">Tuple</span><span class="p">,</span>
+                    <span class="n">Union</span><span class="p">)</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats</span><span class="w"> </span><span class="kn">import</span> <span class="n">TT</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats.bonds</span><span class="w"> </span><span class="kn">import</span> <span class="n">VidalGauge</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats.formats1d</span><span class="w"> </span><span class="kn">import</span> <span class="n">_restore_cores</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.models.mps</span><span class="w"> </span><span class="kn">import</span> <span class="n">MPS</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">_RuntimePolicy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">_normalize_rank</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">DecompositionMetrics</span><span class="p">,</span>
+                                                 <span class="n">ErrorRecord</span><span class="p">,</span>
+                                                 <span class="n">FidelityRecord</span><span class="p">,</span>
+                                                 <span class="n">TimingRecord</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.observers</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">,</span>
+                                                   <span class="n">_normalize_verbosity</span><span class="p">,</span>
+                                                   <span class="n">_resolve_observer</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.results</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">TRDecomposition</span><span class="p">,</span>
+                                                 <span class="n">TTDecomposition</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.ring.blocks</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">_ring_partition</span><span class="p">,</span>
+                                                     <span class="n">_split_block</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.ring.driver</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">BidirectionalRingDriver</span><span class="p">,</span>
+                                                     <span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.ring.gauges</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">AdjointGaugeRecursion</span><span class="p">,</span>
+                                                     <span class="n">GaugeRecursion</span><span class="p">,</span>
+                                                     <span class="n">GaugeMap</span><span class="p">,</span>
+                                                     <span class="n">OrthGaugeRecursion</span><span class="p">,</span>
+                                                     <span class="n">PinvGaugeRecursion</span><span class="p">,</span>
+                                                     <span class="n">_ExpandedGaugeRecursion</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.ring.opening</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">BLOSTRLoopOpener</span><span class="p">,</span>
+                                                      <span class="n">LoopOpener</span><span class="p">,</span>
+                                                      <span class="n">resolve_loop_opener</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources.format</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormatSource</span>
+
+
+<span class="n">_Device</span> <span class="o">=</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_as_tt</span><span class="p">(</span>
+    <span class="n">tt</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;TT&#39;</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="s1">&#39;MPS&#39;</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TT</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalizes TT results, raw cores and open-boundary MPS adapters.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tt</span><span class="p">,</span> <span class="n">MPS</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">tt</span><span class="o">.</span><span class="n">boundary</span> <span class="o">!=</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`tt` should have open boundaries&#39;</span><span class="p">)</span>
+        <span class="n">tt</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">to_tt</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tt</span><span class="p">,</span> <span class="n">TT</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">tt</span><span class="o">.</span><span class="n">n_batches</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;TT-to-TR does not support structural batches&#39;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">tt</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tt</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tt</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`tt` should be a TT, open MPS or core sequence&#39;</span><span class="p">)</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">FormatSource</span><span class="p">(</span><span class="n">tt</span><span class="p">)</span>
+        <span class="n">compact_cores</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">_effective_cores</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">compact_cores</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">compact_cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">compact_cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">compact_cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">compact_cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">compact_cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">compact_cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">TTDecomposition</span><span class="p">(</span><span class="n">compact_cores</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_TTCoreProvider</span><span class="p">:</span>  <span class="c1"># MARK: _TTCoreProvider</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Exposes TT supercores and open-edge absorptions to the ring driver.&quot;&quot;&quot;</span>
+
+    <span class="n">tt</span><span class="p">:</span> <span class="n">TT</span>  <span class="c1"># Original open-boundary format supplying local targets</span>
+
+    <span class="n">boundary_mode</span> <span class="o">=</span> <span class="s1">&#39;open&#39;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">FormatSource</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tt</span><span class="o">.</span><span class="n">to_tt</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tt</span><span class="o">.</span><span class="n">_quantized</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">tt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">_effective_cores</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">local_target</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                     <span class="n">context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the TT core or contracted supercore for the requested</span>
+<span class="sd">        ``sites``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sites</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sites</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">sites</span> <span class="ow">or</span> <span class="p">(</span><span class="n">sites</span> <span class="o">!=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">sites</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sites</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`sites` should form a contiguous TT interval&#39;</span><span class="p">)</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">sites</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">sites</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span>
+                <span class="n">tensor</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">tensor</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">expand_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                           <span class="n">count</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                           <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Adds zero reference rows and unit-metric auxiliary coordinates.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">count</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cores</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+        <span class="n">core</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">]</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span> <span class="k">else</span> <span class="mi">2</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">count</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">core</span><span class="p">,</span> <span class="n">core</span><span class="o">.</span><span class="n">new_zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">)),</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">configure_partition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                            <span class="n">left</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">right</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retains the common construction intervals for local targets.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">central_sites</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sites</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boundary_sites</span> <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">left</span><span class="p">,</span> <span class="o">*</span><span class="n">right</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">partition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rank</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">center</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">block_boundaries</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                  <span class="n">rtol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Measures the shared TT2TR/TR-RSS rank and block partition.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">_ring_partition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">block_boundaries</span><span class="p">,</span> <span class="n">rtol</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">local_rank</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                   <span class="n">sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                   <span class="n">rank</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+                   <span class="n">context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Maps global prescribed ranks to the local cyclic factorization.&quot;&quot;&quot;</span>
+        <span class="n">sites</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sites</span><span class="p">)</span>
+        <span class="n">rank</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">rank</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">rank</span><span class="p">[(</span><span class="n">sites</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">rank</span><span class="p">)],</span>
+            <span class="o">*</span><span class="p">(</span><span class="n">rank</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">sites</span><span class="p">),</span>
+            <span class="n">rank</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">local_context</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                      <span class="n">context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds target dimensions and runtime to the local execution</span>
+<span class="sd">        ``context``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="n">sites</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="o">**</span><span class="n">context</span><span class="p">,</span>
+            <span class="s1">&#39;in_dim&#39;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+            <span class="s1">&#39;dtype&#39;</span><span class="p">:</span> <span class="n">target</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+            <span class="s1">&#39;device&#39;</span><span class="p">:</span> <span class="n">target</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">close_boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                       <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                       <span class="n">opening</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                       <span class="n">context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Absorbs a learned gauge and splits a boundary block sitewise.&quot;&quot;&quot;</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="n">sites</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
+            <span class="n">gauge</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;boundary_gauge&#39;</span><span class="p">,</span> <span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span><span class="p">)</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">gauge</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
+            <span class="n">gauge</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;boundary_gauge&#39;</span><span class="p">,</span> <span class="n">opening</span><span class="o">.</span><span class="n">right_gauge</span><span class="p">)</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">gauge</span><span class="p">,</span> <span class="n">target</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">dims</span><span class="o">=</span><span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`direction` should be &#39;left&#39; or &#39;right&#39;&quot;</span><span class="p">)</span>
+        <span class="n">dimensions</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">sites</span><span class="p">)</span>
+
+        <span class="c1"># Apply bounds only to cuts inside the absorbed boundary block.</span>
+        <span class="n">profile</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;rank_caps&#39;</span><span class="p">)</span>
+        <span class="n">rank</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="n">profile</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span>
+                <span class="nb">tuple</span><span class="p">(</span><span class="n">profile</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">sites</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">metrics</span> <span class="o">=</span> <span class="n">DecompositionMetrics</span><span class="p">()</span> <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s1">&#39;collect_metrics&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="n">_split_block</span><span class="p">(</span>
+            <span class="n">block</span><span class="p">,</span> <span class="n">dimensions</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;rtol&#39;</span><span class="p">),</span>
+            <span class="n">metrics</span><span class="o">=</span><span class="n">metrics</span><span class="p">)</span>
+
+        <span class="c1"># Local SVD indices must be translated to positions in the whole chain.</span>
+        <span class="n">records</span> <span class="o">=</span> <span class="p">(()</span> <span class="k">if</span> <span class="n">metrics</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="n">replace</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">site</span><span class="o">=</span><span class="n">sites</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">record</span><span class="o">.</span><span class="n">site</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">metrics</span><span class="o">.</span><span class="n">truncations</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">metrics</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">context</span><span class="p">[</span><span class="s1">&#39;_metrics&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">truncations</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">records</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cores</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">finalize_center</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">opening</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Absorbs dummy external gauges when discovery blocks overlap.&quot;&quot;&quot;</span>
+        <span class="c1"># After absorption, identity gauges prevent transport from applying the</span>
+        <span class="c1"># same boundary map a second time.</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">opening</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+        <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span><span class="p">,</span> <span class="n">opening</span><span class="o">.</span><span class="n">right_gauge</span>
+        <span class="k">if</span> <span class="n">sites</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                <span class="s1">&#39;ga,aib-&gt;gib&#39;</span><span class="p">,</span> <span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">left</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">left</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">left</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+                             <span class="n">device</span><span class="o">=</span><span class="n">left</span><span class="o">.</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sites</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                <span class="s1">&#39;aib,bg-&gt;aig&#39;</span><span class="p">,</span> <span class="n">cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">opening</span><span class="o">.</span><span class="n">right_gauge</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:])</span>
+            <span class="n">right</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">right</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">right</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+                              <span class="n">device</span><span class="o">=</span><span class="n">right</span><span class="o">.</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">opening</span><span class="p">,</span> <span class="n">cores</span><span class="o">=</span><span class="n">cores</span><span class="p">,</span> <span class="n">left_gauge</span><span class="o">=</span><span class="n">left</span><span class="p">,</span>
+                       <span class="n">right_gauge</span><span class="o">=</span><span class="n">right</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                         <span class="n">opening</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                         <span class="n">local_target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                         <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+                         <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeMap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Keeps the learned outgoing gauge for direct TT-edge absorption.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
+            <span class="n">gauge</span> <span class="o">=</span> <span class="n">opening</span><span class="o">.</span><span class="n">right_gauge</span>
+        <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
+            <span class="n">gauge</span> <span class="o">=</span> <span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`direction` should be &#39;left&#39; or &#39;right&#39;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">GaugeMap</span><span class="p">(</span>
+            <span class="n">core</span><span class="o">=</span><span class="n">gauge</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="n">direction</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;boundary&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                         <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="s1">&#39;absorb_learned_gauge&#39;</span><span class="p">})</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_CanonicalTTCoreProvider</span><span class="p">(</span><span class="n">_TTCoreProvider</span><span class="p">):</span>  <span class="c1"># MARK: CanonicalProvider</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Moves independent canonical centers without changing solved targets.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tt</span><span class="p">:</span> <span class="n">TT</span><span class="p">,</span> <span class="n">center</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">center</span> <span class="o">=</span> <span class="n">center</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">tt</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__post_init__</span><span class="p">()</span>
+        <span class="n">canonical</span> <span class="o">=</span> <span class="n">TT</span><span class="p">(</span><span class="n">_restore_cores</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span><span class="o">.</span><span class="n">canonicalize</span><span class="p">(</span>
+                <span class="n">orth_center</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="n">core</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">canonical</span><span class="o">.</span><span class="n">_effective_cores</span><span class="p">()]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">shift_center</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                     <span class="n">factor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                     <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Absorbs a zero-padded QR factor into the next unsolved core.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                <span class="s1">&#39;xa,apb-&gt;xpb&#39;</span><span class="p">,</span> <span class="n">factor</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                <span class="s1">&#39;apb,xb-&gt;apx&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">factor</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_schmidt_power</span><span class="p">(</span><span class="n">spectrum</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">power</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Applies a spectral power on positive support, zeroing inverse zeros.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">power</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">spectrum</span><span class="p">)</span>
+    <span class="n">positive</span> <span class="o">=</span> <span class="n">spectrum</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="n">safe</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">positive</span><span class="p">,</span> <span class="n">spectrum</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">spectrum</span><span class="p">))</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">positive</span><span class="p">,</span> <span class="n">safe</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">power</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">spectrum</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Schmidt powers overflow on the retained support&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_weight_rows</span><span class="p">(</span><span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                 <span class="n">basis</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                 <span class="n">factor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                 <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Weights the incoming virtual rows by a Schmidt factor.&quot;&quot;&quot;</span>
+    <span class="n">physical_dim</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="n">factor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
+        <span class="n">matrix</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;xa,apb-&gt;xpb&#39;</span><span class="p">,</span> <span class="n">factor</span><span class="p">,</span> <span class="n">matrix</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">factor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">physical_dim</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">basis</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;xa,apy-&gt;xpy&#39;</span><span class="p">,</span> <span class="n">factor</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">factor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">physical_dim</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">matrix</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;xb,pba-&gt;pxa&#39;</span><span class="p">,</span> <span class="n">factor</span><span class="p">,</span> <span class="n">matrix</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">physical_dim</span><span class="p">,</span> <span class="n">factor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">basis</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;xb,pby-&gt;pxy&#39;</span><span class="p">,</span> <span class="n">factor</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">physical_dim</span><span class="p">,</span> <span class="n">factor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="n">basis</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_VidalCoreProvider</span><span class="p">(</span><span class="n">_TTCoreProvider</span><span class="p">):</span>  <span class="c1"># MARK: _VidalCoreProvider</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Supplies canonical Vidal cores and their remaining bond factors.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">tt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tt</span><span class="o">.</span><span class="n">to_tt</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tt</span><span class="o">.</span><span class="n">_quantized</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">tt</span>
+        <span class="n">bonds</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">bonds</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bonds</span><span class="p">,</span> <span class="n">VidalGauge</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">bonds</span><span class="o">.</span><span class="n">_valid</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Adjoint transport requires valid Vidal data&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cores</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">_standard_cores</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spectra</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">bonds</span><span class="o">.</span><span class="n">spectra</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">powers</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">bonds</span><span class="o">.</span><span class="n">powers</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bond_factors</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">_schmidt_power</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">left</span> <span class="o">-</span> <span class="n">right</span><span class="p">)</span>
+                                  <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span> <span class="ow">in</span>
+                                  <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spectra</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">powers</span><span class="p">))</span>
+        <span class="c1"># Auxiliary expansion coordinates carry unit metric, not Schmidt data.</span>
+        <span class="n">unit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_ones</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">left_factors</span> <span class="o">=</span> <span class="p">(</span><span class="n">unit</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span>
+            <span class="n">_schmidt_power</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">right</span><span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span> <span class="ow">in</span>
+            <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spectra</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">powers</span><span class="p">)),</span> <span class="n">unit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">right_factors</span> <span class="o">=</span> <span class="p">(</span><span class="n">unit</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span>
+            <span class="n">_schmidt_power</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">left</span><span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span>
+            <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spectra</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">powers</span><span class="p">)),</span> <span class="n">unit</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">expand_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">count</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                           <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Adds zero target rows with unit metric in auxiliary coordinates.&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">expand_coordinates</span><span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">count</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;left_factors&#39;</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span> <span class="k">else</span> <span class="s1">&#39;right_factors&#39;</span>
+        <span class="n">factors</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">site</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span> <span class="k">else</span> <span class="n">site</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">core</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">]</span>
+        <span class="n">unit</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">core</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">core</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">factors</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">block_diag</span><span class="p">(</span><span class="n">factors</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">unit</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">factors</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_transport_matrices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                            <span class="n">basis</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                            <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span>
+                            <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Weights incoming rows and removes outgoing absorption powers.&quot;&quot;&quot;</span>
+        <span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="n">sites</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sites</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
+            <span class="n">factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_factors</span><span class="p">[</span><span class="n">first</span><span class="p">]</span>
+            <span class="n">spectrum</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spectra</span><span class="p">[</span><span class="n">last</span><span class="p">]</span>
+            <span class="n">power</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">powers</span><span class="p">[</span><span class="n">last</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_factors</span><span class="p">[</span><span class="n">last</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">spectrum</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spectra</span><span class="p">[</span><span class="n">first</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">power</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">powers</span><span class="p">[</span><span class="n">first</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">matrix</span><span class="p">,</span> <span class="n">basis</span> <span class="o">=</span> <span class="n">_weight_rows</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">factor</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">matrix</span> <span class="o">*</span> <span class="n">_schmidt_power</span><span class="p">(</span><span class="n">spectrum</span><span class="p">,</span> <span class="n">power</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">basis</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_transport_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coordinates</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                               <span class="n">sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span>
+                               <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Converts isometric coordinates to the next target&#39;s powers.&quot;&quot;&quot;</span>
+        <span class="n">bond</span> <span class="o">=</span> <span class="n">sites</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span> <span class="k">else</span> <span class="n">sites</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">power</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">powers</span><span class="p">[</span><span class="n">bond</span><span class="p">][</span><span class="mi">1</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span> <span class="k">else</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">coordinates</span> <span class="o">*</span> <span class="n">_schmidt_power</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">spectra</span><span class="p">[</span><span class="n">bond</span><span class="p">],</span> <span class="n">power</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">local_target</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                     <span class="n">context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts Vidal cores with each remaining internal factor once.&quot;&quot;&quot;</span>
+        <span class="n">sites</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sites</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">sites</span> <span class="ow">or</span> <span class="p">(</span><span class="n">sites</span> <span class="o">!=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">sites</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sites</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`sites` should form a contiguous TT interval&#39;</span><span class="p">)</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">sites</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">sites</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">bond_factors</span><span class="p">[</span><span class="n">site</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span>
+                <span class="n">tensor</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">tensor</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                         <span class="n">opening</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                         <span class="n">local_target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                         <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+                         <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeMap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Includes the remaining Vidal factor in the outgoing gauge.&quot;&quot;&quot;</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">prepare_boundary</span><span class="p">(</span>
+            <span class="n">opening</span><span class="p">,</span> <span class="n">local_target</span><span class="p">,</span> <span class="n">recursion_context</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+        <span class="n">sites</span> <span class="o">=</span> <span class="n">recursion_context</span><span class="p">[</span><span class="s1">&#39;from_sites&#39;</span><span class="p">]</span>
+        <span class="n">bond</span> <span class="o">=</span> <span class="n">sites</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span> <span class="k">else</span> <span class="n">sites</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">gauge</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">core</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">bond_factors</span><span class="p">[</span><span class="n">bond</span><span class="p">][</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">GaugeMap</span><span class="p">(</span><span class="n">core</span><span class="o">=</span><span class="n">gauge</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="n">direction</span><span class="p">,</span>
+                        <span class="n">metadata</span><span class="o">=</span><span class="n">step</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_recursion</span><span class="p">(</span><span class="n">recursion</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeRecursion</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolves a built-in transport or a configured strategy object.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">recursion</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">strategies</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;adjoint&#39;</span><span class="p">:</span> <span class="n">AdjointGaugeRecursion</span><span class="p">,</span>
+                      <span class="s1">&#39;pinv&#39;</span><span class="p">:</span> <span class="n">PinvGaugeRecursion</span><span class="p">,</span>
+                      <span class="s1">&#39;orth&#39;</span><span class="p">:</span> <span class="n">OrthGaugeRecursion</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">recursion</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">strategies</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;`recursion` should be &#39;adjoint&#39;, &#39;pinv&#39; or &#39;orth&#39;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">strategies</span><span class="p">[</span><span class="n">recursion</span><span class="p">]()</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">recursion</span><span class="p">,</span> <span class="n">GaugeRecursion</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">recursion</span>
+    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`recursion` should implement GaugeRecursion&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fidelity_error</span><span class="p">(</span><span class="n">tt</span><span class="p">:</span> <span class="n">TT</span><span class="p">,</span>
+                    <span class="n">tr</span><span class="p">:</span> <span class="n">TRDecomposition</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FidelityRecord</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Computes phase-aware fidelity and relative L2 error without densifying.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">normalized_overlap</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">normalized_overlap</span><span class="p">(</span><span class="n">tr</span><span class="p">)</span>
+    <span class="n">target_norm</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+    <span class="n">approximation_norm</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">target_norm</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;TT-to-TR fidelity is undefined for a zero TT&#39;</span><span class="p">)</span>
+    <span class="n">norm_ratio</span> <span class="o">=</span> <span class="n">approximation_norm</span> <span class="o">/</span> <span class="n">target_norm</span>
+    <span class="c1"># This equivalent form avoids subtracting ``2 * norm_ratio`` from two</span>
+    <span class="c1"># order-one squared norms when their magnitudes are slightly different.</span>
+    <span class="c1"># The overlap term still has the unavoidable square-root precision floor</span>
+    <span class="c1"># of contraction-based residuals for nearly identical networks.</span>
+    <span class="n">relative_squared</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">norm_ratio</span><span class="p">)</span><span class="o">.</span><span class="n">square</span><span class="p">()</span> <span class="o">+</span>
+        <span class="mi">2</span> <span class="o">*</span> <span class="n">norm_ratio</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">normalized_overlap</span><span class="o">.</span><span class="n">real</span><span class="p">))</span><span class="o">.</span><span class="n">clamp_min</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">relative</span> <span class="o">=</span> <span class="n">relative_squared</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+    <span class="n">absolute</span> <span class="o">=</span> <span class="n">relative</span> <span class="o">*</span> <span class="n">target_norm</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="n">ErrorRecord</span><span class="p">(</span>
+        <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;reconstruction&#39;</span><span class="p">,</span>
+        <span class="n">absolute</span><span class="o">=</span><span class="n">absolute</span><span class="p">,</span>
+        <span class="n">relative</span><span class="o">=</span><span class="n">relative</span><span class="p">,</span>
+        <span class="n">denominator</span><span class="o">=</span><span class="n">target_norm</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">FidelityRecord</span><span class="p">(</span><span class="n">normalized_overlap</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="n">error</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="TT2TR"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.TT2TR">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">TT2TR</span><span class="p">:</span>  <span class="c1"># MARK: TT2TR</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Converts an open tensor train into a tensor ring.</span>
+
+<span class="sd">    Optimization openers use center-out gauge transport with optional residual</span>
+<span class="sd">    expansion. BLOSTR openers instead recover an exact central opening and</span>
+<span class="sd">    absorb its gauges outward, splitting with SVDs. Input cores remain</span>
+<span class="sd">    unchanged. Spectral factors and the working TT cores use a common complex</span>
+<span class="sd">    dtype, so BLOSTR conversion returns complex cores even for real inputs.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tt : TT, MPS or sequence of torch.Tensor</span>
+<span class="sd">        Open tensor train, open-boundary MPS or cores in standard TT order.</span>
+<span class="sd">        Structural batches are not supported.</span>
+<span class="sd">    out_device : str or torch.device, optional</span>
+<span class="sd">        Device for the returned cores. Default is ``&quot;cpu&quot;``; ``None`` keeps</span>
+<span class="sd">        the input device.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tt</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">out_device</span><span class="p">:</span> <span class="n">_Device</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tt</span> <span class="o">=</span> <span class="n">_as_tt</span><span class="p">(</span><span class="n">tt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_runtime</span> <span class="o">=</span> <span class="n">_RuntimePolicy</span><span class="o">.</span><span class="n">from_tensor</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tt</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">out_device</span><span class="o">=</span><span class="n">out_device</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">tt</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TT</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Input tensor train used for repeated conversions.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tt</span>
+
+<div class="viewcode-block" id="TT2TR.fit"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.TT2TR.fit">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">center</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">loop_opener</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">LoopOpener</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;als&#39;</span><span class="p">,</span>
+            <span class="n">recursion</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">GaugeRecursion</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;adjoint&#39;</span><span class="p">,</span>
+            <span class="o">*</span><span class="p">,</span>
+            <span class="n">block_boundaries</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="n">enrich</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="n">enrich_rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">enrich_rtol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span>
+            <span class="n">rtol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">collect_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TRDecomposition</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fits right-link ranks and optionally truncates SVD splits adaptively.</span>
+
+<span class="sd">        A prescribed ``rank`` starts at ``center`` and grows an initial block</span>
+<span class="sd">        when one site has insufficient physical capacity, then proceeds</span>
+<span class="sd">        sitewise. By default, boundary sites are grouped into blocks, whose</span>
+<span class="sd">        gauges are absorbed before SVD splitting. Overlapping blocks merge;</span>
+<span class="sd">        the whole chain may be opened at once. With known ranks, boundary</span>
+<span class="sd">        blocking can be disabled independently of the initial block.</span>
+<span class="sd">        Discovery first fits one physical supercore for the central block</span>
+<span class="sd">        and splits it with SVDs to determine its internal ranks. Prescribed</span>
+<span class="sd">        blocks instead optimize their physical cores individually. Discovery</span>
+<span class="sd">        is a numerical rank heuristic, not unique rank recovery.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        rank : int or sequence of int, optional</span>
+<span class="sd">            Local ALS rank, or one right-link rank per core including the</span>
+<span class="sd">            cyclic last entry. At SVD splits these are upper bounds: ``rtol``</span>
+<span class="sd">            may select smaller ranks, which are returned without zero padding.</span>
+<span class="sd">            ``None`` discovers ranks using SVDs or spectral multiplicities.</span>
+<span class="sd">        center : int, optional</span>
+<span class="sd">            Initial site, or the center of the discovery block. Defaults to</span>
+<span class="sd">            the middle site.</span>
+<span class="sd">        loop_opener : str or LoopOpener, optional</span>
+<span class="sd">            ``&quot;als&quot;`` optimizes local openings. ``&quot;blostr&quot;`` uses complete</span>
+<span class="sd">            spectral recovery; ``&quot;blostr_svd&quot;`` recovers the first factor</span>
+<span class="sd">            spectrally and splits the remainder with SVDs. Configured opener</span>
+<span class="sd">            objects expose solver, convergence and projection options.</span>
+<span class="sd">        recursion : str or GaugeRecursion, optional</span>
+<span class="sd">            ``&quot;adjoint&quot;`` moves QR centers or uses stored Vidal isometries;</span>
+<span class="sd">            ``&quot;pinv&quot;`` uses TT-core pseudoinverses; ``&quot;orth&quot;`` dualizes the</span>
+<span class="sd">            learned gauge. Configured objects accept PyTorch pseudoinverse</span>
+<span class="sd">            keyword options. Exact BLOSTR conversion does not use transport.</span>
+<span class="sd">        block_boundaries : bool</span>
+<span class="sd">            Group boundary sites into automatic blocks before gauge absorption</span>
+<span class="sd">            and SVD splitting. Default is True. False keeps one-site boundaries</span>
+<span class="sd">            and requires supplied ``rank`` for optimization openers. The</span>
+<span class="sd">            initial block still grows automatically. Exact spectral conversion</span>
+<span class="sd">            does not use this option.</span>
+<span class="sd">        enrich : bool</span>
+<span class="sd">            Append orthogonal residual constraints without changing TR ranks.</span>
+<span class="sd">            Default is True. Exact BLOSTR conversion does not use expansion.</span>
+<span class="sd">        enrich_rank : int, optional</span>
+<span class="sd">            Maximum orthogonal coordinates added per transition. ``None``</span>
+<span class="sd">            retains all significant directions; zero adds none.</span>
+<span class="sd">        enrich_rtol : float</span>
+<span class="sd">            Residual singular-value cutoff relative to the opened factor&#39;s</span>
+<span class="sd">            Frobenius norm. Default is 1e-12.</span>
+<span class="sd">        rtol : float, optional</span>
+<span class="sd">            Relative discarded squared singular-value mass for rank discovery</span>
+<span class="sd">            and block SVD splits. Default ``None`` truncates only to ``rank``</span>
+<span class="sd">            when ranks are supplied. A tolerance can reduce SVD ranks below</span>
+<span class="sd">            these bounds. With no ranks, omitted ``rtol`` uses 1e-12 for</span>
+<span class="sd">            discovery, bounded below by machine precision. Spectral conversion</span>
+<span class="sd">            also uses the tolerance for</span>
+<span class="sd">            reconstruction checks. It does not define ALS convergence.</span>
+<span class="sd">        collect_metrics : bool</span>
+<span class="sd">            Retain local solver and decomposition diagnostics. Final fidelity</span>
+<span class="sd">            and reconstruction error are always measured.</span>
+<span class="sd">        verbose : bool or int</span>
+<span class="sd">            Console verbosity from 0 (silent) to 3 (final cores included).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        TRDecomposition</span>
+<span class="sd">            Cores in site order, metrics and construction metadata.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; tt = tk.formats.TT([torch.ones(2, 1), torch.ones(1, 2)])</span>
+<span class="sd">        &gt;&gt;&gt; result = tk.decompositions.TT2TR(tt).fit(rank=1)</span>
+<span class="sd">        &gt;&gt;&gt; result.rank</span>
+<span class="sd">        [1, 1]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Validate controls before preparing reference coordinates or local</span>
+        <span class="c1"># fits.</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">((</span><span class="s1">&#39;block_boundaries&#39;</span><span class="p">,</span> <span class="n">block_boundaries</span><span class="p">),</span>
+                            <span class="p">(</span><span class="s1">&#39;enrich&#39;</span><span class="p">,</span> <span class="n">enrich</span><span class="p">),</span>
+                            <span class="p">(</span><span class="s1">&#39;collect_metrics&#39;</span><span class="p">,</span> <span class="n">collect_metrics</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be bool type&#39;</span><span class="p">)</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tt</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">center</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">center</span> <span class="o">=</span> <span class="n">count</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`center` should be int type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">center</span> <span class="o">&lt;</span> <span class="n">count</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`center` should identify an input site&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">rtol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rtol</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rtol</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`rtol` should be a number in [0, 1] or None&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">rtol</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`rtol` should lie in [0, 1]&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tt</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`tt` should represent a nonzero tensor&#39;</span><span class="p">)</span>
+        <span class="n">verbosity</span> <span class="o">=</span> <span class="n">_normalize_verbosity</span><span class="p">(</span><span class="n">verbose</span><span class="p">)</span>
+        <span class="n">observer</span> <span class="o">=</span> <span class="n">_resolve_observer</span><span class="p">(</span><span class="n">verbosity</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">if</span> <span class="n">verbosity</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">opener</span> <span class="o">=</span> <span class="n">resolve_loop_opener</span><span class="p">(</span><span class="n">loop_opener</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">block_boundaries</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                <span class="n">opener</span><span class="p">,</span> <span class="n">BLOSTRLoopOpener</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`block_boundaries=False` requires supplied `rank` &#39;</span>
+                <span class="s1">&#39;for optimization openers&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Choose the reference gauge required by the selected transport.</span>
+        <span class="n">strategy</span> <span class="o">=</span> <span class="n">_resolve_recursion</span><span class="p">(</span><span class="n">recursion</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">opener</span><span class="p">,</span> <span class="n">BLOSTRLoopOpener</span><span class="p">):</span>
+            <span class="n">provider</span> <span class="o">=</span> <span class="n">_TTCoreProvider</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tt</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">strategy</span><span class="p">,</span> <span class="n">AdjointGaugeRecursion</span><span class="p">):</span>
+            <span class="n">bonds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tt</span><span class="o">.</span><span class="n">bonds</span>
+            <span class="n">provider</span> <span class="o">=</span> <span class="p">(</span><span class="n">_VidalCoreProvider</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tt</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bonds</span><span class="p">,</span> <span class="n">VidalGauge</span><span class="p">)</span> <span class="ow">and</span> <span class="n">bonds</span><span class="o">.</span><span class="n">_valid</span>
+                        <span class="k">else</span> <span class="n">_CanonicalTTCoreProvider</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tt</span><span class="p">,</span> <span class="n">center</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">provider</span> <span class="o">=</span> <span class="n">_TTCoreProvider</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tt</span><span class="p">)</span>
+
+        <span class="n">ranks</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_normalize_rank</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">opener</span><span class="p">,</span> <span class="n">BLOSTRLoopOpener</span><span class="p">):</span>
+            <span class="n">precision</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">provider</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">provider</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+            <span class="n">rtol</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1e-12</span> <span class="k">if</span> <span class="n">rtol</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">rtol</span><span class="p">,</span>
+                       <span class="p">(</span><span class="n">size</span> <span class="o">*</span> <span class="n">precision</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">observer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">observer</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;start&#39;</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="s1">&#39;TT to TR&#39;</span><span class="p">,</span>
+                <span class="n">values</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;sites&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span> <span class="s1">&#39;in_dim&#39;</span><span class="p">:</span> <span class="n">provider</span><span class="o">.</span><span class="n">in_dim</span><span class="p">,</span>
+                        <span class="s1">&#39;rank&#39;</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">ranks</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">ranks</span><span class="p">)}))</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;collect_metrics&#39;</span><span class="p">:</span> <span class="n">collect_metrics</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">verbosity</span><span class="p">),</span>
+                   <span class="s1">&#39;_observer&#39;</span><span class="p">:</span> <span class="n">observer</span><span class="p">,</span> <span class="s1">&#39;rtol&#39;</span><span class="p">:</span> <span class="n">rtol</span><span class="p">,</span>
+                   <span class="s1">&#39;rank_caps&#39;</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ranks</span><span class="p">}</span>
+
+        <span class="c1"># Construct local factors first, then check the complete</span>
+        <span class="c1"># reconstruction.</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_runtime</span><span class="o">.</span><span class="n">timer</span><span class="p">()</span> <span class="k">as</span> <span class="n">timer</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">opener</span><span class="p">,</span> <span class="n">BLOSTRLoopOpener</span><span class="p">):</span>
+                <span class="n">prescribed</span> <span class="o">=</span> <span class="n">ranks</span> <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_exact</span><span class="p">(</span>
+                    <span class="n">provider</span><span class="p">,</span> <span class="n">opener</span><span class="p">,</span> <span class="n">prescribed</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">rtol</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">enrich</span><span class="p">:</span>
+                    <span class="n">strategy</span> <span class="o">=</span> <span class="n">_ExpandedGaugeRecursion</span><span class="p">(</span>
+                        <span class="n">strategy</span><span class="p">,</span> <span class="n">enrich_rank</span><span class="p">,</span> <span class="n">enrich_rtol</span><span class="p">)</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">BidirectionalRingDriver</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+                    <span class="n">provider</span><span class="p">,</span> <span class="n">ranks</span><span class="p">,</span> <span class="n">opener</span><span class="p">,</span> <span class="n">strategy</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="n">center</span><span class="p">,</span>
+                    <span class="n">block_boundaries</span><span class="o">=</span><span class="n">block_boundaries</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">,</span>
+                    <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">)</span>
+            <span class="n">fidelity</span> <span class="o">=</span> <span class="n">_fidelity_error</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tt</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">opener</span><span class="p">,</span> <span class="n">BLOSTRLoopOpener</span><span class="p">):</span>
+                <span class="c1"># Contraction-based errors have a square-root precision floor.</span>
+                <span class="n">tolerance</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">sqrt</span><span class="p">(</span><span class="n">rtol</span> <span class="ow">or</span> <span class="mf">0.0</span><span class="p">),</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span>
+                    <span class="n">result</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">fidelity</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">relative</span> <span class="o">&gt;</span> <span class="n">tolerance</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                        <span class="s1">&#39;Exact BLOSTR conversion failed its reconstruction &#39;</span>
+                        <span class="s1">&#39;check; use a Gaussian projection or an ALS opener&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span>
+                    <span class="n">actual</span> <span class="o">&gt;</span> <span class="n">cap</span> <span class="k">for</span> <span class="n">actual</span><span class="p">,</span> <span class="n">cap</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="n">ranks</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;TT2TR exceeded the requested `rank`&#39;</span><span class="p">)</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">fidelities</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fidelity</span><span class="p">)</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">fidelity</span><span class="o">.</span><span class="n">error</span><span class="p">)</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">timings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TimingRecord</span><span class="p">(</span><span class="s1">&#39;fit&#39;</span><span class="p">,</span> <span class="n">timer</span><span class="o">.</span><span class="n">elapsed</span><span class="p">))</span>
+
+        <span class="c1"># Finalize storage separately from the device used for local solves.</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">result</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span> <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="s1">&#39;tt2tr&#39;</span><span class="p">,</span> <span class="s1">&#39;center&#39;</span><span class="p">:</span> <span class="n">center</span><span class="p">,</span>
+                    <span class="s1">&#39;requested_rank&#39;</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">ranks</span><span class="p">),</span>
+                    <span class="s1">&#39;recursion&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">recursion</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">recursion</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+                                  <span class="k">else</span> <span class="nb">type</span><span class="p">(</span><span class="n">recursion</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">),</span>
+                    <span class="s1">&#39;enrich&#39;</span><span class="p">:</span> <span class="n">enrich</span><span class="p">,</span> <span class="s1">&#39;block_boundaries&#39;</span><span class="p">:</span> <span class="n">block_boundaries</span><span class="p">}</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="n">_VidalCoreProvider</span><span class="p">):</span>
+            <span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;vidal_powers&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">powers</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">TRDecomposition</span><span class="p">(</span>
+            <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_runtime</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">core</span><span class="p">)</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">cores</span><span class="p">],</span>
+            <span class="n">metrics</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">observer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">observer</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;summary&#39;</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="s1">&#39;TT to TR&#39;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s1">&#39;rank&#39;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="s1">&#39;fidelity&#39;</span><span class="p">:</span> <span class="n">fidelity</span><span class="o">.</span><span class="n">fidelity</span><span class="p">,</span>
+                    <span class="s1">&#39;absolute_error&#39;</span><span class="p">:</span> <span class="n">fidelity</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">absolute</span><span class="p">,</span>
+                    <span class="s1">&#39;relative_error&#39;</span><span class="p">:</span> <span class="n">fidelity</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">relative</span><span class="p">,</span>
+                    <span class="s1">&#39;elapsed&#39;</span><span class="p">:</span> <span class="n">timer</span><span class="o">.</span><span class="n">elapsed</span><span class="p">}))</span>
+            <span class="k">for</span> <span class="n">site</span><span class="p">,</span> <span class="n">core</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">cores</span><span class="p">):</span>
+                <span class="n">observer</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">(</span>
+                    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;core&#39;</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="s1">&#39;TT to TR&#39;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">,</span>
+                    <span class="n">values</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;shape&#39;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="s1">&#39;tensor&#39;</span><span class="p">:</span> <span class="n">core</span><span class="p">}))</span>
+            <span class="n">observer</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_exact</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">provider</span><span class="p">:</span> <span class="n">_TTCoreProvider</span><span class="p">,</span> <span class="n">opener</span><span class="p">:</span> <span class="n">BLOSTRLoopOpener</span><span class="p">,</span>
+               <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span> <span class="n">center</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+               <span class="n">rtol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+               <span class="n">context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TRDecomposition</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Opens the center spectrally and splits the two outward branches.&quot;&quot;&quot;</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">provider</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+        <span class="n">left</span> <span class="o">=</span> <span class="n">right</span> <span class="o">=</span> <span class="n">center</span>
+
+        <span class="c1"># The spectral opening needs compatible external dimensions on both</span>
+        <span class="c1"># sides.</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">sites</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="n">sites</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">needed_left</span> <span class="o">=</span> <span class="n">needed_right</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="n">equal</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">needed_left</span> <span class="o">=</span> <span class="n">rank</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">rank</span><span class="p">[</span><span class="n">left</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">needed_right</span> <span class="o">=</span> <span class="n">rank</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">rank</span><span class="p">[</span><span class="n">right</span><span class="p">]</span>
+                <span class="n">equal</span> <span class="o">=</span> <span class="n">rank</span><span class="p">[</span><span class="n">left</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">rank</span><span class="p">[</span><span class="n">right</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">equal</span> <span class="ow">and</span> <span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">needed_left</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                    <span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">needed_right</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">left</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                    <span class="n">right</span> <span class="o">&lt;</span> <span class="n">count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">left</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">right</span> <span class="o">==</span> <span class="n">count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">dense</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">opener</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">dense</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">TRDecomposition</span><span class="p">(</span>
+                    <span class="n">result</span><span class="o">.</span><span class="n">cores</span><span class="p">,</span> <span class="n">metrics</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="p">{</span>
+                        <span class="o">**</span><span class="n">result</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span> <span class="s1">&#39;exact&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                        <span class="s1">&#39;center_block&#39;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">count</span><span class="p">))})</span>
+            <span class="k">if</span> <span class="n">right</span> <span class="o">&lt;</span> <span class="n">count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">right</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">left</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">left</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="n">local_rank</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span>
+            <span class="n">rank</span><span class="p">[</span><span class="n">left</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="o">*</span><span class="p">(</span><span class="n">rank</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">sites</span><span class="p">),</span> <span class="n">rank</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">opening</span> <span class="o">=</span> <span class="n">opener</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">local_rank</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="p">{</span>
+            <span class="o">**</span><span class="n">context</span><span class="p">,</span> <span class="s1">&#39;sites&#39;</span><span class="p">:</span> <span class="n">sites</span><span class="p">,</span> <span class="s1">&#39;in_dim&#39;</span><span class="p">:</span> <span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">})</span>
+        <span class="k">for</span> <span class="n">gauge</span> <span class="ow">in</span> <span class="p">(</span><span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span><span class="p">,</span> <span class="n">opening</span><span class="o">.</span><span class="n">right_gauge</span><span class="p">):</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="n">gauge</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">gauge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="ow">or</span> <span class="p">(</span>
+                    <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">matrix_rank</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                    <span class="s1">&#39;Exact BLOSTR conversion requires square, full-rank &#39;</span>
+                    <span class="s1">&#39;central gauges; use a larger block or a Gaussian &#39;</span>
+                    <span class="s1">&#39;projection for nonuniform interior ranks&#39;</span><span class="p">)</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="p">(</span><span class="n">opening</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span> <span class="o">-</span> <span class="n">target</span><span class="p">)</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="o">/</span> <span class="n">target</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+        <span class="n">tolerance</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">sqrt</span><span class="p">(</span><span class="n">rtol</span> <span class="ow">or</span> <span class="mf">0.0</span><span class="p">),</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">sqrt</span><span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">error</span> <span class="o">&gt;</span> <span class="n">tolerance</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="s1">&#39;BLOSTR did not recover the central block to the requested &#39;</span>
+                <span class="s1">&#39;accuracy; try Gaussian projection or an ALS opener&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Exact propagation absorbs learned gauges directly, without gauge</span>
+        <span class="c1"># duals. Spectral factors can be complex even for a real input TT.</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">tt_cores</span> <span class="o">=</span> <span class="p">[</span><span class="n">core</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">provider</span><span class="o">.</span><span class="n">cores</span><span class="p">]</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">count</span>
+        <span class="n">cores</span><span class="p">[</span><span class="n">left</span><span class="p">:</span><span class="n">right</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">core</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">opening</span><span class="o">.</span><span class="n">cores</span><span class="p">]</span>
+        <span class="n">gauge</span> <span class="o">=</span> <span class="n">opening</span><span class="o">.</span><span class="n">right_gauge</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="c1"># Expose one rightward physical core and retain the remaining gauge.</span>
+        <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">right</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span>
+                <span class="n">gauge</span><span class="p">,</span> <span class="n">tt_cores</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">cap</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">rank</span><span class="p">[</span><span class="n">site</span><span class="p">],)</span>
+            <span class="n">core</span><span class="p">,</span> <span class="n">gauge</span> <span class="o">=</span> <span class="n">_split_block</span><span class="p">(</span>
+                <span class="n">block</span><span class="p">,</span> <span class="p">(</span><span class="n">provider</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">block</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="n">rank</span><span class="o">=</span><span class="n">cap</span><span class="p">,</span>
+                <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">)</span>
+            <span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="o">=</span> <span class="n">core</span>
+        <span class="n">cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+            <span class="s1">&#39;abg,bi-&gt;aig&#39;</span><span class="p">,</span> <span class="n">gauge</span><span class="p">,</span> <span class="n">tt_cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">gauge</span> <span class="o">=</span> <span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="c1"># Mirror the split for the left branch while preserving site order.</span>
+        <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">left</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span>
+                <span class="n">tt_cores</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">gauge</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+            <span class="n">cap</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">rank</span><span class="p">[</span><span class="n">site</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],)</span>
+            <span class="n">gauge</span><span class="p">,</span> <span class="n">core</span> <span class="o">=</span> <span class="n">_split_block</span><span class="p">(</span>
+                <span class="n">block</span><span class="p">,</span> <span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">provider</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="n">site</span><span class="p">]),</span> <span class="n">rank</span><span class="o">=</span><span class="n">cap</span><span class="p">,</span>
+                <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">)</span>
+            <span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="o">=</span> <span class="n">core</span>
+        <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+            <span class="s1">&#39;ia,gab-&gt;gib&#39;</span><span class="p">,</span> <span class="n">tt_cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">gauge</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">TRDecomposition</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;center_block&#39;</span><span class="p">:</span> <span class="n">sites</span><span class="p">,</span> <span class="s1">&#39;exact&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s1">&#39;local_opening&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">opening</span><span class="o">.</span><span class="n">diagnostics</span><span class="p">)})</span></div>
+
+
+<div class="viewcode-block" id="tt2tr"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.tt2tr">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">tt2tr</span><span class="p">(</span><span class="n">tt</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+          <span class="n">center</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+          <span class="n">loop_opener</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">LoopOpener</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;als&#39;</span><span class="p">,</span>
+          <span class="n">recursion</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">GaugeRecursion</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;adjoint&#39;</span><span class="p">,</span>
+          <span class="o">*</span><span class="p">,</span> <span class="n">block_boundaries</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">enrich</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+          <span class="n">enrich_rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+          <span class="n">enrich_rtol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">,</span> <span class="n">rtol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+          <span class="n">out_device</span><span class="p">:</span> <span class="n">_Device</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="n">collect_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+          <span class="n">verbose</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TRDecomposition</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Converts a tensor train to a tensor ring.</span>
+
+<span class="sd">    Use :class:`TT2TR` for repeated fits of one input tensor train. All</span>
+<span class="sd">    arguments have the same meaning as in :meth:`TT2TR.fit`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tt : TT, MPS or sequence of torch.Tensor</span>
+<span class="sd">        Open tensor train, open-boundary MPS or cores in standard TT order.</span>
+<span class="sd">    rank : int or sequence of int, optional</span>
+<span class="sd">        Local ALS rank or one right-link rank per core, including the closing</span>
+<span class="sd">        link. At SVD splits these are upper bounds; ``rtol`` may reduce them.</span>
+<span class="sd">        ``None`` discovers the rank profile. No zero padding is applied.</span>
+<span class="sd">    center : int, optional</span>
+<span class="sd">        Initial site or discovery-block center. Defaults to the middle site.</span>
+<span class="sd">    loop_opener : str or LoopOpener, optional</span>
+<span class="sd">        Local strategy: ``&quot;als&quot;``, ``&quot;blostr&quot;``, ``&quot;blostr_svd&quot;`` or a</span>
+<span class="sd">        configured opener object.</span>
+<span class="sd">    recursion : str or GaugeRecursion, optional</span>
+<span class="sd">        ``&quot;adjoint&quot;``, ``&quot;pinv&quot;``, ``&quot;orth&quot;`` or a configured strategy.</span>
+<span class="sd">        Exact spectral conversion does not use gauge recursion.</span>
+<span class="sd">    block_boundaries : bool</span>
+<span class="sd">        Group boundary sites into automatic blocks before gauge absorption</span>
+<span class="sd">        and SVD splitting. Default is True. False keeps one-site boundaries</span>
+<span class="sd">        and requires supplied ``rank`` for optimization openers. The</span>
+<span class="sd">        initial block still grows automatically. Exact spectral conversion</span>
+<span class="sd">        does not use this option.</span>
+<span class="sd">    enrich : bool</span>
+<span class="sd">        Whether to append orthogonal residual constraints. Default is True.</span>
+<span class="sd">    enrich_rank : int, optional</span>
+<span class="sd">        Maximum auxiliary coordinates per transition. ``None`` retains all</span>
+<span class="sd">        significant directions.</span>
+<span class="sd">    enrich_rtol : float</span>
+<span class="sd">        Relative residual singular-value threshold. Default is 1e-12.</span>
+<span class="sd">    rtol : float, optional</span>
+<span class="sd">        Relative SVD tail-energy tolerance for discovery and block splits.</span>
+<span class="sd">        Default ``None`` truncates only to ``rank`` when ranks are supplied;</span>
+<span class="sd">        discovery without ranks uses 1e-12.</span>
+<span class="sd">    out_device : str or torch.device, optional</span>
+<span class="sd">        Final core device. Default is ``&quot;cpu&quot;``; ``None`` keeps the input</span>
+<span class="sd">        device.</span>
+<span class="sd">    collect_metrics : bool</span>
+<span class="sd">        Whether to retain local diagnostics. Final error is always measured.</span>
+<span class="sd">    verbose : bool or int</span>
+<span class="sd">        Console verbosity from 0 (silent) to 3 (final cores included).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    TRDecomposition</span>
+<span class="sd">        Tensor ring cores, reconstruction metrics and construction metadata.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">TT2TR</span><span class="p">(</span><span class="n">tt</span><span class="p">,</span> <span class="n">out_device</span><span class="o">=</span><span class="n">out_device</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+        <span class="n">rank</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">loop_opener</span><span class="p">,</span> <span class="n">recursion</span><span class="p">,</span>
+        <span class="n">block_boundaries</span><span class="o">=</span><span class="n">block_boundaries</span><span class="p">,</span> <span class="n">enrich</span><span class="o">=</span><span class="n">enrich</span><span class="p">,</span>
+        <span class="n">enrich_rank</span><span class="o">=</span><span class="n">enrich_rank</span><span class="p">,</span> <span class="n">enrich_rtol</span><span class="o">=</span><span class="n">enrich_rtol</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">,</span>
+        <span class="n">collect_metrics</span><span class="o">=</span><span class="n">collect_metrics</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span></div>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

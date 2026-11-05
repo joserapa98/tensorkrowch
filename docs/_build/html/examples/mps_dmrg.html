@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
     <title>DMRG-like training of MPS &#8212; TensorKrowch 1.1.6 documentation</title>
     
@@ -222,9 +222,31 @@
      Embeddings
     </a>
    </li>
-   <li class="toctree-l2">
+   <li class="toctree-l2 has-children">
     <a class="reference internal" href="../decompositions.html">
      Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../utils.html">
+     Utilities
     </a>
    </li>
   </ul>
@@ -449,17 +471,17 @@ title="Print to PDF"
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
-<span class="kn">import</span> <span class="nn">torch.optim</span> <span class="k">as</span> <span class="nn">optim</span>
-<span class="kn">from</span> <span class="nn">torch.utils.data</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.optim</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">optim</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.utils.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataLoader</span>
 
-<span class="kn">import</span> <span class="nn">torchvision.transforms</span> <span class="k">as</span> <span class="nn">transforms</span>
-<span class="kn">import</span> <span class="nn">torchvision.datasets</span> <span class="k">as</span> <span class="nn">datasets</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchvision.transforms</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">transforms</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchvision.datasets</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">datasets</span>
 
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 
-<span class="kn">import</span> <span class="nn">tensorkrowch</span> <span class="k">as</span> <span class="nn">tk</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tensorkrowch</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tk</span>
 </pre></div>
 </div>
 </div>
@@ -560,9 +582,9 @@ device(type=&#39;cuda&#39;, index=0)
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MPS_DMRG</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPSLayer</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MPS_DMRG</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPSLayer</span><span class="p">):</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">override</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -573,12 +595,12 @@ device(type=&#39;cuda&#39;, index=0)
         <span class="bp">self</span><span class="o">.</span><span class="n">block_length</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">block</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">block</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_position</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">block_position</span><span class="p">]</span>
         <span class="k">return</span> <span class="kc">None</span>
 
-    <span class="k">def</span> <span class="nf">merge_block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block_position</span><span class="p">,</span> <span class="n">block_length</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">merge_block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block_position</span><span class="p">,</span> <span class="n">block_length</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">block_position</span> <span class="o">+</span> <span class="n">block_length</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_features</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s1">&#39;Last position of the block (</span><span class="si">{</span><span class="n">block_position</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">block_length</span><span class="si">}</span><span class="s1">) &#39;</span>
@@ -604,7 +626,7 @@ device(type=&#39;cuda&#39;, index=0)
         <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[:</span><span class="n">block_position</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">block</span><span class="p">]</span> <span class="o">+</span> \
             <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[(</span><span class="n">block_position</span> <span class="o">+</span> <span class="n">block_length</span><span class="p">):]</span>
 
-    <span class="k">def</span> <span class="nf">unmerge_block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cum_percentage</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">unmerge_block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cum_percentage</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="n">block</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">block</span>
 
         <span class="n">block_nodes</span> <span class="o">=</span> <span class="p">[]</span>
@@ -633,7 +655,7 @@ device(type=&#39;cuda&#39;, index=0)
         <span class="bp">self</span><span class="o">.</span><span class="n">block_position</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">block_length</span> <span class="o">=</span> <span class="kc">None</span>
 
-    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">result_mats</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">:</span>
             <span class="k">while</span> <span class="nb">any</span><span class="p">([</span><span class="s1">&#39;input&#39;</span> <span class="ow">in</span> <span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">]):</span>
@@ -691,7 +713,7 @@ device(type=&#39;cuda&#39;, index=0)
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">embedding</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">embedding</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">embedding_dim</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">x</span>
 </pre></div>
@@ -720,7 +742,7 @@ device(type=&#39;cuda&#39;, index=0)
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Check accuracy on training &amp; test to see how good our model is</span>
-<span class="k">def</span> <span class="nf">check_accuracy</span><span class="p">(</span><span class="n">loader</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_accuracy</span><span class="p">(</span><span class="n">loader</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
     <span class="n">num_correct</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">num_samples</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>

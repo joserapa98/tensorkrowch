@@ -1,0 +1,643 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.sketching.base &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/clipboard.min.js"></script>
+    <script src="../../../../_static/copybutton.js"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.sketching.base</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Classes:</span>
+<span class="sd">        * _SketchingFitContext</span>
+<span class="sd">        * RecursiveSketching</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span><span class="p">,</span> <span class="n">nullcontext</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">_RuntimePolicy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">DecompositionMetrics</span><span class="p">,</span>
+                                                 <span class="n">TimingRecord</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.observers</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">,</span>
+                                                   <span class="n">_resolve_observer</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sketching.fitting</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BasisFitter</span><span class="p">,</span> <span class="n">FixedEmbeddingFitter</span><span class="p">,</span> <span class="n">InputFitter</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sketching.projections</span><span class="w"> </span><span class="kn">import</span> <span class="n">RangeProjector</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sketching.specs</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">_DomainSpec</span><span class="p">,</span>
+                                                         <span class="n">_EmbeddingSpec</span><span class="p">,</span>
+                                                         <span class="n">_OutputSpec</span><span class="p">,</span>
+                                                         <span class="n">_SketchingFitSpec</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseSource</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_SketchingFitContext</span><span class="p">:</span>  <span class="c1"># MARK: _SketchingFitContext</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stores diagnostics and numerical state for one independent fit.&quot;&quot;&quot;</span>
+
+    <span class="n">spec</span><span class="p">:</span> <span class="n">_SketchingFitSpec</span>  <span class="c1"># Normalized options for this fit</span>
+    <span class="n">runtime</span><span class="p">:</span> <span class="n">_RuntimePolicy</span>  <span class="c1"># Computation, output placement and timing policy</span>
+    <span class="c1"># Random choices local to this fit</span>
+    <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">observer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Progress and diagnostic event consumer</span>
+    <span class="c1"># Collected numerical and timing records</span>
+    <span class="n">metrics</span><span class="p">:</span> <span class="n">DecompositionMetrics</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">DecompositionMetrics</span><span class="p">)</span>
+    <span class="c1"># Correlated prefix and suffix sketches</span>
+    <span class="n">regions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="c1"># Resolved cores in physical-site order</span>
+    <span class="n">cores</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="c1"># Algorithm-specific numerical state</span>
+    <span class="n">state</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">collect_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Whether structured measurements are retained in the result.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">collect_metrics</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">need_diagnostics</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Whether measurements are requested for storage or display.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">collect_metrics</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">verbosity</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">emit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">site</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">elapsed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">values</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Emits progress without constructing events on the silent path.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">observer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">observer</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="s1">&#39;Recursive sketching&#39;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">level</span><span class="p">,</span>
+                <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">,</span> <span class="n">elapsed</span><span class="o">=</span><span class="n">elapsed</span><span class="p">,</span>
+                <span class="n">values</span><span class="o">=</span><span class="p">{}</span> <span class="k">if</span> <span class="n">values</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">values</span><span class="p">))</span>
+
+    <span class="nd">@contextmanager</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">phase</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">site</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+              <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Times a phase only when diagnostics need elapsed time.&quot;&quot;&quot;</span>
+        <span class="n">timer_context</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">runtime</span><span class="o">.</span><span class="n">timer</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">need_diagnostics</span>
+                         <span class="k">else</span> <span class="n">nullcontext</span><span class="p">())</span>
+        <span class="k">with</span> <span class="n">timer_context</span> <span class="k">as</span> <span class="n">timer</span><span class="p">:</span>
+            <span class="k">yield</span>
+        <span class="n">elapsed</span> <span class="o">=</span> <span class="n">timer</span><span class="o">.</span><span class="n">elapsed</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">need_diagnostics</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">collect_metrics</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">timings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TimingRecord</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">elapsed</span><span class="o">=</span><span class="n">elapsed</span><span class="p">,</span> <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">,</span> <span class="n">elapsed</span><span class="o">=</span><span class="n">elapsed</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">complete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">core</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">n_sites</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reports a core when its solve finishes, in construction order.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="s1">&#39;site_complete&#39;</span><span class="p">,</span> <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;total_sites&#39;</span><span class="p">:</span> <span class="n">n_sites</span><span class="p">,</span> <span class="s1">&#39;shape&#39;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">)})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="s1">&#39;core&#39;</span><span class="p">,</span> <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;tensor&#39;</span><span class="p">:</span> <span class="n">core</span><span class="p">})</span>
+
+
+<div class="viewcode-block" id="RecursiveSketching"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.RecursiveSketching">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">RecursiveSketching</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>  <span class="c1"># MARK: RecursiveSketching</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Shares source, embedding and diagnostic preparation for sampled sketches.</span>
+
+<span class="sd">    Concrete algorithms implement :meth:`fit` and the topology-specific core</span>
+<span class="sd">    construction. User-facing source normalization belongs to :class:`TTRSS`;</span>
+<span class="sd">    this base receives already normalized domains, embeddings and outputs.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source : BaseSource</span>
+<span class="sd">        Evaluates the input configurations.</span>
+<span class="sd">    domains, embeddings, outputs</span>
+<span class="sd">        Internal normalized coordinate domains, embedding matrices and final</span>
+<span class="sd">        input/output layout, prepared by the concrete algorithm.</span>
+<span class="sd">    input_fitter : InputFitter or sequence of InputFitter, optional</span>
+<span class="sd">        Shared fitter or one per final site; inferred when omitted.</span>
+<span class="sd">    range_projector : RangeProjector, optional</span>
+<span class="sd">        Complete range-projection strategy. ``None`` uses direct SVD.</span>
+<span class="sd">    transform : callable, optional</span>
+<span class="sd">        Called once with a :class:`ConfigurationMap` and returns transformed</span>
+<span class="sd">        values with the same shape as its initial ``values`` table.</span>
+<span class="sd">    out_device : str or torch.device, optional</span>
+<span class="sd">        Device receiving completed cores; ``None`` retains the source device.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">BaseSource</span><span class="p">,</span> <span class="n">domains</span><span class="p">:</span> <span class="n">_DomainSpec</span><span class="p">,</span>
+                 <span class="n">embeddings</span><span class="p">:</span> <span class="n">_EmbeddingSpec</span><span class="p">,</span> <span class="n">outputs</span><span class="p">:</span> <span class="n">_OutputSpec</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+                 <span class="n">input_fitter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span>
+                     <span class="n">InputFitter</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">InputFitter</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">range_projector</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">RangeProjector</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">transform</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">out_device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]]</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span>
+                 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">BaseSource</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`source` should inherit from BaseSource&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">domains</span><span class="p">,</span> <span class="n">_DomainSpec</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`domains` should be _DomainSpec type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">embeddings</span><span class="p">,</span> <span class="n">_EmbeddingSpec</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`embeddings` should be _EmbeddingSpec type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">_OutputSpec</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`outputs` should be _OutputSpec type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">domains</span><span class="o">.</span><span class="n">n_sites</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">in_sites</span><span class="p">))</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="n">embeddings</span><span class="o">.</span><span class="n">n_sites</span> <span class="o">!=</span> <span class="n">domains</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="n">outputs</span><span class="o">.</span><span class="n">n_input_sites</span> <span class="o">!=</span> <span class="n">domains</span><span class="o">.</span><span class="n">n_sites</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Source, domains and embeddings should agree&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">range_projector</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                <span class="n">range_projector</span><span class="p">,</span> <span class="n">RangeProjector</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`range_projector` should implement RangeProjector&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">transform</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">transform</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`transform` should be callable or None&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_source</span> <span class="o">=</span> <span class="n">source</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">domains</span> <span class="o">=</span> <span class="n">domains</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embeddings</span> <span class="o">=</span> <span class="n">embeddings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="o">=</span> <span class="n">outputs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_runtime</span> <span class="o">=</span> <span class="n">_RuntimePolicy</span><span class="p">(</span>
+            <span class="n">device</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">out_device</span><span class="o">=</span><span class="n">out_device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_range_projector</span> <span class="o">=</span> <span class="n">range_projector</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transform</span> <span class="o">=</span> <span class="n">transform</span>
+
+        <span class="k">if</span> <span class="n">input_fitter</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fitters</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">kind</span><span class="p">,</span> <span class="n">axis</span> <span class="ow">in</span> <span class="n">outputs</span><span class="o">.</span><span class="n">layout</span><span class="p">:</span>
+                <span class="n">fitters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">FixedEmbeddingFitter</span><span class="p">(</span><span class="n">embeddings</span><span class="o">.</span><span class="n">matrix</span><span class="p">(</span><span class="n">axis</span><span class="p">))</span>
+                               <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;input&#39;</span> <span class="k">else</span> <span class="n">BasisFitter</span><span class="p">(</span>
+                                   <span class="n">in_dim</span><span class="o">=</span><span class="n">outputs</span><span class="o">.</span><span class="n">out_shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_fitter</span><span class="p">,</span> <span class="n">InputFitter</span><span class="p">):</span>
+            <span class="n">fitters</span> <span class="o">=</span> <span class="p">[</span><span class="n">input_fitter</span><span class="p">]</span> <span class="o">*</span> <span class="n">outputs</span><span class="o">.</span><span class="n">n_sites</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_fitter</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                <span class="n">input_fitter</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)):</span>
+            <span class="n">fitters</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">input_fitter</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`input_fitter` should be a fitter or sequence&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fitters</span><span class="p">)</span> <span class="o">!=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">fitter</span><span class="p">,</span> <span class="n">InputFitter</span><span class="p">)</span> <span class="k">for</span> <span class="n">fitter</span> <span class="ow">in</span> <span class="n">fitters</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`input_fitter` should cover every final site&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_fitter</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">fitters</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">source</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BaseSource</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Source supplying values for the fitted function.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_new_context</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">atol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">rtol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
+                     <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">collect_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                     <span class="n">verbose</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_SketchingFitContext</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates isolated numerical and diagnostic state for one fit.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">generator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                <span class="n">generator</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`generator` should be torch.Generator or None&#39;</span><span class="p">)</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">_SketchingFitSpec</span><span class="p">(</span>
+            <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span> <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="n">atol</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">,</span>
+            <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span> <span class="n">collect_metrics</span><span class="o">=</span><span class="n">collect_metrics</span><span class="p">)</span>
+        <span class="n">observer</span> <span class="o">=</span> <span class="p">(</span><span class="n">_resolve_observer</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">verbosity</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">verbosity</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_SketchingFitContext</span><span class="p">(</span>
+            <span class="n">spec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_runtime</span><span class="p">,</span> <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">,</span> <span class="n">observer</span><span class="o">=</span><span class="n">observer</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">_SketchingFitContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Executes shared preparation and a concrete serial construction.&quot;&quot;&quot;</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="s1">&#39;start&#39;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;n_sites&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">n_sites</span><span class="p">})</span>
+        <span class="n">timer_context</span> <span class="o">=</span> <span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">runtime</span><span class="o">.</span><span class="n">timer</span><span class="p">()</span> <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">need_diagnostics</span>
+                         <span class="k">else</span> <span class="n">nullcontext</span><span class="p">())</span>
+        <span class="k">with</span> <span class="n">timer_context</span> <span class="k">as</span> <span class="n">timer</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">context</span><span class="o">.</span><span class="n">phase</span><span class="p">(</span><span class="s1">&#39;source.prepare&#39;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_source</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">context</span><span class="o">.</span><span class="n">phase</span><span class="p">(</span><span class="s1">&#39;regions.build&#39;</span><span class="p">):</span>
+                <span class="n">context</span><span class="o">.</span><span class="n">regions</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_build_regions</span><span class="p">(</span><span class="n">context</span><span class="p">))</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decompose</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_result</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+        <span class="n">elapsed</span> <span class="o">=</span> <span class="n">timer</span><span class="o">.</span><span class="n">elapsed</span> <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">need_diagnostics</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">collect_metrics</span><span class="p">:</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">timings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TimingRecord</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;total&#39;</span><span class="p">,</span> <span class="n">elapsed</span><span class="o">=</span><span class="n">elapsed</span><span class="p">))</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="s1">&#39;summary&#39;</span><span class="p">,</span> <span class="n">elapsed</span><span class="o">=</span><span class="n">elapsed</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;n_sites&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">n_sites</span><span class="p">,</span> <span class="s1">&#39;rank&#39;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">rank</span><span class="p">})</span>
+        <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">observer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">observer</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">metrics</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fit_input_axis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">phi</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                        <span class="n">context</span><span class="p">:</span> <span class="n">_SketchingFitContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fits a physical axis and retains its optional diagnostics.&quot;&quot;&quot;</span>
+        <span class="n">kind</span><span class="p">,</span> <span class="n">source_axis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">layout</span><span class="p">[</span><span class="n">site</span><span class="p">]</span>
+        <span class="n">domain</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">domains</span><span class="o">.</span><span class="n">for_site</span><span class="p">(</span><span class="n">source_axis</span><span class="p">)</span> <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;input&#39;</span>
+                  <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">out_shape</span><span class="p">[</span><span class="n">source_axis</span><span class="p">],</span>
+                                    <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_source</span><span class="o">.</span><span class="n">device</span><span class="p">))</span>
+        <span class="k">with</span> <span class="n">context</span><span class="o">.</span><span class="n">phase</span><span class="p">(</span><span class="s1">&#39;input.fit&#39;</span><span class="p">,</span> <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">):</span>
+            <span class="n">fitted</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_fitter</span><span class="p">[</span><span class="n">site</span><span class="p">]</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+                <span class="n">phi</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">return_info</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">need_diagnostics</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">collect_metrics</span> <span class="ow">and</span> <span class="p">(</span><span class="n">fitted</span><span class="o">.</span><span class="n">record</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">input_fits</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fitted</span><span class="o">.</span><span class="n">record</span><span class="p">)</span>
+            <span class="n">threshold</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">fitted</span><span class="o">.</span><span class="n">coefficients</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span> <span class="o">**</span> <span class="o">-</span><span class="mf">0.5</span>
+            <span class="k">if</span> <span class="n">fitted</span><span class="o">.</span><span class="n">record</span><span class="o">.</span><span class="n">condition_number</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">:</span>
+                <span class="n">context</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">warnings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;Input fit at site </span><span class="si">{</span><span class="n">site</span><span class="si">}</span><span class="s1"> is ill-conditioned&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">fitted</span><span class="o">.</span><span class="n">coefficients</span>
+
+<div class="viewcode-block" id="RecursiveSketching.fit"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.RecursiveSketching.fit">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Runs a concrete recursive-sketching decomposition.&quot;&quot;&quot;</span></div>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_source</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">_SketchingFitContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Prepares sample-dependent output coordinates.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_regions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">_SketchingFitContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Builds correlated prefix and suffix sketches.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_decompose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">_SketchingFitContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Constructs the cores and their result.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                         <span class="n">context</span><span class="p">:</span> <span class="n">_SketchingFitContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Checks the result&#39;s topology and physical dimensions.&quot;&quot;&quot;</span></div>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;RecursiveSketching&#39;</span><span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

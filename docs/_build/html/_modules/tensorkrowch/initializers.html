@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.initializers &#8212; TensorKrowch 1.1.5 documentation</title>
+    <title>tensorkrowch.initializers &#8212; TensorKrowch 1.1.6 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -216,9 +216,31 @@
      Embeddings
     </a>
    </li>
-   <li class="toctree-l2">
+   <li class="toctree-l2 has-children">
     <a class="reference internal" href="../../decompositions.html">
      Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../utils.html">
+     Utilities
     </a>
    </li>
   </ul>
@@ -329,16 +351,16 @@ title="Source repository"
 <span class="sd">Alternative functions to initialize nodes</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Text</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Text</span>
 
-<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 
-<span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">Shape</span>
-<span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span>
-<span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">TensorNetwork</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.components</span><span class="w"> </span><span class="kn">import</span> <span class="n">Shape</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.components</span><span class="w"> </span><span class="kn">import</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.components</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorNetwork</span>
 
 
-<span class="k">def</span> <span class="nf">_initializer</span><span class="p">(</span><span class="n">init_method</span><span class="p">:</span> <span class="n">Text</span><span class="p">,</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_initializer</span><span class="p">(</span><span class="n">init_method</span><span class="p">:</span> <span class="n">Text</span><span class="p">,</span>
                  <span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
                  <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="o">*</span><span class="n">args</span><span class="p">,</span>
@@ -349,7 +371,7 @@ title="Source repository"
         <span class="k">return</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
    
 
-<div class="viewcode-block" id="empty"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.empty">[docs]</a><span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
+<div class="viewcode-block" id="empty"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.empty">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">empty</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
           <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
           <span class="o">*</span><span class="n">args</span><span class="p">,</span>
           <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
@@ -379,7 +401,7 @@ title="Source repository"
                          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="zeros"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.zeros">[docs]</a><span class="k">def</span> <span class="nf">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
+<div class="viewcode-block" id="zeros"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.zeros">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
           <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
           <span class="o">*</span><span class="n">args</span><span class="p">,</span>
           <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
@@ -409,7 +431,7 @@ title="Source repository"
                          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="ones"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.ones">[docs]</a><span class="k">def</span> <span class="nf">ones</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
+<div class="viewcode-block" id="ones"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.ones">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">ones</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
          <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
          <span class="o">*</span><span class="n">args</span><span class="p">,</span>
          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
@@ -439,7 +461,7 @@ title="Source repository"
                          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="copy"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.copy">[docs]</a><span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
+<div class="viewcode-block" id="copy"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.copy">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">copy</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
          <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
          <span class="o">*</span><span class="n">args</span><span class="p">,</span>
          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
@@ -472,7 +494,7 @@ title="Source repository"
                          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="rand"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.rand">[docs]</a><span class="k">def</span> <span class="nf">rand</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
+<div class="viewcode-block" id="rand"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.rand">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">rand</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
          <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
          <span class="o">*</span><span class="n">args</span><span class="p">,</span>
          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
@@ -503,7 +525,7 @@ title="Source repository"
                          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="randn"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.randn">[docs]</a><span class="k">def</span> <span class="nf">randn</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
+<div class="viewcode-block" id="randn"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.randn">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">randn</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
           <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
           <span class="o">*</span><span class="n">args</span><span class="p">,</span>
           <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>

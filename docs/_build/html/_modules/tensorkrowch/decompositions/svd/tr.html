@@ -1,0 +1,1200 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.svd.tr &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/clipboard.min.js"></script>
+    <script src="../../../../_static/copybutton.js"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.svd.tr</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Classes:</span>
+<span class="sd">        * TRSVD</span>
+
+<span class="sd">    Functions:</span>
+<span class="sd">        * tr_svd</span>
+<span class="sd">        * qtr_svd</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">nullcontext</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">prod</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_tensor_norm</span><span class="p">,</span> <span class="n">ratio_from_log</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">_RuntimePolicy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._truncation</span><span class="w"> </span><span class="kn">import</span> <span class="n">_TruncationSpec</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">DecompositionMetrics</span><span class="p">,</span>
+                                                 <span class="n">TimingRecord</span><span class="p">,</span>
+                                                 <span class="n">TruncationRecord</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.observers</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">,</span>
+                                                   <span class="n">_normalize_verbosity</span><span class="p">,</span>
+                                                   <span class="n">_resolve_observer</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.results</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">TensorDecomposition</span><span class="p">,</span>
+                                                 <span class="n">TRDecomposition</span><span class="p">,</span>
+                                                 <span class="n">QTRDecomposition</span><span class="p">,</span>
+                                                 <span class="n">_result_from_source</span><span class="p">)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources.factory</span><span class="w"> </span><span class="kn">import</span> <span class="n">SourceLike</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources.quantics</span><span class="w"> </span><span class="kn">import</span> <span class="n">CallableQuanticsSource</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.svd.tt</span><span class="w"> </span><span class="kn">import</span> <span class="n">TTSVD</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.svd._utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">_SVDProgress</span><span class="p">,</span>
+                                                    <span class="n">_prepare_svd_source</span><span class="p">)</span>
+
+
+<span class="n">_Rank</span> <span class="o">=</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="TRSVD"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.TRSVD">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">TRSVD</span><span class="p">:</span>  <span class="c1"># MARK: TRSVD</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Decomposes a fixed dense tensor into a tensor ring.</span>
+
+<span class="sd">    The tensor and a preferred interior cut are fixed when this object is</span>
+<span class="sd">    created. :meth:`fit` can then be called repeatedly with different</span>
+<span class="sd">    truncation criteria, centers and rank policies. Each fit is independent</span>
+<span class="sd">    and returns a lightweight</span>
+<span class="sd">    :class:`~tensorkrowch.decompositions.TRDecomposition`.</span>
+
+<span class="sd">    The algorithm first reshapes the tensor across an interior bipartition and</span>
+<span class="sd">    computes one SVD. Its selected rank is represented as the product of the</span>
+<span class="sd">    cyclic rank and the rank crossing the interior cut. The two resulting</span>
+<span class="sd">    blocks are then decomposed by the shared TT-SVD engine while preserving</span>
+<span class="sd">    those boundary ranks. No batch dimensions are supported.</span>
+
+<span class="sd">    This construction is based on TR-SVD by Q. Zhao et al. in *Tensor Ring</span>
+<span class="sd">    Decomposition* (2016), `paper &lt;https://arxiv.org/abs/1606.05535&gt;`__. The</span>
+<span class="sd">    implementation uses an interior bipartition followed by two TT-SVD</span>
+<span class="sd">    subchains, rather than the one-direction sequence in the original</span>
+<span class="sd">    algorithm.</span>
+
+<span class="sd">    ``source`` defines the input&#39;s dimensions, evaluation rules and matrix</span>
+<span class="sd">    grouping. Finite sources include</span>
+<span class="sd">    :class:`~tensorkrowch.decompositions.DenseTensorSource`,</span>
+<span class="sd">    :class:`~tensorkrowch.decompositions.SparseTensorSource`,</span>
+<span class="sd">    :class:`~tensorkrowch.decompositions.FormatSource`,</span>
+<span class="sd">    :class:`~tensorkrowch.decompositions.CallableTensorSource` and</span>
+<span class="sd">    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.</span>
+<span class="sd">    SVD materializes their complete tensor once.</span>
+<span class="sd">    A ``torch.Tensor`` is accepted directly, as is a non-Quantics TT/TR format</span>
+<span class="sd">    or its matrix version. Wrap an :class:`~tensorkrowch.models.MPS`</span>
+<span class="sd">    in ``FormatSource`` first.</span>
+
+<span class="sd">    To declare matrix inputs, use</span>
+<span class="sd">    :meth:`~tensorkrowch.decompositions.DenseTensorSource.matrix` or the</span>
+<span class="sd">    corresponding ``.matrix(...)`` constructor of ``SparseTensorSource``,</span>
+<span class="sd">    ``CallableTensorSource`` or ``CallableQuanticsSource``. ``FormatSource``</span>
+<span class="sd">    instead infers matrix grouping from a matrix format. The source selects the</span>
+<span class="sd">    result family and retains any Quantics layouts and coordinate maps.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source : BaseSource, TensorFormat1D or torch.Tensor</span>
+<span class="sd">        Finite tensor input, with shape and evaluation defined by the source.</span>
+<span class="sd">    center : int, optional</span>
+<span class="sd">        Interior cut between sites ``center - 1`` and ``center``. It should</span>
+<span class="sd">        satisfy ``1 &lt;= center &lt; tensor.ndim``. The default is the middle cut.</span>
+<span class="sd">    out_device : str or torch.device, optional</span>
+<span class="sd">        Device where finalized cores are stored. The default is ``&quot;cpu&quot;``.</span>
+<span class="sd">        If ``None``, cores remain on the tensor&#39;s device.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; source = tk.decompositions.DenseTensorSource(torch.ones(2, 2, 2))</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.TRSVD(source).fit(rank=1)</span>
+<span class="sd">    &gt;&gt;&gt; result.rank</span>
+<span class="sd">    [1, 1, 1]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">source</span><span class="p">:</span> <span class="s1">&#39;SourceLike&#39;</span><span class="p">,</span>
+                 <span class="n">center</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="o">*</span><span class="p">,</span>
+                 <span class="n">out_device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]]</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span>
+                 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_source</span><span class="p">,</span> <span class="n">tensor</span><span class="p">,</span> <span class="n">batches</span> <span class="o">=</span> <span class="n">_prepare_svd_source</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">batches</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;TR-SVD does not support `n_batches`&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tensor</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The source should contain at least two TR sites&#39;</span><span class="p">)</span>
+        <span class="n">center</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">ndim</span> <span class="o">//</span> <span class="mi">2</span> <span class="k">if</span> <span class="n">center</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">center</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_center</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">tensor</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_center</span> <span class="o">=</span> <span class="n">center</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tensor</span> <span class="o">=</span> <span class="n">tensor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_runtime</span> <span class="o">=</span> <span class="n">_RuntimePolicy</span><span class="o">.</span><span class="n">from_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span>
+                                                   <span class="n">out_device</span><span class="o">=</span><span class="n">out_device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_phase</span> <span class="o">=</span> <span class="s1">&#39;TRM-SVD&#39;</span> <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_source</span><span class="p">,</span> <span class="s1">&#39;is_matrix&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">else</span> <span class="s1">&#39;TR-SVD&#39;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">source</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SourceLike</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Original source describing the fixed decomposition input.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_center</span><span class="p">(</span><span class="n">center</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_sites</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validates that a ``center`` identifies an interior chain cut.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`center` should be int type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">center</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">center</span> <span class="o">&gt;=</span> <span class="n">n_sites</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`center` should satisfy 1 &lt;= center &lt; tensor.ndim&#39;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">center</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Preferred interior cut used when :meth:`fit` omits ``center``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_center</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_split_cycle_rank</span><span class="p">(</span><span class="n">selected_rank</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                          <span class="n">rank_cap</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Finds the smallest admissible cyclic/interior rank capacity.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">rank_cap</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rank_cap</span> <span class="o">=</span> <span class="n">selected_rank</span>
+
+        <span class="n">candidates</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">cycle_rank</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">rank_cap</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">center_rank</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">selected_rank</span> <span class="o">+</span> <span class="n">cycle_rank</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="n">cycle_rank</span>
+            <span class="k">if</span> <span class="n">center_rank</span> <span class="o">&lt;=</span> <span class="n">rank_cap</span><span class="p">:</span>
+                <span class="n">capacity</span> <span class="o">=</span> <span class="n">cycle_rank</span> <span class="o">*</span> <span class="n">center_rank</span>
+                <span class="n">candidates</span><span class="o">.</span><span class="n">append</span><span class="p">((</span>
+                    <span class="n">capacity</span><span class="p">,</span>
+                    <span class="nb">abs</span><span class="p">(</span><span class="n">cycle_rank</span> <span class="o">-</span> <span class="n">center_rank</span><span class="p">),</span>
+                    <span class="n">cycle_rank</span><span class="p">,</span>
+                    <span class="n">center_rank</span><span class="p">))</span>
+
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">cycle_rank</span><span class="p">,</span> <span class="n">center_rank</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">candidates</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cycle_rank</span><span class="p">,</span> <span class="n">center_rank</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_decompose_subchain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                            <span class="n">subchain</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                            <span class="n">in_dim</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+                            <span class="n">truncation</span><span class="p">:</span> <span class="n">_TruncationSpec</span><span class="p">,</span>
+                            <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                            <span class="n">collect_metrics</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                            <span class="n">progress</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">_SVDProgress</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                            <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                                       <span class="n">Optional</span><span class="p">[</span><span class="n">DecompositionMetrics</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Applies TT-SVD while preserving a ``subchain``&#39;s boundary ranks.&quot;&quot;&quot;</span>
+        <span class="n">left_rank</span> <span class="o">=</span> <span class="n">subchain</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">right_rank</span> <span class="o">=</span> <span class="n">subchain</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">in_dim</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">core</span> <span class="o">=</span> <span class="n">subchain</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">left_rank</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">right_rank</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_runtime</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">core</span><span class="p">)],</span> <span class="kc">None</span>
+
+        <span class="n">fused</span> <span class="o">=</span> <span class="n">subchain</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">left_rank</span> <span class="o">*</span> <span class="n">in_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="o">*</span><span class="n">in_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">in_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">right_rank</span><span class="p">)</span>
+        <span class="n">engine</span> <span class="o">=</span> <span class="n">TTSVD</span><span class="p">(</span>
+            <span class="n">fused</span><span class="p">,</span>
+            <span class="n">out_device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_runtime</span><span class="o">.</span><span class="n">out_device</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">_fit_validated</span><span class="p">(</span>
+            <span class="n">truncation</span><span class="o">=</span><span class="n">truncation</span><span class="p">,</span>
+            <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+            <span class="n">collect_metrics</span><span class="o">=</span><span class="n">collect_metrics</span><span class="p">,</span>
+            <span class="n">progress</span><span class="o">=</span><span class="n">progress</span><span class="p">)</span>
+
+        <span class="n">cores</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+        <span class="n">metrics</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">metrics</span> <span class="k">if</span> <span class="n">collect_metrics</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">left_rank</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">in_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">right_rank</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cores</span><span class="p">,</span> <span class="n">metrics</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_phase_truncations</span><span class="p">(</span><span class="n">metrics</span><span class="p">:</span> <span class="n">DecompositionMetrics</span><span class="p">,</span>
+                           <span class="n">phase</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">site_offset</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">TruncationRecord</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Labels TT-SVD records as local TR-SVD diagnostics.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">replace</span><span class="p">(</span>
+                <span class="n">record</span><span class="p">,</span>
+                <span class="n">site</span><span class="o">=</span><span class="n">site_offset</span> <span class="o">+</span> <span class="n">record</span><span class="o">.</span><span class="n">site</span><span class="p">,</span>
+                <span class="n">phase</span><span class="o">=</span><span class="n">phase</span><span class="p">,</span>
+                <span class="n">global_rel_contribution</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">metrics</span><span class="o">.</span><span class="n">truncations</span>
+        <span class="p">]</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_phase_timing</span><span class="p">(</span><span class="n">metrics</span><span class="p">:</span> <span class="n">DecompositionMetrics</span><span class="p">,</span>
+                      <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                      <span class="n">site_offset</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TimingRecord</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Relabels one nested TT-SVD timing phase with global sites.&quot;&quot;&quot;</span>
+        <span class="n">timing</span> <span class="o">=</span> <span class="n">metrics</span><span class="o">.</span><span class="n">timings</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">children</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">replace</span><span class="p">(</span>
+                <span class="n">child</span><span class="p">,</span>
+                <span class="n">site</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">site</span> <span class="ow">is</span> <span class="kc">None</span>
+                      <span class="k">else</span> <span class="n">site_offset</span> <span class="o">+</span> <span class="n">child</span><span class="o">.</span><span class="n">site</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">timing</span><span class="o">.</span><span class="n">children</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">timing</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">children</span><span class="o">=</span><span class="n">children</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fit_validated</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">center</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                       <span class="n">truncation</span><span class="p">:</span> <span class="n">_TruncationSpec</span><span class="p">,</span>
+                       <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                       <span class="n">collect_metrics</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                       <span class="n">progress</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">_SVDProgress</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                       <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TRDecomposition</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Runs the cyclic SVD kernel from already validated fit options.&quot;&quot;&quot;</span>
+        <span class="n">rank_cap</span> <span class="o">=</span> <span class="n">truncation</span><span class="o">.</span><span class="n">rank</span>
+        <span class="n">initial_cap</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">rank_cap</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">rank_cap</span> <span class="o">*</span> <span class="n">rank_cap</span>
+        <span class="n">initial_truncation</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">truncation</span> <span class="k">if</span> <span class="n">initial_cap</span> <span class="o">==</span> <span class="n">truncation</span><span class="o">.</span><span class="n">rank</span> <span class="k">else</span>
+            <span class="n">replace</span><span class="p">(</span><span class="n">truncation</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="n">initial_cap</span><span class="p">))</span>
+        <span class="n">in_dim</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+        <span class="n">total_timer_context</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_runtime</span><span class="o">.</span><span class="n">timer</span><span class="p">()</span> <span class="k">if</span> <span class="n">collect_metrics</span> <span class="k">else</span> <span class="n">nullcontext</span><span class="p">())</span>
+        <span class="k">with</span> <span class="n">total_timer_context</span> <span class="k">as</span> <span class="n">total_timer</span><span class="p">:</span>
+            <span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_runtime</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor</span><span class="p">)</span>
+            <span class="n">left_size</span> <span class="o">=</span> <span class="n">prod</span><span class="p">(</span><span class="n">in_dim</span><span class="p">[:</span><span class="n">center</span><span class="p">])</span>
+            <span class="n">right_size</span> <span class="o">=</span> <span class="n">prod</span><span class="p">(</span><span class="n">in_dim</span><span class="p">[</span><span class="n">center</span><span class="p">:])</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">left_size</span><span class="p">,</span> <span class="n">right_size</span><span class="p">)</span>
+            <span class="n">initial_result</span> <span class="o">=</span> <span class="n">TTSVD</span><span class="p">(</span>
+                <span class="n">matrix</span><span class="p">,</span>
+                <span class="n">out_device</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">_fit_validated</span><span class="p">(</span>
+                    <span class="n">truncation</span><span class="o">=</span><span class="n">initial_truncation</span><span class="p">,</span>
+                    <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+                    <span class="n">collect_metrics</span><span class="o">=</span><span class="n">collect_metrics</span><span class="p">)</span>
+            <span class="n">selected_rank</span> <span class="o">=</span> <span class="n">initial_result</span><span class="o">.</span><span class="n">rank</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="n">cycle_rank</span><span class="p">,</span> <span class="n">center_rank</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split_cycle_rank</span><span class="p">(</span>
+                <span class="n">selected_rank</span><span class="o">=</span><span class="n">selected_rank</span><span class="p">,</span>
+                <span class="n">rank_cap</span><span class="o">=</span><span class="n">rank_cap</span><span class="p">)</span>
+            <span class="n">initial_capacity</span> <span class="o">=</span> <span class="n">cycle_rank</span> <span class="o">*</span> <span class="n">center_rank</span>
+            <span class="n">initial_padding</span> <span class="o">=</span> <span class="n">initial_capacity</span> <span class="o">-</span> <span class="n">selected_rank</span>
+
+            <span class="n">left_factor</span><span class="p">,</span> <span class="n">right_factor</span> <span class="o">=</span> <span class="n">initial_result</span><span class="o">.</span><span class="n">cores</span>
+            <span class="n">initial_metrics</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">initial_result</span><span class="o">.</span><span class="n">metrics</span> <span class="k">if</span> <span class="n">collect_metrics</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">del</span> <span class="n">initial_result</span>
+
+            <span class="k">if</span> <span class="n">progress</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">initial_record</span> <span class="o">=</span> <span class="n">initial_metrics</span><span class="o">.</span><span class="n">truncations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">initial_timing</span> <span class="o">=</span> <span class="n">initial_metrics</span><span class="o">.</span><span class="n">timings</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">progress</span><span class="o">.</span><span class="n">observer</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">(</span>
+                    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;bipartition_complete&#39;</span><span class="p">,</span>
+                    <span class="n">phase</span><span class="o">=</span><span class="n">progress</span><span class="o">.</span><span class="n">phase</span><span class="p">,</span>
+                    <span class="n">elapsed</span><span class="o">=</span><span class="n">initial_timing</span><span class="o">.</span><span class="n">elapsed</span><span class="p">,</span>
+                    <span class="n">values</span><span class="o">=</span><span class="p">{</span>
+                        <span class="s1">&#39;blocks&#39;</span><span class="p">:</span> <span class="p">(</span>
+                            <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">center</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)),</span>
+                            <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">center</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">in_dim</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))),</span>
+                        <span class="s1">&#39;full_rank&#39;</span><span class="p">:</span> <span class="n">initial_record</span><span class="o">.</span><span class="n">full_rank</span><span class="p">,</span>
+                        <span class="s1">&#39;selected_rank&#39;</span><span class="p">:</span> <span class="n">selected_rank</span><span class="p">,</span>
+                        <span class="s1">&#39;cycle_rank&#39;</span><span class="p">:</span> <span class="n">cycle_rank</span><span class="p">,</span>
+                        <span class="s1">&#39;center_rank&#39;</span><span class="p">:</span> <span class="n">center_rank</span><span class="p">,</span>
+                        <span class="s1">&#39;absolute_error&#39;</span><span class="p">:</span> <span class="n">initial_record</span><span class="o">.</span><span class="n">local_abs_error</span><span class="p">,</span>
+                        <span class="s1">&#39;relative_error&#39;</span><span class="p">:</span> <span class="n">initial_record</span><span class="o">.</span><span class="n">local_rel_error</span><span class="p">,</span>
+                    <span class="p">}))</span>
+            <span class="k">if</span> <span class="n">initial_padding</span><span class="p">:</span>
+                <span class="n">left_factor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span>
+                    <span class="n">left_factor</span><span class="p">,</span>
+                    <span class="n">left_factor</span><span class="o">.</span><span class="n">new_zeros</span><span class="p">(</span>
+                        <span class="n">left_factor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">initial_padding</span><span class="p">),</span>
+                <span class="p">],</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">right_factor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span>
+                    <span class="n">right_factor</span><span class="p">,</span>
+                    <span class="n">right_factor</span><span class="o">.</span><span class="n">new_zeros</span><span class="p">(</span>
+                        <span class="n">initial_padding</span><span class="p">,</span> <span class="n">right_factor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                <span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="n">left_subchain</span> <span class="o">=</span> <span class="n">left_factor</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="o">*</span><span class="n">in_dim</span><span class="p">[:</span><span class="n">center</span><span class="p">],</span> <span class="n">cycle_rank</span><span class="p">,</span> <span class="n">center_rank</span><span class="p">)</span>
+            <span class="n">left_subchain</span> <span class="o">=</span> <span class="n">left_subchain</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">right_subchain</span> <span class="o">=</span> <span class="n">right_factor</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="n">cycle_rank</span><span class="p">,</span> <span class="n">center_rank</span><span class="p">,</span> <span class="o">*</span><span class="n">in_dim</span><span class="p">[</span><span class="n">center</span><span class="p">:])</span>
+            <span class="n">right_subchain</span> <span class="o">=</span> <span class="n">right_subchain</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">left_progress</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="kc">None</span> <span class="k">if</span> <span class="n">progress</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">replace</span><span class="p">(</span>
+                    <span class="n">progress</span><span class="p">,</span>
+                    <span class="n">subphase</span><span class="o">=</span><span class="s1">&#39;left_subchain&#39;</span><span class="p">))</span>
+            <span class="n">right_progress</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="kc">None</span> <span class="k">if</span> <span class="n">progress</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">replace</span><span class="p">(</span>
+                    <span class="n">progress</span><span class="p">,</span>
+                    <span class="n">site_offset</span><span class="o">=</span><span class="n">center</span><span class="p">,</span>
+                    <span class="n">subphase</span><span class="o">=</span><span class="s1">&#39;right_subchain&#39;</span><span class="p">))</span>
+            <span class="n">left_cores</span><span class="p">,</span> <span class="n">left_metrics</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decompose_subchain</span><span class="p">(</span>
+                <span class="n">subchain</span><span class="o">=</span><span class="n">left_subchain</span><span class="p">,</span>
+                <span class="n">in_dim</span><span class="o">=</span><span class="n">in_dim</span><span class="p">[:</span><span class="n">center</span><span class="p">],</span>
+                <span class="n">truncation</span><span class="o">=</span><span class="n">truncation</span><span class="p">,</span>
+                <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+                <span class="n">collect_metrics</span><span class="o">=</span><span class="n">collect_metrics</span><span class="p">,</span>
+                <span class="n">progress</span><span class="o">=</span><span class="n">left_progress</span><span class="p">)</span>
+            <span class="n">right_cores</span><span class="p">,</span> <span class="n">right_metrics</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decompose_subchain</span><span class="p">(</span>
+                <span class="n">subchain</span><span class="o">=</span><span class="n">right_subchain</span><span class="p">,</span>
+                <span class="n">in_dim</span><span class="o">=</span><span class="n">in_dim</span><span class="p">[</span><span class="n">center</span><span class="p">:],</span>
+                <span class="n">truncation</span><span class="o">=</span><span class="n">truncation</span><span class="p">,</span>
+                <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+                <span class="n">collect_metrics</span><span class="o">=</span><span class="n">collect_metrics</span><span class="p">,</span>
+                <span class="n">progress</span><span class="o">=</span><span class="n">right_progress</span><span class="p">)</span>
+
+        <span class="n">metrics</span> <span class="o">=</span> <span class="n">DecompositionMetrics</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">collect_metrics</span><span class="p">:</span>
+            <span class="n">initial_records</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_phase_truncations</span><span class="p">(</span>
+                <span class="n">initial_metrics</span><span class="p">,</span>
+                <span class="n">phase</span><span class="o">=</span><span class="s1">&#39;initial_bipartition&#39;</span><span class="p">,</span>
+                <span class="n">site_offset</span><span class="o">=</span><span class="n">center</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">left_records</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">[]</span> <span class="k">if</span> <span class="n">left_metrics</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_phase_truncations</span><span class="p">(</span>
+                    <span class="n">left_metrics</span><span class="p">,</span>
+                    <span class="n">phase</span><span class="o">=</span><span class="s1">&#39;left_subchain&#39;</span><span class="p">,</span>
+                    <span class="n">site_offset</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+            <span class="n">right_records</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">[]</span> <span class="k">if</span> <span class="n">right_metrics</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_phase_truncations</span><span class="p">(</span>
+                    <span class="n">right_metrics</span><span class="p">,</span>
+                    <span class="n">phase</span><span class="o">=</span><span class="s1">&#39;right_subchain&#39;</span><span class="p">,</span>
+                    <span class="n">site_offset</span><span class="o">=</span><span class="n">center</span><span class="p">))</span>
+            <span class="n">metrics</span><span class="o">.</span><span class="n">truncations</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                <span class="n">left_records</span> <span class="o">+</span> <span class="n">initial_records</span> <span class="o">+</span> <span class="n">right_records</span><span class="p">)</span>
+
+            <span class="n">phase_timings</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_phase_timing</span><span class="p">(</span>
+                    <span class="n">initial_metrics</span><span class="p">,</span> <span class="s1">&#39;initial_bipartition&#39;</span><span class="p">,</span> <span class="n">center</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span>
+            <span class="p">]</span>
+            <span class="k">if</span> <span class="n">left_metrics</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">phase_timings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_phase_timing</span><span class="p">(</span>
+                    <span class="n">left_metrics</span><span class="p">,</span> <span class="s1">&#39;left_subchain&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">right_metrics</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">phase_timings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_phase_timing</span><span class="p">(</span>
+                    <span class="n">right_metrics</span><span class="p">,</span> <span class="s1">&#39;right_subchain&#39;</span><span class="p">,</span> <span class="n">center</span><span class="p">))</span>
+            <span class="n">metrics</span><span class="o">.</span><span class="n">timings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TimingRecord</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fit&#39;</span><span class="p">,</span>
+                <span class="n">elapsed</span><span class="o">=</span><span class="n">total_timer</span><span class="o">.</span><span class="n">elapsed</span><span class="p">,</span>
+                <span class="n">children</span><span class="o">=</span><span class="n">phase_timings</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">initial_padding</span><span class="p">:</span>
+                <span class="n">metrics</span><span class="o">.</span><span class="n">warnings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;Initial SVD rank </span><span class="si">{</span><span class="n">selected_rank</span><span class="si">}</span><span class="s1"> uses capacity &#39;</span>
+                    <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">initial_capacity</span><span class="si">}</span><span class="s1"> with </span><span class="si">{</span><span class="n">initial_padding</span><span class="si">}</span><span class="s1"> structural &#39;</span>
+                    <span class="s1">&#39;zero dimensions&#39;</span><span class="p">)</span>
+            <span class="n">metrics</span><span class="o">.</span><span class="n">warnings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="s1">&#39;Cyclic SVD truncation records are local diagnostics and are &#39;</span>
+                <span class="s1">&#39;not combined into a global reconstruction bound&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">TRDecomposition</span><span class="p">(</span>
+            <span class="n">cores</span><span class="o">=</span><span class="n">left_cores</span> <span class="o">+</span> <span class="n">right_cores</span><span class="p">,</span>
+            <span class="n">metrics</span><span class="o">=</span><span class="n">metrics</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="s1">&#39;tr_svd&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;center&#39;</span><span class="p">:</span> <span class="n">center</span><span class="p">,</span>
+                <span class="s1">&#39;rank_mode&#39;</span><span class="p">:</span> <span class="s1">&#39;discovery&#39;</span> <span class="k">if</span> <span class="n">rank_cap</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="s1">&#39;shared&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;renormalize&#39;</span><span class="p">:</span> <span class="n">renormalize</span><span class="p">,</span>
+                <span class="s1">&#39;initial_padding&#39;</span><span class="p">:</span> <span class="n">initial_padding</span><span class="p">,</span>
+            <span class="p">})</span>
+
+<div class="viewcode-block" id="TRSVD.fit"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.TRSVD.fit">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">center</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">rank</span><span class="p">:</span> <span class="n">_Rank</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">atol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">rtol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">collect_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorDecomposition&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Runs TR-SVD from an interior bipartition of the fixed tensor.</span>
+
+<span class="sd">        The active exact SVD backend is selected through</span>
+<span class="sd">        :func:`tensorkrowch.set_svd_method` or</span>
+<span class="sd">        :func:`tensorkrowch.svd_method`. When metrics are collected, discarded</span>
+<span class="sd">        energies are returned as phase-labelled local diagnostics. They are</span>
+<span class="sd">        not combined into a global reconstruction bound because the successive</span>
+<span class="sd">        TR-SVD truncations are not all orthogonal in one common scale.</span>
+
+<span class="sd">        If ``rank`` is an integer, it is a shared upper bound for every TR</span>
+<span class="sd">        ``rank`` and its square bounds the initial bipartition. Local</span>
+<span class="sd">        truncation criteria may therefore select a different effective</span>
+<span class="sd">        ``rank`` at each site. With ``None``, ranks are discovered from the</span>
+<span class="sd">        selected SVD dimensions. The selected ``rank`` is split with the</span>
+<span class="sd">        smallest admissible product and the most balanced pair breaks ties.</span>
+<span class="sd">        Any extra capacity</span>
+<span class="sd">        required by the cap is padded only with structural zeros and recorded</span>
+<span class="sd">        in ``result.metadata``.</span>
+
+<span class="sd">        Here, ``initial_rank`` is the ``rank`` actually selected by the initial</span>
+<span class="sd">        SVD, whereas ``initial_capacity`` is the product of the two TR ranks</span>
+<span class="sd">        used to represent it. Their difference is ``initial_padding``. For</span>
+<span class="sd">        example, an ``initial_rank`` of 7 may use ranks 2 and 4, giving an</span>
+<span class="sd">        ``initial_capacity`` of 8 and an ``initial_padding`` of 1.</span>
+
+<span class="sd">        The fixed tensor should have shape ``(d_1, ..., d_n)``, with one input</span>
+<span class="sd">        dimension per TR site. The returned cores all have shape</span>
+<span class="sd">        ``(rank_{k-1}, d_k, rank_k)``, where the left ``rank`` of the first</span>
+<span class="sd">        core matches the right ``rank`` of the last core. Consequently, the</span>
+<span class="sd">        result always represents a cyclic TR.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        center : int, optional</span>
+<span class="sd">            Interior cut used for this fit. If omitted, the ``center`` fixed at</span>
+<span class="sd">            construction is used.</span>
+<span class="sd">        rank : int, optional</span>
+<span class="sd">            Maximum ``rank`` allowed at every link. At each subchain SVD cut,</span>
+<span class="sd">            at most this many singular values are retained. The initial</span>
+<span class="sd">            bipartition retains at most ``rank ** 2`` singular values before</span>
+<span class="sd">            its selected ``rank`` is factorized into two TR ranks.</span>
+<span class="sd">        cutoff : float, optional</span>
+<span class="sd">            Minimum singular value to keep. It must be finite and</span>
+<span class="sd">            non-negative. Singular values ``&lt;= cutoff`` are removed.</span>
+<span class="sd">        atol : float, optional</span>
+<span class="sd">            Absolute tolerance over the tail sum of squared singular values.</span>
+<span class="sd">            Starting from the smallest singular value, values are discarded</span>
+<span class="sd">            while the accumulated sum of squares is ``&lt;= atol``. It must be</span>
+<span class="sd">            finite and non-negative.</span>
+<span class="sd">        rtol : float, optional</span>
+<span class="sd">            Relative tolerance over the tail sum of squared singular values.</span>
+<span class="sd">            Starting from the smallest singular value, values are discarded</span>
+<span class="sd">            while the tail sum of squares divided by the total sum of squares</span>
+<span class="sd">            is ``&lt;= rtol``. It must be finite and in ``[0, 1]``.</span>
+<span class="sd">        cum_percentage : float, optional</span>
+<span class="sd">            Minimum fraction of squared singular-value mass to keep. Equivalent</span>
+<span class="sd">            to setting ``rtol = 1 - cum_percentage``. It must be finite and in</span>
+<span class="sd">            ``[0, 1]``.</span>
+
+<span class="sd">            .. math::</span>
+
+<span class="sd">        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge</span>
+<span class="sd">                cum\_percentage</span>
+
+<span class="sd">        renormalize : bool</span>
+<span class="sd">            If ``True``, normalizes the residual before every SVD and</span>
+<span class="sd">            accumulates extracted scales logarithmically. Complete scales are</span>
+<span class="sd">            redistributed without changing the represented tensor.</span>
+<span class="sd">        collect_metrics : bool</span>
+<span class="sd">            If ``True``, collects phase-labelled local truncation records and</span>
+<span class="sd">            synchronized timings in ``result.metrics``. The default is</span>
+<span class="sd">            ``False`` to avoid diagnostic norm reductions, records and device</span>
+<span class="sd">            synchronizations. Metrics are always collected when console output</span>
+<span class="sd">            is requested.</span>
+<span class="sd">        verbose : bool or int</span>
+<span class="sd">            Console verbosity level:</span>
+
+<span class="sd">            - ``0`` or ``False``: no console output;</span>
+<span class="sd">            - ``1`` or ``True``: phase title, input configuration, cut</span>
+<span class="sd">              progress and final summary;</span>
+<span class="sd">            - ``2``: detailed per-cut ``rank``, error and timing information;</span>
+<span class="sd">            - ``3``: level 2 output followed by every final core.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        TRDecomposition</span>
+<span class="sd">            Lightweight result containing cores and ranks. Its structured</span>
+<span class="sd">            metrics are empty unless ``collect_metrics=True`` or</span>
+<span class="sd">            ``verbose&gt;0``.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        Fix a tensor and compare shared ``rank`` caps at the middle cut:</span>
+
+<span class="sd">        &gt;&gt;&gt; tensor = torch.arange(16.).reshape(2, 2, 2, 2)</span>
+<span class="sd">        &gt;&gt;&gt; decomposer = tk.decompositions.TRSVD(tensor)</span>
+<span class="sd">        &gt;&gt;&gt; rank_one = decomposer.fit(rank=1)</span>
+<span class="sd">        &gt;&gt;&gt; rank_two = decomposer.fit(rank=2)</span>
+<span class="sd">        &gt;&gt;&gt; max(rank_one.rank)</span>
+<span class="sd">        1</span>
+<span class="sd">        &gt;&gt;&gt; max(rank_two.rank) &lt;= 2</span>
+<span class="sd">        True</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">renormalize</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`renormalize` should be bool type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">collect_metrics</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`collect_metrics` should be bool type&#39;</span><span class="p">)</span>
+        <span class="n">truncation</span> <span class="o">=</span> <span class="n">_TruncationSpec</span><span class="p">(</span>
+            <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+            <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">,</span>
+            <span class="n">atol</span><span class="o">=</span><span class="n">atol</span><span class="p">,</span>
+            <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">,</span>
+            <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">center</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">center</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_center</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_center</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
+        <span class="n">verbosity</span> <span class="o">=</span> <span class="n">_normalize_verbosity</span><span class="p">(</span><span class="n">verbose</span><span class="p">)</span>
+        <span class="n">emit_events</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="n">collect_metrics</span> <span class="o">=</span> <span class="n">collect_metrics</span> <span class="ow">or</span> <span class="n">emit_events</span>
+        <span class="n">fit_observer</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">_resolve_observer</span><span class="p">(</span><span class="n">verbosity</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">if</span> <span class="n">emit_events</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="n">in_dim</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fit_observer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fit_observer</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;start&#39;</span><span class="p">,</span>
+                <span class="n">phase</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_phase</span><span class="p">,</span>
+                <span class="n">values</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s1">&#39;sites&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">in_dim</span><span class="p">),</span>
+                    <span class="s1">&#39;in_dim&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source</span><span class="o">.</span><span class="n">in_dim</span> <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_source</span><span class="p">,</span> <span class="s1">&#39;is_matrix&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">else</span> <span class="n">in_dim</span><span class="p">,</span>
+                    <span class="s1">&#39;out_dim&#39;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_source</span><span class="p">,</span> <span class="s1">&#39;out_dim&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+                    <span class="s1">&#39;center&#39;</span><span class="p">:</span> <span class="n">center</span><span class="p">,</span>
+                    <span class="s1">&#39;rank_mode&#39;</span><span class="p">:</span> <span class="p">(</span>
+                        <span class="s1">&#39;discovery&#39;</span> <span class="k">if</span> <span class="n">truncation</span><span class="o">.</span><span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="s1">&#39;shared&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;renormalize&#39;</span><span class="p">:</span> <span class="n">renormalize</span><span class="p">,</span>
+                <span class="p">}))</span>
+        <span class="n">progress</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="kc">None</span> <span class="k">if</span> <span class="n">fit_observer</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_SVDProgress</span><span class="p">(</span>
+                <span class="n">observer</span><span class="o">=</span><span class="n">fit_observer</span><span class="p">,</span>
+                <span class="n">phase</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_phase</span><span class="p">))</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_validated</span><span class="p">(</span>
+            <span class="n">center</span><span class="o">=</span><span class="n">center</span><span class="p">,</span>
+            <span class="n">truncation</span><span class="o">=</span><span class="n">truncation</span><span class="p">,</span>
+            <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+            <span class="n">collect_metrics</span><span class="o">=</span><span class="n">collect_metrics</span><span class="p">,</span>
+            <span class="n">progress</span><span class="o">=</span><span class="n">progress</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">fit_observer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">initial_padding</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;initial_padding&#39;</span><span class="p">]</span>
+            <span class="n">cycle_rank</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">rank</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">center_rank</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">rank</span><span class="p">[</span><span class="n">center</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">initial_capacity</span> <span class="o">=</span> <span class="n">cycle_rank</span> <span class="o">*</span> <span class="n">center_rank</span>
+            <span class="n">selected_rank</span> <span class="o">=</span> <span class="n">initial_capacity</span> <span class="o">-</span> <span class="n">initial_padding</span>
+            <span class="n">timing</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">timings</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">approximation</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+                <span class="n">device</span><span class="o">=</span><span class="n">approximation</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">approximation</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">abs_log_error</span> <span class="o">=</span> <span class="n">log_tensor_norm</span><span class="p">(</span><span class="n">approximation</span> <span class="o">-</span> <span class="n">target</span><span class="p">)</span>
+            <span class="n">target_log_norm</span> <span class="o">=</span> <span class="n">log_tensor_norm</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+            <span class="n">abs_error</span> <span class="o">=</span> <span class="n">abs_log_error</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+            <span class="n">rel_error</span> <span class="o">=</span> <span class="n">ratio_from_log</span><span class="p">(</span>
+                <span class="n">abs_log_error</span><span class="p">,</span> <span class="n">target_log_norm</span><span class="p">)</span>
+            <span class="n">fit_observer</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;summary&#39;</span><span class="p">,</span>
+                <span class="n">phase</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_phase</span><span class="p">,</span>
+                <span class="n">values</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s1">&#39;rank&#39;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span>
+                    <span class="s1">&#39;center&#39;</span><span class="p">:</span> <span class="n">center</span><span class="p">,</span>
+                    <span class="s1">&#39;initial_rank&#39;</span><span class="p">:</span> <span class="n">selected_rank</span><span class="p">,</span>
+                    <span class="s1">&#39;initial_capacity&#39;</span><span class="p">:</span> <span class="n">initial_capacity</span><span class="p">,</span>
+                    <span class="s1">&#39;initial_padding&#39;</span><span class="p">:</span> <span class="n">initial_padding</span><span class="p">,</span>
+                    <span class="s1">&#39;absolute_error&#39;</span><span class="p">:</span> <span class="n">abs_error</span><span class="p">,</span>
+                    <span class="s1">&#39;relative_error&#39;</span><span class="p">:</span> <span class="n">rel_error</span><span class="p">,</span>
+                    <span class="s1">&#39;elapsed&#39;</span><span class="p">:</span> <span class="n">timing</span><span class="o">.</span><span class="n">elapsed</span><span class="p">,</span>
+                <span class="p">}))</span>
+            <span class="n">displayed</span> <span class="o">=</span> <span class="n">_result_from_source</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">site</span><span class="p">,</span> <span class="n">core</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">displayed</span><span class="o">.</span><span class="n">cores</span><span class="p">):</span>
+                <span class="n">fit_observer</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">DecompositionEvent</span><span class="p">(</span>
+                    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;core&#39;</span><span class="p">,</span>
+                    <span class="n">phase</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_phase</span><span class="p">,</span>
+                    <span class="n">level</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                    <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">,</span>
+                    <span class="n">values</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;shape&#39;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="s1">&#39;tensor&#39;</span><span class="p">:</span> <span class="n">core</span><span class="p">}))</span>
+            <span class="n">fit_observer</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_result_from_source</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="tr_svd"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.tr_svd">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">tr_svd</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="s1">&#39;SourceLike&#39;</span><span class="p">,</span>
+           <span class="n">center</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">rank</span><span class="p">:</span> <span class="n">_Rank</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">atol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">rtol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+           <span class="n">out_device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]]</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span><span class="p">,</span>
+           <span class="n">verbose</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+           <span class="n">collect_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorDecomposition&#39;</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Decomposes a finite source using :class:`TRSVD`.</span>
+
+<span class="sd">    ``source`` defines the input&#39;s dimensions, evaluation rules and matrix</span>
+<span class="sd">    grouping. Finite sources include</span>
+<span class="sd">    :class:`~tensorkrowch.decompositions.DenseTensorSource`,</span>
+<span class="sd">    :class:`~tensorkrowch.decompositions.SparseTensorSource`,</span>
+<span class="sd">    :class:`~tensorkrowch.decompositions.FormatSource`,</span>
+<span class="sd">    :class:`~tensorkrowch.decompositions.CallableTensorSource` and</span>
+<span class="sd">    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.</span>
+<span class="sd">    SVD materializes their complete tensor once.</span>
+<span class="sd">    A ``torch.Tensor`` is accepted directly, as is a non-Quantics TT/TR format</span>
+<span class="sd">    or its matrix version. Wrap an :class:`~tensorkrowch.models.MPS`</span>
+<span class="sd">    in ``FormatSource`` first.</span>
+
+<span class="sd">    To declare matrix inputs, use</span>
+<span class="sd">    :meth:`~tensorkrowch.decompositions.DenseTensorSource.matrix` or the</span>
+<span class="sd">    corresponding ``.matrix(...)`` constructor of ``SparseTensorSource``,</span>
+<span class="sd">    ``CallableTensorSource`` or ``CallableQuanticsSource``. ``FormatSource``</span>
+<span class="sd">    instead infers matrix grouping from a matrix format. The source selects the</span>
+<span class="sd">    result family and retains any Quantics layouts and coordinate maps.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source : BaseSource, TensorFormat1D or torch.Tensor</span>
+<span class="sd">        Finite tensor input, with shape and evaluation defined by the source.</span>
+<span class="sd">    center : int, optional</span>
+<span class="sd">        Interior cut satisfying ``1 &lt;= center &lt; tensor.ndim``. The default is</span>
+<span class="sd">        the middle cut.</span>
+<span class="sd">    rank : int, optional</span>
+<span class="sd">        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at</span>
+<span class="sd">        most this many singular values are retained. The initial bipartition</span>
+<span class="sd">        retains at most ``rank ** 2`` singular values before its selected</span>
+<span class="sd">        ``rank`` is factorized into two TR ranks.</span>
+<span class="sd">    cutoff : float, optional</span>
+<span class="sd">        Minimum singular value to keep. It must be finite and non-negative.</span>
+<span class="sd">        Singular values ``&lt;= cutoff`` are removed.</span>
+<span class="sd">    atol : float, optional</span>
+<span class="sd">        Absolute tolerance over the tail sum of squared singular values.</span>
+<span class="sd">        Starting from the smallest singular value, values are discarded while</span>
+<span class="sd">        the accumulated sum of squares is ``&lt;= atol``. It must be finite and</span>
+<span class="sd">        non-negative.</span>
+<span class="sd">    rtol : float, optional</span>
+<span class="sd">        Relative tolerance over the tail sum of squared singular values.</span>
+<span class="sd">        Starting from the smallest singular value, values are discarded while</span>
+<span class="sd">        the tail sum of squares divided by the total sum of squares is</span>
+<span class="sd">        ``&lt;= rtol``. It must be finite and in ``[0, 1]``.</span>
+<span class="sd">    cum_percentage : float, optional</span>
+<span class="sd">        Minimum fraction of squared singular-value mass to keep. Equivalent to</span>
+<span class="sd">        setting ``rtol = 1 - cum_percentage``. It must be finite and in</span>
+<span class="sd">        ``[0, 1]``.</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge</span>
+<span class="sd">            cum\_percentage</span>
+
+<span class="sd">    renormalize : bool</span>
+<span class="sd">        If ``True``, normalizes residuals before SVDs and accumulates their</span>
+<span class="sd">        scales logarithmically before redistributing them over final cores.</span>
+<span class="sd">    out_device : str or torch.device, optional</span>
+<span class="sd">        Device where finalized cores are stored. If ``None``, they remain on</span>
+<span class="sd">        the input device. The default is ``&quot;cpu&quot;``.</span>
+<span class="sd">    verbose : bool or int</span>
+<span class="sd">        Console verbosity level:</span>
+
+<span class="sd">        - ``0`` or ``False``: no console output;</span>
+<span class="sd">        - ``1`` or ``True``: phase title, input configuration, cut progress</span>
+<span class="sd">          and final summary;</span>
+<span class="sd">        - ``2``: detailed per-cut ``rank``, error and timing information;</span>
+<span class="sd">        - ``3``: level 2 output followed by every final core.</span>
+
+<span class="sd">    collect_metrics : bool</span>
+<span class="sd">        Whether to collect structured error, truncation and timing metrics.</span>
+<span class="sd">        With ``False`` and ``verbose=0``, diagnostic reductions and</span>
+<span class="sd">        synchronized timings are skipped.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    TRDecomposition</span>
+<span class="sd">        Decomposition with cores and metadata. Access ``cores`` for the</span>
+<span class="sd">        tensors and</span>
+<span class="sd">        :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info` for</span>
+<span class="sd">        structured information.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; source = tk.decompositions.DenseTensorSource(</span>
+<span class="sd">    ...     torch.arange(16.).reshape(2, 2, 2, 2))</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.tr_svd(source, rank=2)</span>
+<span class="sd">    &gt;&gt;&gt; result.in_dim</span>
+<span class="sd">    (2, 2, 2, 2)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">TRSVD</span><span class="p">(</span>
+        <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+        <span class="n">center</span><span class="o">=</span><span class="n">center</span><span class="p">,</span>
+        <span class="n">out_device</span><span class="o">=</span><span class="n">out_device</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+            <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+            <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">,</span>
+            <span class="n">atol</span><span class="o">=</span><span class="n">atol</span><span class="p">,</span>
+            <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">,</span>
+            <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
+            <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+            <span class="n">collect_metrics</span><span class="o">=</span><span class="n">collect_metrics</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="qtr_svd"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.qtr_svd">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">qtr_svd</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">CallableQuanticsSource</span><span class="p">,</span>
+            <span class="n">center</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="o">*</span><span class="p">,</span>
+            <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">atol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">rtol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">out_device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]]</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="n">collect_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QTRDecomposition</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Decomposes a discretized coordinate callable into QTR cores.</span>
+
+<span class="sd">    Materializes the full digit tensor from ``source`` and runs</span>
+<span class="sd">    :meth:`TRSVD.fit` through :class:`TRSVD`. The result retains</span>
+<span class="sd">    the source&#39;s layouts and coordinate maps for coordinate evaluation.</span>
+
+<span class="sd">    Construct :class:`~tensorkrowch.decompositions.CallableQuanticsSource`</span>
+<span class="sd">    first to define the callable, digit ordering and coordinate grid;</span>
+<span class="sd">    use :meth:`~tensorkrowch.decompositions.CallableQuanticsSource.matrix`</span>
+<span class="sd">    for paired input/output coordinates. The source selects the vector or</span>
+<span class="sd">    matrix result; this function only controls its decomposition.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source : CallableQuanticsSource</span>
+<span class="sd">        Callable with its digit layout and coordinate map.</span>
+<span class="sd">    center : int, optional</span>
+<span class="sd">        Interior cut from which the cyclic decomposition starts. If omitted,</span>
+<span class="sd">        uses the middle of the digit chain.</span>
+<span class="sd">    rank : int, optional</span>
+<span class="sd">        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at</span>
+<span class="sd">        most this many singular values are retained. The initial bipartition</span>
+<span class="sd">        retains at most ``rank ** 2`` singular values before its selected</span>
+<span class="sd">        ``rank`` is factorized into two TR ranks.</span>
+<span class="sd">    cutoff : float, optional</span>
+<span class="sd">        Minimum singular value to keep. It must be finite and non-negative.</span>
+<span class="sd">        Singular values ``&lt;= cutoff`` are removed.</span>
+<span class="sd">    atol : float, optional</span>
+<span class="sd">        Absolute tolerance over the tail sum of squared singular values.</span>
+<span class="sd">        Starting from the smallest singular value, values are discarded while</span>
+<span class="sd">        the accumulated sum of squares is ``&lt;= atol``. It must be finite and</span>
+<span class="sd">        non-negative.</span>
+<span class="sd">    rtol : float, optional</span>
+<span class="sd">        Relative tolerance over the tail sum of squared singular values.</span>
+<span class="sd">        Starting from the smallest singular value, values are discarded while</span>
+<span class="sd">        the tail sum of squares divided by the total sum of squares is</span>
+<span class="sd">        ``&lt;= rtol``. It must be finite and in ``[0, 1]``.</span>
+<span class="sd">    cum_percentage : float, optional</span>
+<span class="sd">        Minimum fraction of squared singular-value mass to keep. Equivalent to</span>
+<span class="sd">        setting ``rtol = 1 - cum_percentage``. It must be finite and in</span>
+<span class="sd">        ``[0, 1]``.</span>
+
+<span class="sd">    renormalize : bool</span>
+<span class="sd">        If ``True``, normalizes residuals before SVDs and accumulates their</span>
+<span class="sd">        scales logarithmically before redistributing them over final cores.</span>
+<span class="sd">    out_device : str or torch.device, optional</span>
+<span class="sd">        Device where finalized cores are stored. If ``None``, they remain on</span>
+<span class="sd">        the source device. The default is ``&quot;cpu&quot;``.</span>
+<span class="sd">    verbose : bool or int</span>
+<span class="sd">        Console verbosity level:</span>
+
+<span class="sd">        - ``0`` or ``False``: no console output;</span>
+<span class="sd">        - ``1`` or ``True``: phase title, input configuration, cut progress</span>
+<span class="sd">          and final summary;</span>
+<span class="sd">        - ``2``: detailed per-cut ``rank``, error and timing information;</span>
+<span class="sd">        - ``3``: level 2 output followed by every final core.</span>
+
+<span class="sd">    collect_metrics : bool</span>
+<span class="sd">        Whether to collect structured error, truncation and timing metrics.</span>
+<span class="sd">        With ``False`` and ``verbose=0``, diagnostic reductions and</span>
+<span class="sd">        synchronized timings are skipped.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    QTRDecomposition</span>
+<span class="sd">        Quantics decomposition with cores, coordinate information and</span>
+<span class="sd">        optional metrics.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; source = tk.decompositions.CallableQuanticsSource(</span>
+<span class="sd">    ...     lambda coordinates: torch.exp(coordinates.sum(-1)),</span>
+<span class="sd">    ...     n_coordinates=1, base=2, level=3, domain=(0., 1.))</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.qtr_svd(source, rank=1)</span>
+<span class="sd">    &gt;&gt;&gt; result.evaluate_indices(torch.tensor([[0], [4]]))</span>
+<span class="sd">    tensor([1.0000, 1.6487])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">CallableQuanticsSource</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`source` should be CallableQuanticsSource type&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">TRSVD</span><span class="p">(</span>
+        <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+        <span class="n">center</span><span class="o">=</span><span class="n">center</span><span class="p">,</span>
+        <span class="n">out_device</span><span class="o">=</span><span class="n">out_device</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+            <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+            <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">,</span>
+            <span class="n">atol</span><span class="o">=</span><span class="n">atol</span><span class="p">,</span>
+            <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">,</span>
+            <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
+            <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+            <span class="n">collect_metrics</span><span class="o">=</span><span class="n">collect_metrics</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span></div>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;TRSVD&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;tr_svd&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;qtr_svd&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

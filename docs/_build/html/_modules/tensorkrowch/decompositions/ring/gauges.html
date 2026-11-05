@@ -1,0 +1,1233 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.ring.gauges &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/clipboard.min.js"></script>
+    <script src="../../../../_static/copybutton.js"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.ring.gauges</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Classes:</span>
+<span class="sd">        * ExperimentalWarning</span>
+<span class="sd">        * GaugeMap</span>
+<span class="sd">        * GaugeRecursion</span>
+<span class="sd">        * OrthGaugeRecursion</span>
+<span class="sd">        * PinvGaugeRecursion</span>
+<span class="sd">        * AdjointGaugeRecursion</span>
+<span class="sd">        * _ExpandedGaugeRecursion</span>
+
+<span class="sd">    Functions:</span>
+<span class="sd">        * _validate_non_negative_float</span>
+<span class="sd">        * _matrix_from_core</span>
+<span class="sd">        * _core_from_matrix</span>
+<span class="sd">        * _pinv_options</span>
+<span class="sd">        * _rank_statistics</span>
+<span class="sd">        * _residual_directions</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">isfinite</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">Any</span><span class="p">,</span>
+                    <span class="n">Mapping</span><span class="p">,</span>
+                    <span class="n">Optional</span><span class="p">,</span>
+                    <span class="n">Protocol</span><span class="p">,</span>
+                    <span class="n">Sequence</span><span class="p">,</span>
+                    <span class="n">Tuple</span><span class="p">,</span>
+                    <span class="n">runtime_checkable</span><span class="p">)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">safe_divide</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">GaugeRecord</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.observers</span><span class="w"> </span><span class="kn">import</span> <span class="n">DecompositionEvent</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.ring.opening</span><span class="w"> </span><span class="kn">import</span> <span class="n">LoopOpening</span>
+
+
+<div class="viewcode-block" id="ExperimentalWarning"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.ExperimentalWarning">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">ExperimentalWarning</span><span class="p">(</span><span class="ne">UserWarning</span><span class="p">):</span>  <span class="c1"># MARK: ExperimentalWarning</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Warns that an opt-in decomposition strategy is still experimental.&quot;&quot;&quot;</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate_non_negative_float</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+                                 <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validates an optional finite non-negative scalar.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be a real scalar or None&#39;</span><span class="p">)</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be finite and non-negative&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_matrix_from_core</span><span class="p">(</span><span class="n">core</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Places the transported dimension in rows and both TR ranks in columns.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">orientation</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">core</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">core</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_core_from_matrix</span><span class="p">(</span><span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                      <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                      <span class="n">cyclic_rank</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                      <span class="n">local_rank</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Restores the standard oriented gauge-core shape from its ``matrix``.&quot;&quot;&quot;</span>
+    <span class="n">external_dim</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">tensor</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">external_dim</span><span class="p">,</span> <span class="n">cyclic_rank</span><span class="p">,</span> <span class="n">local_rank</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">orientation</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">tensor</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tensor</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_pinv_options</span><span class="p">(</span><span class="n">options</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validates scalar pseudoinverse options for an unbatched gauge.&quot;&quot;&quot;</span>
+    <span class="n">unknown</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">difference</span><span class="p">((</span><span class="s1">&#39;atol&#39;</span><span class="p">,</span> <span class="s1">&#39;rtol&#39;</span><span class="p">,</span> <span class="s1">&#39;hermitian&#39;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;Unsupported pseudoinverse options: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">unknown</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;atol&#39;</span><span class="p">,</span> <span class="s1">&#39;rtol&#39;</span><span class="p">):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="n">value</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be a real scalar tensor&#39;</span><span class="p">)</span>
+            <span class="n">valid</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">value</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be a non-negative scalar&#39;</span><span class="p">)</span>
+            <span class="n">valid</span> <span class="o">=</span> <span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">value</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">valid</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be finite and non-negative&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="s1">&#39;hermitian&#39;</span> <span class="ow">in</span> <span class="n">result</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;hermitian&#39;</span><span class="p">],</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`hermitian` should be bool type&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_rank_statistics</span><span class="p">(</span><span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                     <span class="n">options</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+                     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Measures rank using the same cutoff as the scalar pseudoinverse.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hermitian&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">descending</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svdvals</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span>
+    <span class="n">atol</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;atol&#39;</span><span class="p">)</span>
+    <span class="n">atol</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">new_zeros</span><span class="p">(())</span> <span class="k">if</span> <span class="n">atol</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span>
+        <span class="n">atol</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">rtol</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;rtol&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">rtol</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">rtol</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">atol</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span>
+            <span class="nb">max</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+    <span class="n">rtol</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">rtol</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">cutoff</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">atol</span><span class="p">,</span> <span class="n">rtol</span> <span class="o">*</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">rank</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">values</span> <span class="o">&gt;</span> <span class="n">cutoff</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+    <span class="n">condition</span> <span class="o">=</span> <span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">new_tensor</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span> <span class="k">if</span> <span class="n">rank</span> <span class="o">&lt;</span> <span class="nb">min</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+                 <span class="k">else</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">values</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">rank</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">,</span> <span class="n">condition</span>
+
+
+<div class="viewcode-block" id="GaugeMap"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.GaugeMap">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GaugeMap</span><span class="p">:</span>  <span class="c1"># MARK: GaugeMap</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents a map between a TT bond and two TR bonds.</span>
+
+<span class="sd">    A left gauge has shape ``(cyclic_rank, external_dim, local_rank)`` and a</span>
+<span class="sd">    right gauge has shape ``(local_rank, external_dim, cyclic_rank)``. Both</span>
+<span class="sd">    orientations expose the same matrix layout through :attr:`matrix`.</span>
+<span class="sd">    :meth:`pinv` returns its directional dual. The transpose in that dual</span>
+<span class="sd">    is not conjugated because tensor network bonds contract bilinearly.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    core : torch.Tensor</span>
+<span class="sd">        Three-dimensional floating or complex gauge tensor.</span>
+<span class="sd">    orientation : {&quot;left&quot;, &quot;right&quot;}</span>
+<span class="sd">        Which external gauge is represented by ``core``.</span>
+<span class="sd">    site : int, optional</span>
+<span class="sd">        Destination site used in diagnostics.</span>
+<span class="sd">    records : sequence of GaugeRecord</span>
+<span class="sd">        Optional measurements from the transport that produced this map.</span>
+<span class="sd">    metadata : mapping</span>
+<span class="sd">        Optional transport diagnostics, copied when the map is constructed.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; gauge = tk.decompositions.GaugeMap(</span>
+<span class="sd">    ...     torch.eye(2).reshape(1, 2, 2), &#39;left&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; gauge.pinv().matrix.shape</span>
+<span class="sd">    torch.Size([2, 2])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">core</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>  <span class="c1"># Raw tensor with standard TR axes</span>
+    <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># Left or right interpretation of the TR axes</span>
+    <span class="n">site</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Destination site used in diagnostics</span>
+    <span class="c1"># Original map retained for dual-cancellation diagnostics</span>
+    <span class="n">_reference_matrix</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">compare</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="c1"># Validated options for the directional pseudoinverse</span>
+    <span class="n">_pinv_kwargs</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span>
+        <span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">compare</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># Measurements from the transport that produced this map</span>
+    <span class="n">records</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">GaugeRecord</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="c1"># Transport diagnostics independent of the gauge tensor</span>
+    <span class="n">metadata</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`core` should be torch.Tensor type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`core` should be a three-dimensional gauge&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">is_floating_point</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`core` should have a floating or complex dtype&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">dim</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`core` axes should have positive dimensions&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orientation</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`orientation` should be &#39;left&#39; or &#39;right&#39;&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">site</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">site</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">site</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`site` should be int type or None&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">site</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`site` should be non-negative&#39;</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_pinv_kwargs&#39;</span><span class="p">,</span> <span class="n">_pinv_options</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pinv_kwargs</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reference_matrix</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">reference</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reference_matrix</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reference</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`_reference_matrix` should be torch.Tensor&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">reference</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Reference and dual matrices should match&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">reference</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="ow">or</span> \
+                    <span class="p">(</span><span class="n">reference</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Reference and dual should share runtime&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">GaugeRecord</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`records` should contain GaugeRecord objects&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`metadata` should be a mapping&#39;</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;records&#39;</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">))</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;metadata&#39;</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns shape ``(external_dim, cyclic_rank * local_rank)``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">_matrix_from_core</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">orientation</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cyclic_rank</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Cyclic rank encoded by this orientation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orientation</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span> \
+            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">local_rank</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Adjacent TR rank encoded by this orientation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orientation</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span> \
+            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_dual</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Whether this map was constructed as a directional dual.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reference_matrix</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="GaugeMap.mirror"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.GaugeMap.mirror">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">mirror</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;GaugeMap&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Swaps the two TR axes while preserving the matrix representation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">GaugeMap</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="s1">&#39;right&#39;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orientation</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span> <span class="k">else</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">site</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reference_matrix</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pinv_kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GaugeMap.pinv"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.GaugeMap.pinv">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">pinv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">pinv_kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;GaugeMap&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructs the directional dual with a Moore-Penrose pseudoinverse.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        **pinv_kwargs</span>
+<span class="sd">            ``atol``, ``rtol`` and ``hermitian`` forwarded to</span>
+<span class="sd">            :func:`torch.linalg.pinv`. Tolerances must be numbers or real</span>
+<span class="sd">            scalar tensors; batched gauge maps are not supported.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        GaugeMap</span>
+<span class="sd">            Dual with the same external and TR dimensions. Rank-deficient</span>
+<span class="sd">            maps retain their support projector; no cancellation is enforced.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">options</span> <span class="o">=</span> <span class="n">_pinv_options</span><span class="p">(</span><span class="n">pinv_kwargs</span><span class="p">)</span>
+        <span class="n">matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span>
+        <span class="n">dual</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">return</span> <span class="n">GaugeMap</span><span class="p">(</span>
+            <span class="n">_core_from_matrix</span><span class="p">(</span><span class="n">dual</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">orientation</span><span class="p">,</span>
+                              <span class="bp">self</span><span class="o">.</span><span class="n">cyclic_rank</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_rank</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">orientation</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">site</span><span class="p">,</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GaugeMap.diagnostics"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.GaugeMap.diagnostics">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">diagnostics</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeRecord</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Measures rank, condition and identity-cancellation error.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dual</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pinv</span><span class="p">()</span><span class="o">.</span><span class="n">diagnostics</span><span class="p">()</span>
+        <span class="n">matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reference_matrix</span>
+        <span class="n">rank</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">,</span> <span class="n">condition</span> <span class="o">=</span> <span class="n">_rank_statistics</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pinv_kwargs</span><span class="p">)</span>
+        <span class="n">product</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">matrix</span>
+        <span class="n">identity</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span>
+            <span class="n">product</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">product</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">product</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="p">(</span><span class="n">product</span> <span class="o">-</span> <span class="n">identity</span><span class="p">)</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="o">/</span> <span class="n">identity</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+        <span class="n">tolerance</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">GaugeRecord</span><span class="p">(</span>
+            <span class="n">orientation</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">orientation</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+            <span class="n">numerical_rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span> <span class="n">cancellable_rank</span><span class="o">=</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">condition_number</span><span class="o">=</span><span class="n">condition</span><span class="p">,</span> <span class="n">cancellation_error</span><span class="o">=</span><span class="n">error</span><span class="p">,</span>
+            <span class="n">projective</span><span class="o">=</span><span class="n">rank</span> <span class="o">&lt;</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">inverse_method</span><span class="o">=</span><span class="s1">&#39;pinv&#39;</span><span class="p">,</span>
+            <span class="n">tolerance</span><span class="o">=</span><span class="n">tolerance</span><span class="p">,</span> <span class="n">rank_tolerance</span><span class="o">=</span><span class="n">cutoff</span><span class="p">,</span> <span class="n">site</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">site</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GaugeMap.as_event"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.GaugeMap.as_event">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">as_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">phase</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DecompositionEvent</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates an observer event from the measured gauge diagnostics.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        phase : str</span>
+<span class="sd">            Algorithm phase reported by the observer.</span>
+<span class="sd">        level : int</span>
+<span class="sd">            Verbosity level associated with the event.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phase</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`phase` should be str type&#39;</span><span class="p">)</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">diagnostics</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">DecompositionEvent</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s1">&#39;gauge&#39;</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="n">phase</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">level</span><span class="p">,</span> <span class="n">site</span><span class="o">=</span><span class="n">record</span><span class="o">.</span><span class="n">site</span><span class="p">,</span>
+            <span class="n">values</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;orientation&#39;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">orientation</span><span class="p">,</span> <span class="s1">&#39;shape&#39;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+                <span class="s1">&#39;rank&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">numerical_rank</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">cancellable_rank</span><span class="p">),</span>
+                <span class="s1">&#39;condition_number&#39;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">condition_number</span><span class="p">,</span>
+                <span class="s1">&#39;cancellation_error&#39;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">cancellation_error</span><span class="p">,</span>
+                <span class="s1">&#39;projective&#39;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">projective</span><span class="p">,</span> <span class="s1">&#39;inverse_method&#39;</span><span class="p">:</span> <span class="s1">&#39;pinv&#39;</span><span class="p">,</span>
+            <span class="p">})</span></div></div>
+
+
+<div class="viewcode-block" id="GaugeRecursion"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.GaugeRecursion">[docs]</a><span class="nd">@runtime_checkable</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GaugeRecursion</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>  <span class="c1"># MARK: GaugeRecursion</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines directional gauge transport between neighboring local problems.</span>
+
+<span class="sd">    Each method receives a completed ``opening``, the destination</span>
+<span class="sd">    ``local_target`` and a ``recursion_context`` with the provider and source</span>
+<span class="sd">    and destination sites. It returns the gauge fixed in the next opening.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="GaugeRecursion.advance_left"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.GaugeRecursion.advance_left">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">advance_left</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">opening</span><span class="p">:</span> <span class="n">LoopOpening</span><span class="p">,</span>
+                     <span class="n">local_target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                     <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+                     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeMap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Builds the fixed right gauge for the next site to the left.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        opening : LoopOpening</span>
+<span class="sd">            Completed source opening with its learned cores and gauges.</span>
+<span class="sd">        local_target : object</span>
+<span class="sd">            Destination objective supplied by the target provider.</span>
+<span class="sd">        recursion_context : mapping</span>
+<span class="sd">            Provider and source ``from_sites`` and destination ``to_sites``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        GaugeMap</span>
+<span class="sd">            Gauge fixed on the right of the destination and its diagnostics.</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="GaugeRecursion.advance_right"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.GaugeRecursion.advance_right">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">advance_right</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">opening</span><span class="p">:</span> <span class="n">LoopOpening</span><span class="p">,</span>
+                      <span class="n">local_target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                      <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+                      <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeMap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Builds the fixed left gauge for the next site to the right.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        opening : LoopOpening</span>
+<span class="sd">            Completed source opening with its learned cores and gauges.</span>
+<span class="sd">        local_target : object</span>
+<span class="sd">            Destination objective supplied by the target provider.</span>
+<span class="sd">        recursion_context : mapping</span>
+<span class="sd">            Provider and source ``from_sites`` and destination ``to_sites``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        GaugeMap</span>
+<span class="sd">            Gauge fixed on the left of the destination and its diagnostics.</span>
+<span class="sd">        &quot;&quot;&quot;</span></div></div>
+
+
+<div class="viewcode-block" id="OrthGaugeRecursion"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.OrthGaugeRecursion">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">OrthGaugeRecursion</span><span class="p">:</span>  <span class="c1"># MARK: OrthGaugeRecursion</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Transports using the pseudoinverse of the learned outgoing gauge.</span>
+
+<span class="sd">    The outgoing right gauge is dualized and mirrored into the next fixed</span>
+<span class="sd">    left gauge. The leftward operation is its mirror. The induced support</span>
+<span class="sd">    projector is orthogonal; deficient rank is allowed.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    **pinv_kwargs</span>
+<span class="sd">        ``atol``, ``rtol`` and ``hermitian`` forwarded to</span>
+<span class="sd">        :func:`torch.linalg.pinv`. Tolerances must be numbers or real scalar</span>
+<span class="sd">        tensors; batched gauge maps are not supported.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; recursion = tk.decompositions.OrthGaugeRecursion(rtol=1e-12)</span>
+<span class="sd">    &gt;&gt;&gt; isinstance(recursion, tk.decompositions.GaugeRecursion)</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">pinv_kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pinv_kwargs</span> <span class="o">=</span> <span class="n">_pinv_options</span><span class="p">(</span><span class="n">pinv_kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_advance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">opening</span><span class="p">:</span> <span class="n">LoopOpening</span><span class="p">,</span>
+                 <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+                 <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeMap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Dualizes and mirrors the outgoing gauge in one ``direction``.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">opening</span><span class="p">,</span> <span class="n">LoopOpening</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`opening` should be LoopOpening type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">recursion_context</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`recursion_context` should be a mapping&#39;</span><span class="p">)</span>
+        <span class="n">to_sites</span> <span class="o">=</span> <span class="n">recursion_context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;to_sites&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">to_sites</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">to_sites</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`recursion_context` should identify one destination site&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
+            <span class="n">outgoing</span> <span class="o">=</span> <span class="n">opening</span><span class="o">.</span><span class="n">right_gauge</span>
+            <span class="n">orientation</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">outgoing</span> <span class="o">=</span> <span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span>
+            <span class="n">orientation</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span>
+        <span class="k">if</span> <span class="n">outgoing</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;The opening has no outgoing </span><span class="si">{</span><span class="n">orientation</span><span class="si">}</span><span class="s1"> gauge&#39;</span><span class="p">)</span>
+
+        <span class="c1"># This transport dualizes the learned gauge, not a TT-core unfolding.</span>
+        <span class="n">fixed_map</span> <span class="o">=</span> <span class="n">GaugeMap</span><span class="p">(</span>
+            <span class="n">outgoing</span><span class="p">,</span> <span class="n">orientation</span><span class="p">,</span> <span class="n">to_sites</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span>
+                <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_pinv_kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">mirror</span><span class="p">()</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="n">fixed_map</span><span class="o">.</span><span class="n">diagnostics</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">GaugeMap</span><span class="p">(</span>
+            <span class="n">orientation</span><span class="o">=</span><span class="s1">&#39;left&#39;</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span> <span class="k">else</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
+            <span class="n">core</span><span class="o">=</span><span class="n">fixed_map</span><span class="o">.</span><span class="n">core</span><span class="p">,</span>
+            <span class="n">records</span><span class="o">=</span><span class="p">(</span><span class="n">record</span><span class="p">,),</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;inverse_method&#39;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">inverse_method</span><span class="p">,</span>
+                <span class="s1">&#39;projective&#39;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">projective</span><span class="p">,</span>
+                <span class="s1">&#39;cancellation_error&#39;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">cancellation_error</span><span class="p">,</span>
+            <span class="p">})</span>
+
+<div class="viewcode-block" id="OrthGaugeRecursion.advance_left"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.OrthGaugeRecursion.advance_left">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">advance_left</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">opening</span><span class="p">:</span> <span class="n">LoopOpening</span><span class="p">,</span>
+                     <span class="n">local_target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                     <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+                     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeMap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Builds the fixed right gauge for the next site to the left.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_advance</span><span class="p">(</span><span class="n">opening</span><span class="p">,</span> <span class="n">recursion_context</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OrthGaugeRecursion.advance_right"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.OrthGaugeRecursion.advance_right">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">advance_right</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">opening</span><span class="p">:</span> <span class="n">LoopOpening</span><span class="p">,</span>
+                      <span class="n">local_target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                      <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+                      <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeMap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Builds the fixed left gauge for the next site to the right.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_advance</span><span class="p">(</span><span class="n">opening</span><span class="p">,</span> <span class="n">recursion_context</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="PinvGaugeRecursion"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.PinvGaugeRecursion">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">PinvGaugeRecursion</span><span class="p">(</span><span class="n">OrthGaugeRecursion</span><span class="p">):</span>  <span class="c1"># MARK: PinvGaugeRecursion</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Transports learned TR factors through the local TT-core pseudoinverse.</span>
+
+<span class="sd">    For the directional TT unfolding :math:`M` and the factor :math:`X`</span>
+<span class="sd">    formed by the incoming gauge and recovered TR core, the next gauge is</span>
+<span class="sd">    :math:`E=M^+X`. An initial multi-site block is contracted and inverted</span>
+<span class="sd">    as a whole. Components outside the column space of :math:`M` are allowed.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    **pinv_kwargs</span>
+<span class="sd">        ``atol``, ``rtol`` and ``hermitian`` forwarded to</span>
+<span class="sd">        :func:`torch.linalg.pinv`. Tolerances must be numbers or real scalar</span>
+<span class="sd">        tensors; batched gauge maps are not supported.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; recursion = tk.decompositions.PinvGaugeRecursion(rtol=1e-12)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_solve_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                           <span class="n">basis</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                           <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">GaugeRecord</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Expresses ``basis`` in the columns of one TT-core unfolding.&quot;&quot;&quot;</span>
+        <span class="n">coordinates</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_pinv_kwargs</span><span class="p">)</span> <span class="o">@</span> <span class="n">basis</span>
+        <span class="k">return</span> <span class="n">coordinates</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coordinate_record</span><span class="p">(</span>
+            <span class="n">matrix</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">coordinates</span><span class="p">,</span> <span class="s1">&#39;pinv&#39;</span><span class="p">,</span> <span class="n">orientation</span><span class="p">,</span> <span class="n">site</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_coordinate_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                           <span class="n">basis</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                           <span class="n">coordinates</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                           <span class="n">method</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">orientation</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeRecord</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Measures projection error without rejecting rank deficiency.&quot;&quot;&quot;</span>
+        <span class="n">options</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pinv_kwargs</span> <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;pinv&#39;</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="n">rank</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">,</span> <span class="n">condition</span> <span class="o">=</span> <span class="n">_rank_statistics</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span>
+        <span class="n">residual</span> <span class="o">=</span> <span class="p">(</span><span class="n">matrix</span> <span class="o">@</span> <span class="n">coordinates</span> <span class="o">-</span> <span class="n">basis</span><span class="p">)</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="n">safe_divide</span><span class="p">(</span><span class="n">residual</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">norm</span><span class="p">(),</span> <span class="n">zero_value</span><span class="o">=</span><span class="n">residual</span><span class="p">)</span>
+        <span class="n">tolerance</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">GaugeRecord</span><span class="p">(</span>
+            <span class="n">orientation</span><span class="o">=</span><span class="n">orientation</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+            <span class="n">numerical_rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span> <span class="n">cancellable_rank</span><span class="o">=</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">condition_number</span><span class="o">=</span><span class="n">condition</span><span class="p">,</span> <span class="n">cancellation_error</span><span class="o">=</span><span class="n">error</span><span class="p">,</span>
+            <span class="n">projective</span><span class="o">=</span><span class="p">(</span><span class="n">rank</span> <span class="o">&lt;</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">error</span> <span class="o">&gt;</span> <span class="n">tolerance</span><span class="p">),</span>
+            <span class="n">inverse_method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="n">tolerance</span><span class="p">,</span>
+            <span class="n">rank_tolerance</span><span class="o">=</span><span class="n">cutoff</span><span class="p">,</span> <span class="n">site</span><span class="o">=</span><span class="n">site</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_transport_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                               <span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                               <span class="n">basis</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                               <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                               <span class="n">context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+                               <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">GaugeRecord</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Solves the Euclidean coordinate problem for one core unfolding.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solve_coordinates</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">site</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_source_core</span><span class="p">(</span>
+        <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Gets the contracted TT target associated with the source opening.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">recursion_context</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`recursion_context` should be a mapping&#39;</span><span class="p">)</span>
+        <span class="n">from_sites</span> <span class="o">=</span> <span class="n">recursion_context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;from_sites&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">from_sites</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">from_sites</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;TT-core recursion requires source TT sites&#39;</span><span class="p">)</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="n">recursion_context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;provider&#39;</span><span class="p">)</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="s1">&#39;cores&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cores</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;TT-core recursion requires standardized provider cores&#39;</span><span class="p">)</span>
+        <span class="n">site</span> <span class="o">=</span> <span class="n">from_sites</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">core</span> <span class="o">=</span> <span class="p">(</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">from_sites</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span>
+                <span class="n">provider</span><span class="o">.</span><span class="n">local_target</span><span class="p">(</span><span class="n">from_sites</span><span class="p">,</span> <span class="n">recursion_context</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">core</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">):</span>
+            <span class="n">core</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">core</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The source TT core should be three-dimensional&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">core</span><span class="p">,</span> <span class="n">site</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_local_matrices</span><span class="p">(</span><span class="n">opening</span><span class="p">:</span> <span class="n">LoopOpening</span><span class="p">,</span>
+                        <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+                        <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span>
+                        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Forms the source unfolding and learned prefix/suffix factor once.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">opening</span><span class="p">,</span> <span class="n">LoopOpening</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`opening` should be LoopOpening type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">opening</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">recursion_context</span><span class="p">[</span><span class="s1">&#39;from_sites&#39;</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Opened TR cores should match the source TT sites&#39;</span><span class="p">)</span>
+        <span class="n">tt_core</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">PinvGaugeRecursion</span><span class="o">.</span><span class="n">_source_core</span><span class="p">(</span><span class="n">recursion_context</span><span class="p">)</span>
+        <span class="n">tr_core</span> <span class="o">=</span> <span class="n">opening</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">opening</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">tr_core</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">tr_core</span><span class="p">,</span> <span class="n">core</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">tr_core</span> <span class="o">=</span> <span class="n">tr_core</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">tr_core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">tr_core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">tt_core</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">tr_core</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="n">tt_core</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">tr_core</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;TT and opened TR cores should share dtype and device&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Use identical row coordinates for the TT reference and learned</span>
+        <span class="c1"># factor.</span>
+        <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The opening has no incoming left gauge&#39;</span><span class="p">)</span>
+            <span class="n">basis</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                <span class="s1">&#39;gma,apb-&gt;mpgb&#39;</span><span class="p">,</span> <span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span><span class="p">,</span> <span class="n">tr_core</span><span class="p">)</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="n">tt_core</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">tt_core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">opening</span><span class="o">.</span><span class="n">right_gauge</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The opening has no incoming right gauge&#39;</span><span class="p">)</span>
+            <span class="n">basis</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                <span class="s1">&#39;apb,bng-&gt;pnag&#39;</span><span class="p">,</span> <span class="n">tr_core</span><span class="p">,</span> <span class="n">opening</span><span class="o">.</span><span class="n">right_gauge</span><span class="p">)</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="n">tt_core</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">tt_core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">tr_core</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_advance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">opening</span><span class="p">:</span> <span class="n">LoopOpening</span><span class="p">,</span>
+                 <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+                 <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeMap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extends a retained TR prefix or suffix through its source block.&quot;&quot;&quot;</span>
+        <span class="n">matrix</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">tr_core</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_local_matrices</span><span class="p">(</span>
+            <span class="n">opening</span><span class="p">,</span> <span class="n">recursion_context</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+        <span class="n">sites</span> <span class="o">=</span> <span class="n">recursion_context</span><span class="p">[</span><span class="s1">&#39;from_sites&#39;</span><span class="p">]</span>
+        <span class="n">site</span> <span class="o">=</span> <span class="n">sites</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span> <span class="k">else</span> <span class="n">sites</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">coordinates</span><span class="p">,</span> <span class="n">record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transport_coordinates</span><span class="p">(</span>
+            <span class="n">matrix</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">site</span><span class="p">,</span> <span class="n">recursion_context</span><span class="p">)</span>
+        <span class="n">cyclic_rank</span> <span class="o">=</span> <span class="p">(</span><span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span>
+                       <span class="k">else</span> <span class="n">tr_core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">local_rank</span> <span class="o">=</span> <span class="p">(</span><span class="n">tr_core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span>
+                      <span class="k">else</span> <span class="n">opening</span><span class="o">.</span><span class="n">right_gauge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">gauge</span> <span class="o">=</span> <span class="n">coordinates</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">cyclic_rank</span><span class="p">,</span> <span class="n">local_rank</span><span class="p">)</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">GaugeMap</span><span class="p">(</span>
+            <span class="n">orientation</span><span class="o">=</span><span class="s1">&#39;left&#39;</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span> <span class="k">else</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
+            <span class="n">core</span><span class="o">=</span><span class="n">gauge</span><span class="p">,</span>
+            <span class="n">records</span><span class="o">=</span><span class="p">(</span><span class="n">record</span><span class="p">,),</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;inverse_method&#39;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">inverse_method</span><span class="p">,</span>
+                <span class="s1">&#39;projective&#39;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">projective</span><span class="p">,</span>
+                <span class="s1">&#39;projection_error&#39;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">cancellation_error</span><span class="p">,</span>
+                <span class="s1">&#39;source_site&#39;</span><span class="p">:</span> <span class="n">site</span><span class="p">,</span>
+            <span class="p">})</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_residual_directions</span><span class="p">(</span><span class="n">q</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">basis</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                         <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">rtol</span><span class="p">:</span> <span class="nb">float</span>
+                         <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Finds significant learned directions outside an orthonormal range.&quot;&quot;&quot;</span>
+    <span class="n">residual</span> <span class="o">=</span> <span class="n">basis</span> <span class="o">-</span> <span class="n">q</span> <span class="o">@</span> <span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">mH</span> <span class="o">@</span> <span class="n">basis</span><span class="p">)</span>
+    <span class="n">residual</span> <span class="o">=</span> <span class="n">residual</span> <span class="o">-</span> <span class="n">q</span> <span class="o">@</span> <span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">mH</span> <span class="o">@</span> <span class="n">residual</span><span class="p">)</span>
+    <span class="n">u</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">residual</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">capacity</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">capacity</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">capacity</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span>
+    <span class="n">selected</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">capacity</span><span class="p">,</span> <span class="nb">int</span><span class="p">((</span><span class="n">values</span> <span class="o">&gt;</span> <span class="n">basis</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="o">*</span> <span class="n">rtol</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()))</span>
+    <span class="n">extra</span> <span class="o">=</span> <span class="n">u</span><span class="p">[:,</span> <span class="p">:</span><span class="n">selected</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">selected</span><span class="p">:</span>
+        <span class="n">extra</span> <span class="o">=</span> <span class="n">extra</span> <span class="o">-</span> <span class="n">q</span> <span class="o">@</span> <span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">mH</span> <span class="o">@</span> <span class="n">extra</span><span class="p">)</span>
+        <span class="n">extra</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">extra</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;reduced&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">Q</span>
+    <span class="k">return</span> <span class="n">extra</span><span class="p">,</span> <span class="n">residual</span>
+
+
+<div class="viewcode-block" id="AdjointGaugeRecursion"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.AdjointGaugeRecursion">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">AdjointGaugeRecursion</span><span class="p">(</span><span class="n">PinvGaugeRecursion</span><span class="p">):</span>  <span class="c1"># MARK: AdjointGaugeRecursion</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Transports opened factors through directional TT isometries.</span>
+
+<span class="sd">    For an ordinary TT, :class:`~tensorkrowch.decompositions.TT2TR` first</span>
+<span class="sd">    prepares a mixed canonical form. Each transition factorizes the source</span>
+<span class="sd">    core or contracted block as :math:`B=QF`, transports with :math:`Q^H`,</span>
+<span class="sd">    and absorbs :math:`F` into the next reference target. This preserves the</span>
+<span class="sd">    input tensor while moving its orthogonality center independently along</span>
+<span class="sd">    the two outward branches.</span>
+
+<span class="sd">    A valid :class:`~tensorkrowch.formats.VidalGauge` instead supplies the</span>
+<span class="sd">    isometries directly. Stored Schmidt powers are removed or absorbed on</span>
+<span class="sd">    both sides before applying the adjoint; powers may differ at each bond.</span>
+<span class="sd">    The input&#39;s local targets and their ALS metric are retained. Explicit,</span>
+<span class="sd">    implicit and inverse Vidal therefore share the same transport strategy.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    **pinv_kwargs</span>
+<span class="sd">        Accepted for the common recursion interface. The directional adjoint</span>
+<span class="sd">        and its numerical-rank diagnostics do not use these options. Optional</span>
+<span class="sd">        TT2TR expansion adds orthogonal residual coordinates and zero reference</span>
+<span class="sd">        rows without changing TR ranks.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; recursion = tk.decompositions.AdjointGaugeRecursion()</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_advance_qr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">opening</span><span class="p">:</span> <span class="n">LoopOpening</span><span class="p">,</span>
+                    <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+                    <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                    <span class="n">enrich_rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="n">enrich_rtol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-12</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeMap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Moves the canonical center while retaining residual coordinates.&quot;&quot;&quot;</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="n">recursion_context</span><span class="p">[</span><span class="s1">&#39;provider&#39;</span><span class="p">]</span>
+        <span class="n">shift_center</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="s1">&#39;shift_center&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">shift_center</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;Adjoint QR transport requires a canonical TT target provider&#39;</span><span class="p">)</span>
+        <span class="n">matrix</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">block</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_local_matrices</span><span class="p">(</span>
+            <span class="n">opening</span><span class="p">,</span> <span class="n">recursion_context</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+
+        <span class="c1"># Move the triangular factor into the unsolved reference core; the</span>
+        <span class="c1"># isometry supplies the adjoint transport.</span>
+        <span class="n">q</span><span class="p">,</span> <span class="n">factor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;reduced&#39;</span><span class="p">)</span>
+
+        <span class="n">extra</span><span class="p">,</span> <span class="n">residual</span> <span class="o">=</span> <span class="n">_residual_directions</span><span class="p">(</span>
+            <span class="n">q</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">enrich_rank</span><span class="p">,</span> <span class="n">enrich_rtol</span><span class="p">)</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">extra</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">old_dimension</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">selected</span><span class="p">:</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">q</span><span class="p">,</span> <span class="n">extra</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">factor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span>
+                <span class="n">factor</span><span class="p">,</span> <span class="n">factor</span><span class="o">.</span><span class="n">new_zeros</span><span class="p">(</span><span class="n">selected</span><span class="p">,</span> <span class="n">factor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">coordinates</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">mH</span> <span class="o">@</span> <span class="n">basis</span>
+        <span class="n">shift_center</span><span class="p">(</span><span class="n">recursion_context</span><span class="p">[</span><span class="s1">&#39;to_sites&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">factor</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
+            <span class="n">gauge</span> <span class="o">=</span> <span class="n">coordinates</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">block</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">gauge</span> <span class="o">=</span> <span class="n">coordinates</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">block</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">opening</span><span class="o">.</span><span class="n">right_gauge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">identity</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">q</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">q</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">GaugeMap</span><span class="p">(</span><span class="n">core</span><span class="o">=</span><span class="n">gauge</span><span class="p">,</span>
+                        <span class="n">orientation</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span>
+                                     <span class="k">else</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
+                        <span class="n">metadata</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="s1">&#39;orthogonal_residual_enrichment&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;old_dimension&#39;</span><span class="p">:</span> <span class="n">old_dimension</span><span class="p">,</span> <span class="s1">&#39;new_dimension&#39;</span><span class="p">:</span> <span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="s1">&#39;added&#39;</span><span class="p">:</span> <span class="n">selected</span><span class="p">,</span>
+            <span class="s1">&#39;residual_before&#39;</span><span class="p">:</span> <span class="n">safe_divide</span><span class="p">(</span><span class="n">residual</span><span class="o">.</span><span class="n">norm</span><span class="p">(),</span> <span class="n">basis</span><span class="o">.</span><span class="n">norm</span><span class="p">()),</span>
+            <span class="s1">&#39;residual_after&#39;</span><span class="p">:</span> <span class="n">safe_divide</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">basis</span> <span class="o">-</span> <span class="n">q</span> <span class="o">@</span> <span class="n">coordinates</span><span class="p">)</span><span class="o">.</span><span class="n">norm</span><span class="p">(),</span> <span class="n">basis</span><span class="o">.</span><span class="n">norm</span><span class="p">()),</span>
+            <span class="s1">&#39;target_preservation_error&#39;</span><span class="p">:</span> <span class="n">safe_divide</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">q</span> <span class="o">@</span> <span class="n">factor</span> <span class="o">-</span> <span class="n">matrix</span><span class="p">)</span><span class="o">.</span><span class="n">norm</span><span class="p">(),</span> <span class="n">matrix</span><span class="o">.</span><span class="n">norm</span><span class="p">()),</span>
+            <span class="s1">&#39;orthogonality_error&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">mH</span> <span class="o">@</span> <span class="n">q</span> <span class="o">-</span> <span class="n">identity</span><span class="p">)</span><span class="o">.</span><span class="n">norm</span><span class="p">(),</span>
+        <span class="p">})</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_advance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">opening</span><span class="p">:</span> <span class="n">LoopOpening</span><span class="p">,</span>
+                 <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+                 <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeMap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Uses QR for ordinary targets and Schmidt adjoints for Vidal.&quot;&quot;&quot;</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="n">recursion_context</span><span class="p">[</span><span class="s1">&#39;provider&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="s1">&#39;shift_center&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_advance_qr</span><span class="p">(</span><span class="n">opening</span><span class="p">,</span> <span class="n">recursion_context</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_advance</span><span class="p">(</span><span class="n">opening</span><span class="p">,</span> <span class="n">recursion_context</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_transport_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                               <span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                               <span class="n">basis</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                               <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                               <span class="n">context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+                               <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">GaugeRecord</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Projects and converts to the next target&#39;s Schmidt powers.&quot;&quot;&quot;</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;provider&#39;</span><span class="p">]</span>
+        <span class="n">sites</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;from_sites&#39;</span><span class="p">]</span>
+        <span class="n">isometry</span><span class="p">,</span> <span class="n">weighted</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">_transport_matrices</span><span class="p">(</span>
+            <span class="n">matrix</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">sites</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+        <span class="n">center_coordinates</span> <span class="o">=</span> <span class="n">isometry</span><span class="o">.</span><span class="n">mH</span> <span class="o">@</span> <span class="n">weighted</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coordinate_record</span><span class="p">(</span>
+            <span class="n">isometry</span><span class="p">,</span> <span class="n">weighted</span><span class="p">,</span> <span class="n">center_coordinates</span><span class="p">,</span> <span class="s1">&#39;adjoint&#39;</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">site</span><span class="p">)</span>
+        <span class="n">coordinates</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">_transport_coordinates</span><span class="p">(</span>
+            <span class="n">center_coordinates</span><span class="p">,</span> <span class="n">sites</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">coordinates</span><span class="p">,</span> <span class="n">record</span></div>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_ExpandedGaugeRecursion</span><span class="p">:</span>  <span class="c1"># MARK: _ExpandedGaugeRecursion</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Appends orthogonal zero-target constraints, retaining the base transport.</span>
+
+<span class="sd">    For weighted source columns ``M`` and retained factor ``X``, the new</span>
+<span class="sd">    rows are ``U.H @ X`` with ``U`` spanning ``(I - M @ pinv(M)) @ X``.</span>
+<span class="sd">    The original coordinates ``E`` are kept. The identity</span>
+<span class="sd">    ``X = M @ E + U @ U.H @ X`` requires ``E = pinv(M) @ X`` and complete</span>
+<span class="sd">    residual support; it does not hold for every learned-gauge transport.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">recursion</span><span class="p">:</span> <span class="n">GaugeRecursion</span><span class="p">,</span>
+                 <span class="n">enrich_rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="n">enrich_rtol</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">enrich_rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">enrich_rank</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                    <span class="n">enrich_rank</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`enrich_rank` should be int type or None&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">enrich_rank</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`enrich_rank` should be non-negative&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">recursion</span> <span class="o">=</span> <span class="n">recursion</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enrich_rank</span> <span class="o">=</span> <span class="n">enrich_rank</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enrich_rtol</span> <span class="o">=</span> <span class="n">_validate_non_negative_float</span><span class="p">(</span>
+            <span class="n">enrich_rtol</span><span class="p">,</span> <span class="s1">&#39;enrich_rtol&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">enrich_rtol</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`enrich_rtol` should be a non-negative float&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_advance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">opening</span><span class="p">:</span> <span class="n">LoopOpening</span><span class="p">,</span>
+                 <span class="n">local_target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                 <span class="n">context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+                 <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeMap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Preserves base coordinates and appends the orthogonal residual.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recursion</span><span class="p">,</span> <span class="n">AdjointGaugeRecursion</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">callable</span><span class="p">(</span>
+                <span class="nb">getattr</span><span class="p">(</span><span class="n">context</span><span class="p">[</span><span class="s1">&#39;provider&#39;</span><span class="p">],</span> <span class="s1">&#39;shift_center&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">recursion</span><span class="o">.</span><span class="n">_advance_qr</span><span class="p">(</span>
+                <span class="n">opening</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">enrich_rank</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">enrich_rtol</span><span class="p">)</span>
+        <span class="n">advance</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recursion</span><span class="o">.</span><span class="n">advance_right</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span>
+                   <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">recursion</span><span class="o">.</span><span class="n">advance_left</span><span class="p">)</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">advance</span><span class="p">(</span><span class="n">opening</span><span class="p">,</span> <span class="n">local_target</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+        <span class="n">matrix</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">block</span> <span class="o">=</span> <span class="n">PinvGaugeRecursion</span><span class="o">.</span><span class="n">_local_matrices</span><span class="p">(</span>
+            <span class="n">opening</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recursion</span><span class="p">,</span> <span class="n">AdjointGaugeRecursion</span><span class="p">):</span>
+            <span class="n">matrix</span><span class="p">,</span> <span class="n">basis</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;provider&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">_transport_matrices</span><span class="p">(</span>
+                <span class="n">matrix</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;from_sites&#39;</span><span class="p">],</span> <span class="n">direction</span><span class="p">)</span>
+        <span class="c1"># An SVD identifies support without assigning arbitrary bases to null</span>
+        <span class="c1"># reference columns. Its cutoff is numerical, not a TT truncation.</span>
+        <span class="n">q</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">cutoff</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">q</span><span class="p">[:,</span> <span class="n">values</span> <span class="o">&gt;</span> <span class="n">cutoff</span><span class="p">]</span>
+        <span class="n">extra</span><span class="p">,</span> <span class="n">residual</span> <span class="o">=</span> <span class="n">_residual_directions</span><span class="p">(</span>
+            <span class="n">q</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">enrich_rank</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">enrich_rtol</span><span class="p">)</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">extra</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">coordinates</span> <span class="o">=</span> <span class="n">extra</span><span class="o">.</span><span class="n">mH</span> <span class="o">@</span> <span class="n">basis</span>
+        <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
+            <span class="n">added_gauge</span> <span class="o">=</span> <span class="n">coordinates</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="n">selected</span><span class="p">,</span> <span class="n">opening</span><span class="o">.</span><span class="n">left_gauge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">block</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">added_gauge</span> <span class="o">=</span> <span class="n">coordinates</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="n">selected</span><span class="p">,</span> <span class="n">block</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">opening</span><span class="o">.</span><span class="n">right_gauge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">old_dimension</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">gauge</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">step</span><span class="o">.</span><span class="n">core</span><span class="p">,</span> <span class="n">added_gauge</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;provider&#39;</span><span class="p">]</span>
+        <span class="n">destination</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;to_sites&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">before</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">destination</span><span class="p">]</span>
+
+        <span class="c1"># Added equations have zero target rows, preserving the reference</span>
+        <span class="c1"># tensor.</span>
+        <span class="n">provider</span><span class="o">.</span><span class="n">expand_coordinates</span><span class="p">(</span><span class="n">destination</span><span class="p">,</span> <span class="n">selected</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span>
+        <span class="n">after</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">cores</span><span class="p">[</span><span class="n">destination</span><span class="p">]</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span> <span class="k">else</span> <span class="mi">2</span>
+        <span class="n">original</span> <span class="o">=</span> <span class="n">after</span><span class="o">.</span><span class="n">narrow</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">before</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span>
+        <span class="n">zeros</span> <span class="o">=</span> <span class="n">after</span><span class="o">.</span><span class="n">narrow</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">before</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="n">selected</span><span class="p">)</span>
+        <span class="n">preservation_error</span> <span class="o">=</span> <span class="n">safe_divide</span><span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">hypot</span><span class="p">((</span><span class="n">original</span> <span class="o">-</span> <span class="n">before</span><span class="p">)</span><span class="o">.</span><span class="n">norm</span><span class="p">(),</span> <span class="n">zeros</span><span class="o">.</span><span class="n">norm</span><span class="p">()),</span>
+            <span class="n">before</span><span class="o">.</span><span class="n">norm</span><span class="p">())</span>
+        <span class="n">identity</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">selected</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">extra</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">extra</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">diagnostics</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="o">**</span><span class="n">step</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="s1">&#39;orthogonal_residual_enrichment&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;base_recursion&#39;</span><span class="p">:</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recursion</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="s1">&#39;old_dimension&#39;</span><span class="p">:</span> <span class="n">old_dimension</span><span class="p">,</span>
+            <span class="s1">&#39;new_dimension&#39;</span><span class="p">:</span> <span class="n">gauge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;added&#39;</span><span class="p">:</span> <span class="n">selected</span><span class="p">,</span>
+            <span class="s1">&#39;residual_before&#39;</span><span class="p">:</span> <span class="n">safe_divide</span><span class="p">(</span><span class="n">residual</span><span class="o">.</span><span class="n">norm</span><span class="p">(),</span> <span class="n">basis</span><span class="o">.</span><span class="n">norm</span><span class="p">()),</span>
+            <span class="s1">&#39;residual_after&#39;</span><span class="p">:</span> <span class="n">safe_divide</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">residual</span> <span class="o">-</span> <span class="n">extra</span> <span class="o">@</span> <span class="n">coordinates</span><span class="p">)</span><span class="o">.</span><span class="n">norm</span><span class="p">(),</span> <span class="n">basis</span><span class="o">.</span><span class="n">norm</span><span class="p">()),</span>
+            <span class="s1">&#39;target_preservation_error&#39;</span><span class="p">:</span> <span class="n">preservation_error</span><span class="p">,</span>
+            <span class="s1">&#39;orthogonality_error&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">extra</span><span class="o">.</span><span class="n">mH</span> <span class="o">@</span> <span class="n">extra</span> <span class="o">-</span> <span class="n">identity</span><span class="p">)</span><span class="o">.</span><span class="n">norm</span><span class="p">(),</span>
+            <span class="s1">&#39;cross_orthogonality_error&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">mH</span> <span class="o">@</span> <span class="n">extra</span><span class="p">)</span><span class="o">.</span><span class="n">norm</span><span class="p">(),</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">GaugeMap</span><span class="p">(</span><span class="n">gauge</span><span class="p">,</span>
+                        <span class="s1">&#39;left&#39;</span> <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span> <span class="k">else</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                        <span class="n">records</span><span class="o">=</span><span class="n">step</span><span class="o">.</span><span class="n">records</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">diagnostics</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">advance_right</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">opening</span><span class="p">:</span> <span class="n">LoopOpening</span><span class="p">,</span>
+                      <span class="n">local_target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                      <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+                      <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeMap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Expands the next left gauge in rightward transport.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_advance</span><span class="p">(</span><span class="n">opening</span><span class="p">,</span> <span class="n">local_target</span><span class="p">,</span> <span class="n">recursion_context</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">advance_left</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">opening</span><span class="p">:</span> <span class="n">LoopOpening</span><span class="p">,</span>
+                     <span class="n">local_target</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                     <span class="n">recursion_context</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+                     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GaugeMap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Expands the next right gauge in leftward transport.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_advance</span><span class="p">(</span><span class="n">opening</span><span class="p">,</span> <span class="n">local_target</span><span class="p">,</span> <span class="n">recursion_context</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">)</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;GaugeMap&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;GaugeRecursion&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;OrthGaugeRecursion&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;PinvGaugeRecursion&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;AdjointGaugeRecursion&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ExperimentalWarning&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

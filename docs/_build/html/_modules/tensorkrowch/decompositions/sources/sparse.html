@@ -1,0 +1,764 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.sources.sparse &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/clipboard.min.js"></script>
+    <script src="../../../../_static/copybutton.js"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.sources.sparse</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Internal classes:</span>
+<span class="sd">        * _SparseLookup</span>
+
+<span class="sd">    Public classes:</span>
+<span class="sd">        * SparseTensorSource</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">prod</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">_INTEGER_DTYPES</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">_normalize_dims</span><span class="p">,</span>
+                                                <span class="n">_ravel_indices</span><span class="p">,</span>
+                                                <span class="n">_unravel_indices</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources.base</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">BaseSource</span><span class="p">,</span>
+                                                      <span class="n">ConfigurationBatch</span><span class="p">,</span>
+                                                      <span class="n">_discrete_indices</span><span class="p">,</span>
+                                                      <span class="n">_data_weights</span><span class="p">)</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_SparseLookup</span><span class="p">:</span>  <span class="c1"># MARK: _SparseLookup</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stores coalesced indexed values and performs ordered sparse lookups.&quot;&quot;&quot;</span>
+
+    <span class="n">indices</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">values</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">in_dim</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">flat_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">flat_ids</span> <span class="o">=</span> <span class="n">_ravel_indices</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flat_ids</span><span class="p">,</span> <span class="n">inverse</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">flat_ids</span><span class="p">,</span>
+                                              <span class="nb">sorted</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                              <span class="n">return_inverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span>
+        <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+        <span class="n">combined</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">new_zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">flat_ids</span><span class="o">.</span><span class="n">numel</span><span class="p">(),</span> <span class="o">*</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="n">combined</span><span class="o">.</span><span class="n">index_add</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">inverse</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">indices</span> <span class="o">=</span> <span class="n">_unravel_indices</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">flat_ids</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns stored values or zero for absent configurations.&quot;&quot;&quot;</span>
+        <span class="n">flat_ids</span> <span class="o">=</span> <span class="n">_ravel_indices</span><span class="p">(</span><span class="n">indices</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)</span>
+        <span class="n">positions</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">flat_ids</span><span class="p">,</span> <span class="n">flat_ids</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">new_zeros</span><span class="p">((</span><span class="n">flat_ids</span><span class="o">.</span><span class="n">numel</span><span class="p">(),</span>
+                                        <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">flat_ids</span><span class="o">.</span><span class="n">numel</span><span class="p">():</span>
+            <span class="n">safe</span> <span class="o">=</span> <span class="n">positions</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">flat_ids</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">matched</span> <span class="o">=</span> <span class="p">(</span><span class="n">positions</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">flat_ids</span><span class="o">.</span><span class="n">numel</span><span class="p">())</span> <span class="o">&amp;</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">flat_ids</span><span class="o">.</span><span class="n">index_select</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">safe</span><span class="p">)</span> <span class="o">==</span> <span class="n">flat_ids</span><span class="p">)</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">matched</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">index_select</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">safe</span><span class="p">[</span><span class="n">matched</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+
+<div class="viewcode-block" id="SparseTensorSource"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">SparseTensorSource</span><span class="p">(</span><span class="n">BaseSource</span><span class="p">):</span>  <span class="c1"># MARK: SparseTensorSource</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Sparse tensor source with declared zeros outside its support.</span>
+
+<span class="sd">    The usual constructor represents a tensor with one axis per vector site.</span>
+<span class="sd">    The source&#39;s ``in_dim`` contains every site&#39;s dimension. ``n_sites`` counts</span>
+<span class="sd">    all sites, including those returned as outputs. ``in_sites`` selects the</span>
+<span class="sd">    evaluated sites, in configuration order; the remaining axes form</span>
+<span class="sd">    ``out_shape`` in their original order, as in :class:`DenseTensorSource`.</span>
+
+<span class="sd">    Columns of ``indices`` and evaluation configurations follow ``in_sites``</span>
+<span class="sd">    order. Trailing axes of ``values`` are output axes, in the original order</span>
+<span class="sd">    of the remaining sites. By default, inputs occupy the first sites.</span>
+
+<span class="sd">    Repeated indices are coalesced by summing their values, matching sparse</span>
+<span class="sd">    COO semantics; boolean values are combined by logical OR. Absent entries</span>
+<span class="sd">    are known zeros, rather than missing observations.</span>
+
+<span class="sd">    Use :meth:`matrix` for scalar entries with paired input/output indices,</span>
+<span class="sd">    or :meth:`from_data` to construct a vector source representing a normalized</span>
+<span class="sd">    empirical distribution. The usual constructor and :meth:`matrix` preserve</span>
+<span class="sd">    the supplied values without normalizing them.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    indices : torch.Tensor</span>
+<span class="sd">        Integer indices of shape ``(n_entries, len(in_sites))``, with columns</span>
+<span class="sd">        ordered by ``in_sites``.</span>
+<span class="sd">    values : torch.Tensor</span>
+<span class="sd">        Stored values of shape ``(n_entries, *out_shape)``, with output axes</span>
+<span class="sd">        in the original order of sites outside ``in_sites``.</span>
+<span class="sd">    in_dim : sequence of int</span>
+<span class="sd">        Dimensions of all sites in chain order, or only input dimensions in</span>
+<span class="sd">        ``in_sites`` order when output sites are present. Omitted output</span>
+<span class="sd">        dimensions are inferred from the trailing axes of ``values``.</span>
+<span class="sd">    in_sites : sequence of int, optional</span>
+<span class="sd">        Distinct input sites, in configuration order. Defaults to the first</span>
+<span class="sd">        ``indices.shape[1]`` sites, in increasing order.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; source = tk.decompositions.SparseTensorSource(</span>
+<span class="sd">    ...     torch.tensor([[0], [2]]), torch.tensor([2., 5.]), in_dim=(3,))</span>
+<span class="sd">    &gt;&gt;&gt; source.contract_dense()</span>
+<span class="sd">    tensor([2., 0., 5.])</span>
+
+<span class="sd">    Select only the first variable while retaining the full tensor dimensions:</span>
+
+<span class="sd">    &gt;&gt;&gt; source = tk.decompositions.SparseTensorSource(</span>
+<span class="sd">    ...     torch.tensor([[0], [1]]),</span>
+<span class="sd">    ...     torch.tensor([[0., 2., 0.], [0., 0., 5.]]),</span>
+<span class="sd">    ...     in_dim=(2, 3), in_sites=(0,))</span>
+<span class="sd">    &gt;&gt;&gt; source.n_sites, source.in_dim, source.out_shape</span>
+<span class="sd">    (2, (2, 3), (3,))</span>
+<span class="sd">    &gt;&gt;&gt; source.evaluate(tk.decompositions.ConfigurationBatch(torch.tensor([[1]])))</span>
+<span class="sd">    tensor([[0., 0., 5.]])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">indices</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                 <span class="n">values</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                 <span class="n">in_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="o">*</span><span class="p">,</span>
+                 <span class="n">in_sites</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`indices` should be torch.Tensor type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`values` should be torch.Tensor type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">indices</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">indices</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_INTEGER_DTYPES</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`indices` should be a two-dimensional integer tensor&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`values` should have a leading support dimension&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`values` and `indices` should have the same leading size&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">indices</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`values` and `indices` should share a device&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">is_floating_point</span><span class="p">()</span> <span class="ow">or</span> <span class="n">values</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()</span> <span class="ow">or</span> \
+                <span class="n">values</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`values` should have a floating, complex or boolean dtype&#39;</span><span class="p">)</span>
+
+        <span class="n">n_inputs</span> <span class="o">=</span> <span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">n_inputs</span> <span class="o">+</span> <span class="n">values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">in_sites</span><span class="o">=</span><span class="p">(</span>
+            <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_inputs</span><span class="p">))</span> <span class="k">if</span> <span class="n">in_sites</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">in_sites</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_sites</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_inputs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`indices` should contain one column per input site&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span> <span class="o">=</span> <span class="n">_normalize_dims</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="s1">&#39;in_dim&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_inputs</span> <span class="ow">and</span> <span class="n">values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span> <span class="o">=</span> <span class="n">_normalize_dims</span><span class="p">(</span>
+                <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">in_sites</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">site</span><span class="p">)]</span>
+                      <span class="k">if</span> <span class="n">site</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_sites</span> <span class="k">else</span> <span class="nb">next</span><span class="p">(</span><span class="n">outputs</span><span class="p">)</span>
+                      <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)),</span> <span class="s1">&#39;in_dim&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span> <span class="ow">or</span> \
+                <span class="nb">tuple</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_shape</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`indices`, `values` and `in_dim` should describe all axes&#39;</span><span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">_discrete_indices</span><span class="p">(</span>
+            <span class="n">ConfigurationBatch</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;indices&#39;</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites_dims</span><span class="p">,</span> <span class="n">values</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lookup</span> <span class="o">=</span> <span class="n">_SparseLookup</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites_dims</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_indices</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup</span><span class="o">.</span><span class="n">values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_flat_ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup</span><span class="o">.</span><span class="n">flat_ids</span>
+
+<div class="viewcode-block" id="SparseTensorSource.matrix"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource.matrix">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">matrix</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
+               <span class="n">indices</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+               <span class="n">values</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+               <span class="n">in_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+               <span class="n">out_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+               <span class="o">*</span><span class="p">,</span>
+               <span class="n">ordering</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;grouped&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;SparseTensorSource&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructs a matrix source from paired input/output entry indices.</span>
+
+<span class="sd">        Unlike the usual constructor, each row of ``indices`` identifies both</span>
+<span class="sd">        sides of a scalar matrix entry. By default, columns are grouped as</span>
+<span class="sd">        ``(in_0, in_1, ..., out_0, out_1, ...)``. With</span>
+<span class="sd">        ``ordering=&quot;interleaved&quot;``, columns alternate as</span>
+<span class="sd">        ``(in_0, out_0, in_1, out_1, ...)``. For ``n_sites`` pairs,</span>
+<span class="sd">        ``in_dim`` and ``out_dim`` must each contain ``n_sites`` dimensions;</span>
+<span class="sd">        they cannot be inferred from the stored entries alone.</span>
+
+<span class="sd">        :meth:`evaluate` receives only input indices, with shape</span>
+<span class="sd">        ``(batch, n_sites)`` in site order, and returns all output axes with</span>
+<span class="sd">        ``out_shape == out_dim``. Unstored entries remain zero.</span>
+<span class="sd">        :meth:`contract_dense` returns interleaved input/output</span>
+<span class="sd">        axes regardless of input ordering, as in :meth:`DenseTensorSource.matrix`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        indices : torch.Tensor</span>
+<span class="sd">            Integer indices with shape ``(n_entries, 2 * n_sites)`` in</span>
+<span class="sd">            ``ordering``.</span>
+<span class="sd">        values : torch.Tensor</span>
+<span class="sd">            Scalar entry values with shape ``(n_entries,)``.</span>
+<span class="sd">        in_dim, out_dim : sequence of int</span>
+<span class="sd">            Input and output dimensions, respectively, for each matrix site.</span>
+<span class="sd">        ordering : {``&quot;grouped&quot;``, ``&quot;interleaved&quot;``}</span>
+<span class="sd">            Order of index columns; defaults to ``&quot;grouped&quot;``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        SparseTensorSource</span>
+<span class="sd">            Source retaining paired axes for matrix decomposition.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; source = tk.decompositions.SparseTensorSource.matrix(</span>
+<span class="sd">        ...     torch.tensor([[0, 1], [1, 0]]), torch.tensor([2., 3.]),</span>
+<span class="sd">        ...     in_dim=(2,), out_dim=(2,))</span>
+<span class="sd">        &gt;&gt;&gt; source.evaluate(tk.decompositions.ConfigurationBatch(</span>
+<span class="sd">        ...     torch.tensor([[0]])))</span>
+<span class="sd">        tensor([[0., 2.]])</span>
+<span class="sd">        &gt;&gt;&gt; source.contract_dense()</span>
+<span class="sd">        tensor([[0., 2.],</span>
+<span class="sd">                [3., 0.]])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">_normalize_dims</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="s1">&#39;in_dim&#39;</span><span class="p">)</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="n">_normalize_dims</span><span class="p">(</span><span class="n">out_dim</span><span class="p">,</span> <span class="s1">&#39;out_dim&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">outputs</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`in_dim` and `out_dim` should have equal lengths&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ordering</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`ordering` should be str type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ordering</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;grouped&#39;</span><span class="p">,</span> <span class="s1">&#39;interleaved&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`ordering` should be either &quot;grouped&quot; or &quot;interleaved&quot;&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`indices` should be torch.Tensor type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">indices</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`indices` should be a two-dimensional integer tensor&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`values` should contain one scalar per matrix entry&#39;</span><span class="p">)</span>
+        <span class="n">n_sites</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">n_sites</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`indices` should contain two columns per site&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">ordering</span> <span class="o">==</span> <span class="s1">&#39;grouped&#39;</span><span class="p">:</span>
+            <span class="n">axes</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">axis</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_sites</span><span class="p">)</span>
+                         <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="n">n_sites</span> <span class="o">+</span> <span class="n">site</span><span class="p">))</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[:,</span> <span class="n">axes</span><span class="p">]</span>
+
+        <span class="n">source</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span>
+                     <span class="nb">tuple</span><span class="p">(</span><span class="n">dim</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">)</span>
+                           <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">pair</span><span class="p">))</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">_matrix_dims</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">_in_dim</span> <span class="o">=</span> <span class="n">inputs</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">_set_sites</span><span class="p">(</span><span class="n">n_sites</span><span class="p">)</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">_ordering</span> <span class="o">=</span> <span class="n">ordering</span>
+        <span class="k">return</span> <span class="n">source</span></div>
+
+<div class="viewcode-block" id="SparseTensorSource.from_data"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource.from_data">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_data</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
+                  <span class="n">dataset</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                  <span class="n">in_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="n">weights</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="n">dtype</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;SparseTensorSource&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructs a discrete empirical distribution from sample indices.</span>
+
+<span class="sd">        Each row of ``dataset`` is one observation, rather than an entry with</span>
+<span class="sd">        an explicitly supplied value as in the usual constructor. Samples</span>
+<span class="sd">        receive equal weights by default; explicit ``weights`` are normalized</span>
+<span class="sd">        to sum to one. Repeated configurations accumulate their weights, and</span>
+<span class="sd">        unobserved configurations have zero mass. The result is a scalar</span>
+<span class="sd">        vector source with ``out_shape=()``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : torch.Tensor</span>
+<span class="sd">            Integer samples with shape ``(n_samples, len(in_sites))``. All</span>
+<span class="sd">            columns are inputs in their given order, so this constructor has</span>
+<span class="sd">            ``len(in_sites) == n_sites``. Repeats accumulate.</span>
+<span class="sd">        in_dim : sequence of int, optional</span>
+<span class="sd">            Dimensions of all vector sites; inferred from sample maxima when</span>
+<span class="sd">            omitted.</span>
+<span class="sd">        weights : torch.Tensor, optional</span>
+<span class="sd">            Non-negative sample weights, normalized to total mass one.</span>
+<span class="sd">        dtype : torch.dtype, optional</span>
+<span class="sd">            Dtype for uniform or integral weights.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        SparseTensorSource</span>
+<span class="sd">            Vector source with known zeros outside the observed support.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; source = tk.decompositions.SparseTensorSource.from_data(</span>
+<span class="sd">        ...     torch.tensor([[0], [2], [0]]), in_dim=(3,))</span>
+<span class="sd">        &gt;&gt;&gt; source.contract_dense()</span>
+<span class="sd">        tensor([0.6667, 0.0000, 0.3333])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">_data_weights</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_INTEGER_DTYPES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`dataset` should contain integer indices&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">dataset</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`dataset` indices should be non-negative&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">in_dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">in_dim</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">dataset</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Dimensions of all vector variables or matrix input axes.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Dtype of sparse values.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span><span class="o">.</span><span class="n">dtype</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">device</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Device of sparse indices and values.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span><span class="o">.</span><span class="n">device</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">support</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConfigurationBatch</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Coalesced stored indices in ``in_sites`` order for vectors.</span>
+
+<span class="sd">        Matrices return interleaved input/output indices in site order.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">ConfigurationBatch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_indices</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;indices&#39;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">support_values</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Stored values corresponding to :attr:`support`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span>
+
+<div class="viewcode-block" id="SparseTensorSource.evaluate"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource.evaluate">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configurations</span><span class="p">:</span> <span class="n">ConfigurationBatch</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluates integer configurations of shape ``(batch, len(in_sites))``</span>
+<span class="sd">        in ``in_sites`` order. Returns shape ``(batch, *out_shape)``, with</span>
+<span class="sd">        zeros outside the support.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">_discrete_indices</span><span class="p">(</span>
+            <span class="n">configurations</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites_dims</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_matrix</span><span class="p">:</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="n">_unravel_indices</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span>
+                <span class="n">prod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dim</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_dim</span><span class="p">)</span>
+            <span class="n">full</span> <span class="o">=</span> <span class="n">indices</span><span class="o">.</span><span class="n">new_empty</span><span class="p">(</span><span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                     <span class="n">outputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                     <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)</span>
+            <span class="n">full</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">full</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">outputs</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup</span><span class="p">(</span><span class="n">full</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dim</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_record_evaluation</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="SparseTensorSource.contract_dense"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource.contract_dense">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">contract_dense</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Materializes all sites in their original order, with zeros outside</span>
+<span class="sd">        the support. Matrix input/output axes are interleaved in site order.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">dim</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_dim</span><span class="p">)</span>
+                       <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">pair</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_matrix</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span><span class="o">.</span><span class="n">new_zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">ordered</span> <span class="o">=</span> <span class="n">tensor</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_matrix</span><span class="p">:</span>
+            <span class="n">out_sites</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">site</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)</span>
+                              <span class="k">if</span> <span class="n">site</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_sites</span><span class="p">)</span>
+            <span class="n">ordered</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">in_sites</span><span class="p">,</span> <span class="o">*</span><span class="n">out_sites</span><span class="p">)</span>
+        <span class="n">ordered</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_indices</span><span class="o">.</span><span class="n">T</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span>
+        <span class="k">return</span> <span class="n">tensor</span></div></div>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;SparseTensorSource&#39;</span><span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

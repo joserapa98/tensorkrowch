@@ -216,9 +216,43 @@
      Embeddings
     </a>
    </li>
-   <li class="toctree-l2">
+   <li class="toctree-l2 has-children">
     <a class="reference internal" href="decompositions.html">
      Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="formats.html">
+     Formats
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+    <label for="toctree-checkbox-5">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="formats_api.html">
+       Format API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="utils.html">
+     Utilities
     </a>
    </li>
   </ul>
@@ -335,6 +369,7 @@ title="Source repository"
  | <a href="#E"><strong>E</strong></a>
  | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
+ | <a href="#H"><strong>H</strong></a>
  | <a href="#I"><strong>I</strong></a>
  | <a href="#K"><strong>K</strong></a>
  | <a href="#L"><strong>L</strong></a>
@@ -348,28 +383,107 @@ title="Source repository"
  | <a href="#T"><strong>T</strong></a>
  | <a href="#U"><strong>U</strong></a>
  | <a href="#V"><strong>V</strong></a>
+ | <a href="#W"><strong>W</strong></a>
  | <a href="#Z"><strong>Z</strong></a>
  
 </div>
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.absorb_bond">absorb_bond() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
       <li><a href="components.html#tensorkrowch.AbstractNode">AbstractNode (class in tensorkrowch)</a>
 </li>
-      <li><a href="operations.html#tensorkrowch.add">add() (in module tensorkrowch)</a>
+      <li><a href="utils.html#tensorkrowch.utils.accurate_svd">accurate_svd() (in module tensorkrowch.utils)</a>
 </li>
+      <li><a href="operations.html#tensorkrowch.add">add() (in module tensorkrowch)</a>
+
+      <ul>
+        <li><a href="components.html#tensorkrowch.AbstractNode.add">(tensorkrowch.AbstractNode method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.add">(tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      </ul></li>
       <li><a href="models.html#tensorkrowch.models.MPSData.add_data">add_data() (tensorkrowch.models.MPSData method)</a>
 
       <ul>
+        <li><a href="models.html#tensorkrowch.models.PEPS.add_data">(tensorkrowch.models.PEPS method)</a>
+</li>
         <li><a href="components.html#tensorkrowch.TensorNetwork.add_data">(tensorkrowch.TensorNetwork method)</a>
 </li>
       </ul></li>
       <li><a href="embeddings.html#tensorkrowch.embeddings.add_ones">add_ones() (in module tensorkrowch.embeddings)</a>
 </li>
-      <li><a href="components.html#tensorkrowch.TensorNetwork.auto_stack">auto_stack (tensorkrowch.TensorNetwork property)</a>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.adjoint">adjoint() (tensorkrowch.formats.QTR method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.adjoint">(tensorkrowch.formats.QTRM method)</a>
 </li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.adjoint">(tensorkrowch.formats.QTT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.adjoint">(tensorkrowch.formats.QTTM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TR.adjoint">(tensorkrowch.formats.TR method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.adjoint">(tensorkrowch.formats.TRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TT.adjoint">(tensorkrowch.formats.TT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.adjoint">(tensorkrowch.formats.TTM method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.AdjointGaugeRecursion">AdjointGaugeRecursion (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.GaugeRecursion.advance_left">advance_left() (tensorkrowch.decompositions.GaugeRecursion method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.OrthGaugeRecursion.advance_left">(tensorkrowch.decompositions.OrthGaugeRecursion method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.GaugeRecursion.advance_right">advance_right() (tensorkrowch.decompositions.GaugeRecursion method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.OrthGaugeRecursion.advance_right">(tensorkrowch.decompositions.OrthGaugeRecursion method)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="formats_api.html#tensorkrowch.formats.AffineCoordinateMap">AffineCoordinateMap (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.LoopOpening.all_cores">all_cores (tensorkrowch.decompositions.LoopOpening property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSLoopOpener">ALSLoopOpener (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSProblem">ALSProblem (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSSweepDriver">ALSSweepDriver (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.GaugeOrbit.apply">apply() (tensorkrowch.formats.GaugeOrbit method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.apply">(tensorkrowch.formats.QTRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.apply">(tensorkrowch.formats.QTTM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.apply">(tensorkrowch.formats.TRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.apply">(tensorkrowch.formats.TTM method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.GaugeMap.as_event">as_event() (tensorkrowch.decompositions.GaugeMap method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.DecompositionMetrics.as_info">as_info() (tensorkrowch.decompositions.DecompositionMetrics method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TensorDecomposition.as_info">(tensorkrowch.decompositions.TensorDecomposition method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationBatch.as_tensor">as_tensor() (tensorkrowch.decompositions.ConfigurationBatch method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.as_tensor_source">as_tensor_source() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="components.html#tensorkrowch.TensorNetwork.auto_stack">auto_stack (tensorkrowch.TensorNetwork property)</a>
+</li>
       <li><a href="components.html#tensorkrowch.TensorNetwork.auto_unbind">auto_unbind (tensorkrowch.TensorNetwork property)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.axes">axes (tensorkrowch.AbstractNode property)</a>
@@ -392,7 +506,25 @@ title="Source repository"
 <h2 id="B">B</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource">BaseSource (class in tensorkrowch.decompositions)</a>
+</li>
       <li><a href="embeddings.html#tensorkrowch.embeddings.basis">basis() (in module tensorkrowch.embeddings)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.BasisFitter">BasisFitter (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.batch_shape">batch_shape (tensorkrowch.formats.TensorFormat1D property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationBatch.batch_size">batch_size (tensorkrowch.decompositions.ConfigurationBatch property)</a>
+</li>
+      <li><a href="utils.html#tensorkrowch.utils.binomial_coeffs">binomial_coeffs() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.block">block() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.BlockLayout">BlockLayout (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.BLOSTRLoopOpener">BLOSTRLoopOpener (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.BLOSTRSVDLoopOpener">BLOSTRSVDLoopOpener (class in tensorkrowch.decompositions)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.MPO.bond_dim">bond_dim (tensorkrowch.models.MPO property)</a>
 
@@ -405,13 +537,15 @@ title="Source repository"
 </li>
         <li><a href="models.html#tensorkrowch.models.Tree.bond_dim">(tensorkrowch.models.Tree property)</a>
 </li>
-        <li><a href="models.html#tensorkrowch.models.UPEPS.bond_dim">(tensorkrowch.models.UPEPS property)</a>
-</li>
         <li><a href="models.html#tensorkrowch.models.UTree.bond_dim">(tensorkrowch.models.UTree property)</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="formats_api.html#tensorkrowch.formats.BondFactors1D">BondFactors1D (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.bonds">bonds (tensorkrowch.formats.TensorFormat1D property)</a>
+</li>
       <li><a href="models.html#tensorkrowch.models.MPO.boundary">boundary (tensorkrowch.models.MPO property)</a>
 
       <ul>
@@ -422,22 +556,74 @@ title="Source repository"
         <li><a href="models.html#tensorkrowch.models.PEPS.boundary">(tensorkrowch.models.PEPS property)</a>
 </li>
       </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SketchOperator.build">build() (tensorkrowch.decompositions.SketchOperator method)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.models.MPO.canonicalize">canonicalize() (tensorkrowch.models.MPO method)</a>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableLoopOpener">CallableLoopOpener (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableQuanticsSource">CallableQuanticsSource (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableSource">CallableSource (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableTensorSource">CallableTensorSource (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.canonicalize">canonicalize() (tensorkrowch.formats.TensorFormat1D method)</a>
 
       <ul>
+        <li><a href="models.html#tensorkrowch.models.MPO.canonicalize">(tensorkrowch.models.MPO method)</a>
+</li>
         <li><a href="models.html#tensorkrowch.models.MPS.canonicalize">(tensorkrowch.models.MPS method)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.Tree.canonicalize">(tensorkrowch.models.Tree method)</a>
 </li>
       </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.canonicalize_minimal">canonicalize_minimal() (tensorkrowch.formats.QTR method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.canonicalize_minimal">(tensorkrowch.formats.QTRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.canonicalize_minimal">(tensorkrowch.formats.QTT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.canonicalize_minimal">(tensorkrowch.formats.QTTM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TR.canonicalize_minimal">(tensorkrowch.formats.TR method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.canonicalize_minimal">(tensorkrowch.formats.TRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TT.canonicalize_minimal">(tensorkrowch.formats.TT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.canonicalize_minimal">(tensorkrowch.formats.TTM method)</a>
+</li>
+      </ul></li>
       <li><a href="models.html#tensorkrowch.models.MPS.canonicalize_univocal">canonicalize_univocal() (tensorkrowch.models.MPS method)</a>
 </li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTT.canonicalize_vidal">canonicalize_vidal() (tensorkrowch.formats.QTT method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.canonicalize_vidal">(tensorkrowch.formats.QTTM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TT.canonicalize_vidal">(tensorkrowch.formats.TT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.canonicalize_vidal">(tensorkrowch.formats.TTM method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSLoopOpener.capabilities">capabilities (tensorkrowch.decompositions.ALSLoopOpener property)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.BLOSTRLoopOpener.capabilities">(tensorkrowch.decompositions.BLOSTRLoopOpener property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableLoopOpener.capabilities">(tensorkrowch.decompositions.CallableLoopOpener property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.LoopOpener.capabilities">(tensorkrowch.decompositions.LoopOpener property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.QRLoopOpener.capabilities">(tensorkrowch.decompositions.QRLoopOpener property)</a>
+</li>
+      </ul></li>
       <li><a href="components.html#tensorkrowch.Edge.change_size">change_size() (tensorkrowch.Edge method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.Node.change_type">change_type() (tensorkrowch.Node method)</a>
@@ -446,10 +632,32 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.ParamNode.change_type">(tensorkrowch.ParamNode method)</a>
 </li>
       </ul></li>
+      <li><a href="utils.html#tensorkrowch.utils.check_name_style">check_name_style() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat.clone">clone() (tensorkrowch.formats.TensorFormat method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.clone">(tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator.collect">collect() (tensorkrowch.decompositions.PhiOperator method)</a>
+</li>
+      <li><a href="models.html#tensorkrowch.models.MPS.condition">condition() (tensorkrowch.models.MPS method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator.configuration_batch">configuration_batch() (tensorkrowch.decompositions.PhiOperator method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationBatch">ConfigurationBatch (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap">ConfigurationMap (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap.configurations">configurations (tensorkrowch.decompositions.ConfigurationMap property)</a>
+</li>
       <li><a href="operations.html#tensorkrowch.conj">conj() (in module tensorkrowch)</a>
 
       <ul>
         <li><a href="components.html#tensorkrowch.AbstractNode.conj">(tensorkrowch.AbstractNode method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.conj">(tensorkrowch.formats.TensorFormat1D method)</a>
 </li>
       </ul></li>
       <li><a href="operations.html#tensorkrowch.connect">connect() (in module tensorkrowch)</a>
@@ -475,8 +683,6 @@ title="Source repository"
 </li>
         <li><a href="models.html#tensorkrowch.models.Tree.contract">(tensorkrowch.models.Tree method)</a>
 </li>
-        <li><a href="models.html#tensorkrowch.models.UPEPS.contract">(tensorkrowch.models.UPEPS method)</a>
-</li>
         <li><a href="models.html#tensorkrowch.models.UTree.contract">(tensorkrowch.models.UTree method)</a>
 </li>
         <li><a href="components.html#tensorkrowch.TensorNetwork.contract">(tensorkrowch.TensorNetwork method)</a>
@@ -488,21 +694,51 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.Edge.contract_">(tensorkrowch.Edge method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="operations.html#tensorkrowch.contract_between">contract_between() (in module tensorkrowch)</a>
 
       <ul>
         <li><a href="components.html#tensorkrowch.AbstractNode.contract_between">(tensorkrowch.AbstractNode method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="operations.html#tensorkrowch.contract_between_">contract_between_() (in module tensorkrowch)</a>
 
       <ul>
         <li><a href="components.html#tensorkrowch.AbstractNode.contract_between_">(tensorkrowch.AbstractNode method)</a>
 </li>
       </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.contract_block">contract_block() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.contract_dense">contract_dense() (tensorkrowch.decompositions.BaseSource method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.DenseTensorSource.contract_dense">(tensorkrowch.decompositions.DenseTensorSource method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.FormatSource.contract_dense">(tensorkrowch.decompositions.FormatSource method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.LoopOpening.contract_dense">(tensorkrowch.decompositions.LoopOpening method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource.contract_dense">(tensorkrowch.decompositions.SparseTensorSource method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.contract_dense">(tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableQuanticsSource.contract_dense_grid_axes">contract_dense_grid_axes() (tensorkrowch.decompositions.CallableQuanticsSource method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTR.contract_dense_grid_axes">(tensorkrowch.formats.QTR method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.contract_dense_grid_axes">(tensorkrowch.formats.QTRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.contract_dense_grid_axes">(tensorkrowch.formats.QTT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.contract_dense_grid_axes">(tensorkrowch.formats.QTTM method)</a>
+</li>
+      </ul></li>
       <li><a href="operations.html#tensorkrowch.contract_edges">contract_edges() (in module tensorkrowch)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConvergencePolicy">ConvergencePolicy (class in tensorkrowch.decompositions)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.ConvMPS">ConvMPS (class in tensorkrowch.models)</a>
 </li>
@@ -520,6 +756,8 @@ title="Source repository"
 </li>
       <li><a href="models.html#tensorkrowch.models.ConvUTree">ConvUTree (class in tensorkrowch.models)</a>
 </li>
+      <li><a href="formats_api.html#tensorkrowch.formats.CoordinateMap">CoordinateMap (class in tensorkrowch.formats)</a>
+</li>
       <li><a href="initializers.html#tensorkrowch.copy">copy() (in module tensorkrowch)</a>
 
       <ul>
@@ -529,9 +767,13 @@ title="Source repository"
 </li>
         <li><a href="models.html#tensorkrowch.models.ConvMPSLayer.copy">(tensorkrowch.models.ConvMPSLayer method)</a>
 </li>
+        <li><a href="models.html#tensorkrowch.models.ConvPEPS.copy">(tensorkrowch.models.ConvPEPS method)</a>
+</li>
         <li><a href="models.html#tensorkrowch.models.ConvUMPS.copy">(tensorkrowch.models.ConvUMPS method)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.ConvUMPSLayer.copy">(tensorkrowch.models.ConvUMPSLayer method)</a>
+</li>
+        <li><a href="models.html#tensorkrowch.models.ConvUPEPS.copy">(tensorkrowch.models.ConvUPEPS method)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.MPO.copy">(tensorkrowch.models.MPO method)</a>
 </li>
@@ -539,11 +781,15 @@ title="Source repository"
 </li>
         <li><a href="models.html#tensorkrowch.models.MPSLayer.copy">(tensorkrowch.models.MPSLayer method)</a>
 </li>
+        <li><a href="models.html#tensorkrowch.models.PEPS.copy">(tensorkrowch.models.PEPS method)</a>
+</li>
         <li><a href="models.html#tensorkrowch.models.UMPO.copy">(tensorkrowch.models.UMPO method)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.UMPS.copy">(tensorkrowch.models.UMPS method)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.UMPSLayer.copy">(tensorkrowch.models.UMPSLayer method)</a>
+</li>
+        <li><a href="models.html#tensorkrowch.models.UPEPS.copy">(tensorkrowch.models.UPEPS method)</a>
 </li>
         <li><a href="components.html#tensorkrowch.Node.copy">(tensorkrowch.Node method)</a>
 </li>
@@ -552,6 +798,28 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.TensorNetwork.copy">(tensorkrowch.TensorNetwork method)</a>
 </li>
       </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRSegmentEnvironmentCache.core_versions">core_versions (tensorkrowch.decompositions.TRSegmentEnvironmentCache property)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTEnvironmentCache.core_versions">(tensorkrowch.decompositions.TTEnvironmentCache property)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.CoreDeterminingSystem">CoreDeterminingSystem (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRSegmentEnvironmentCache.cores">cores (tensorkrowch.decompositions.TRSegmentEnvironmentCache property)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTEnvironmentCache.cores">(tensorkrowch.decompositions.TTEnvironmentCache property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.cores">(tensorkrowch.formats.TensorFormat1D property)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat.cpu">cpu() (tensorkrowch.formats.TensorFormat method)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat.cuda">cuda() (tensorkrowch.formats.TensorFormat method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.GaugeMap.cyclic_rank">cyclic_rank (tensorkrowch.decompositions.GaugeMap property)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -560,9 +828,59 @@ title="Source repository"
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.TensorNetwork.data_nodes">data_nodes (tensorkrowch.TensorNetwork property)</a>
 </li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QuantizedLayout.decode_digits">decode_digits() (tensorkrowch.formats.QuantizedLayout method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.BLOSTRLoopOpener.decompose">decompose() (tensorkrowch.decompositions.BLOSTRLoopOpener method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.DecompositionMetrics">DecompositionMetrics (class in tensorkrowch.decompositions)</a>
+</li>
       <li><a href="components.html#tensorkrowch.TensorNetwork.delete_node">delete_node() (tensorkrowch.TensorNetwork method)</a>
 </li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.DenseTensorSource">DenseTensorSource (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.DirectTREnvironment.design">design() (tensorkrowch.decompositions.DirectTREnvironment method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.EnvironmentCache.design">(tensorkrowch.decompositions.EnvironmentCache method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRSegmentEnvironmentCache.design">(tensorkrowch.decompositions.TRSegmentEnvironmentCache method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTEnvironmentCache.design">(tensorkrowch.decompositions.TTEnvironmentCache method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat.detach">detach() (tensorkrowch.formats.TensorFormat method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.detach">(tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat.detach_">detach_() (tensorkrowch.formats.TensorFormat method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.detach_">(tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      </ul></li>
       <li><a href="components.html#tensorkrowch.AbstractNode.device">device (tensorkrowch.AbstractNode property)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.device">(tensorkrowch.decompositions.BaseSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableSource.device">(tensorkrowch.decompositions.CallableSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationBatch.device">(tensorkrowch.decompositions.ConfigurationBatch property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.DenseTensorSource.device">(tensorkrowch.decompositions.DenseTensorSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.FormatSource.device">(tensorkrowch.decompositions.FormatSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource.device">(tensorkrowch.decompositions.SparseTensorSource property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat.device">(tensorkrowch.formats.TensorFormat property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.device">(tensorkrowch.formats.TensorFormat1D property)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.GaugeMap.diagnostics">diagnostics() (tensorkrowch.decompositions.GaugeMap method)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.ConvMPS.dilation">dilation (tensorkrowch.models.ConvMPS property)</a>
 
@@ -584,6 +902,8 @@ title="Source repository"
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.DirectTREnvironment">DirectTREnvironment (class in tensorkrowch.decompositions)</a>
+</li>
       <li><a href="operations.html#tensorkrowch.disconnect">disconnect() (in module tensorkrowch)</a>
 
       <ul>
@@ -594,10 +914,54 @@ title="Source repository"
       </ul></li>
       <li><a href="embeddings.html#tensorkrowch.embeddings.discretize">discretize() (in module tensorkrowch.embeddings)</a>
 </li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.distance">distance() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
       <li><a href="operations.html#tensorkrowch.div">div() (in module tensorkrowch)</a>
+
+      <ul>
+        <li><a href="components.html#tensorkrowch.AbstractNode.div">(tensorkrowch.AbstractNode method)</a>
 </li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.ExplicitGridMap.domain">domain (tensorkrowch.formats.ExplicitGridMap property)</a>
+</li>
+      <li><a href="models.html#tensorkrowch.models.PEPS.down_border">down_border (tensorkrowch.models.PEPS property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ExactRows.draw">draw() (tensorkrowch.decompositions.ExactRows method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.ObservedRows.draw">(tensorkrowch.decompositions.ObservedRows method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.RowSampler.draw">(tensorkrowch.decompositions.RowSampler method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRExactLeverageRows.draw">(tensorkrowch.decompositions.TRExactLeverageRows method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRProductLeverageRows.draw">(tensorkrowch.decompositions.TRProductLeverageRows method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTLeverageRows.draw">(tensorkrowch.decompositions.TTLeverageRows method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.UniformRows.draw">(tensorkrowch.decompositions.UniformRows method)</a>
+</li>
+      </ul></li>
       <li><a href="components.html#tensorkrowch.AbstractNode.dtype">dtype (tensorkrowch.AbstractNode property)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.dtype">(tensorkrowch.decompositions.BaseSource property)</a>
 </li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableSource.dtype">(tensorkrowch.decompositions.CallableSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationBatch.dtype">(tensorkrowch.decompositions.ConfigurationBatch property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.DenseTensorSource.dtype">(tensorkrowch.decompositions.DenseTensorSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.FormatSource.dtype">(tensorkrowch.decompositions.FormatSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource.dtype">(tensorkrowch.decompositions.SparseTensorSource property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat.dtype">(tensorkrowch.formats.TensorFormat property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.dtype">(tensorkrowch.formats.TensorFormat1D property)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -614,8 +978,6 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.TensorNetwork.edges">(tensorkrowch.TensorNetwork property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.ParamStackNode.edges_dict">edges_dict (tensorkrowch.ParamStackNode property)</a>
 
       <ul>
@@ -626,7 +988,113 @@ title="Source repository"
 </li>
       <li><a href="initializers.html#tensorkrowch.empty">empty() (in module tensorkrowch)</a>
 </li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QuantizedLayout.encode_indices">encode_indices() (tensorkrowch.formats.QuantizedLayout method)</a>
+</li>
       <li><a href="models.html#tensorkrowch.models.MPS.entropy">entropy() (tensorkrowch.models.MPS method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSProblem.entry_weights">entry_weights() (tensorkrowch.decompositions.ALSProblem method)</a>
+</li>
+      <li><a href="utils.html#tensorkrowch.utils.enum_repeated_names">enum_repeated_names() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.EnvironmentCache">EnvironmentCache (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="utils.html#tensorkrowch.utils.erase_enum">erase_enum() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TensorDecomposition.error">error() (tensorkrowch.decompositions.TensorDecomposition method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTR.error">(tensorkrowch.formats.QTR method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.error">(tensorkrowch.formats.QTT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TR.error">(tensorkrowch.formats.TR method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TT.error">(tensorkrowch.formats.TT method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ErrorRecord">ErrorRecord (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSProblem.evaluate">evaluate() (tensorkrowch.decompositions.ALSProblem method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.evaluate">(tensorkrowch.decompositions.BaseSource method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableSource.evaluate">(tensorkrowch.decompositions.CallableSource method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap.evaluate">(tensorkrowch.decompositions.ConfigurationMap method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.DenseTensorSource.evaluate">(tensorkrowch.decompositions.DenseTensorSource method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.FormatSource.evaluate">(tensorkrowch.decompositions.FormatSource method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator.evaluate">(tensorkrowch.decompositions.PhiOperator method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource.evaluate">(tensorkrowch.decompositions.SparseTensorSource method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTR.evaluate">(tensorkrowch.formats.QTR method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.evaluate">(tensorkrowch.formats.QTRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.evaluate">(tensorkrowch.formats.QTT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.evaluate">(tensorkrowch.formats.QTTM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TR.evaluate">(tensorkrowch.formats.TR method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.evaluate">(tensorkrowch.formats.TRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TT.evaluate">(tensorkrowch.formats.TT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.evaluate">(tensorkrowch.formats.TTM method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.evaluate_coordinates">evaluate_coordinates() (tensorkrowch.formats.QTR method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.evaluate_coordinates">(tensorkrowch.formats.QTRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.evaluate_coordinates">(tensorkrowch.formats.QTT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.evaluate_coordinates">(tensorkrowch.formats.QTTM method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.evaluate_digits">evaluate_digits() (tensorkrowch.formats.QTR method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.evaluate_digits">(tensorkrowch.formats.QTRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.evaluate_digits">(tensorkrowch.formats.QTT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.evaluate_digits">(tensorkrowch.formats.QTTM method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.evaluate_indices">evaluate_indices() (tensorkrowch.formats.QTR method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.evaluate_indices">(tensorkrowch.formats.QTRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.evaluate_indices">(tensorkrowch.formats.QTT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.evaluate_indices">(tensorkrowch.formats.QTTM method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap.evaluate_source">evaluate_source() (tensorkrowch.decompositions.ConfigurationMap method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSProblem.evaluation_error">evaluation_error() (tensorkrowch.decompositions.ALSProblem method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSProblem.evaluation_info">evaluation_info (tensorkrowch.decompositions.ALSProblem property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.evaluation_stats">evaluation_stats (tensorkrowch.decompositions.BaseSource property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.EvaluationStats">EvaluationStats (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ExactRows">ExactRows (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ExperimentalWarning">ExperimentalWarning</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.ExplicitGridMap">ExplicitGridMap (class in tensorkrowch.formats)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -634,20 +1102,84 @@ title="Source repository"
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.models.ConvMPS.forward">forward() (tensorkrowch.models.ConvMPS method)</a>
+      <li><a href="utils.html#tensorkrowch.utils.fact">fact() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.BondFactors1D.factors">factors (tensorkrowch.formats.BondFactors1D property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationBatch.feature_shape">feature_shape (tensorkrowch.decompositions.ConfigurationBatch property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.fiber">fiber() (tensorkrowch.decompositions.BaseSource method)</a>
 
       <ul>
-        <li><a href="models.html#tensorkrowch.models.ConvMPSLayer.forward">(tensorkrowch.models.ConvMPSLayer method)</a>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.FormatSource.fiber">(tensorkrowch.decompositions.FormatSource method)</a>
 </li>
-        <li><a href="models.html#tensorkrowch.models.ConvPEPS.forward">(tensorkrowch.models.ConvPEPS method)</a>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator.fiber">(tensorkrowch.decompositions.PhiOperator method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator.fiber_at">fiber_at() (tensorkrowch.decompositions.PhiOperator method)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.fidelity">fidelity() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.FidelityRecord">FidelityRecord (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSSweepDriver.fit">fit() (tensorkrowch.decompositions.ALSSweepDriver method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.BasisFitter.fit">(tensorkrowch.decompositions.BasisFitter method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.FixedEmbeddingFitter.fit">(tensorkrowch.decompositions.FixedEmbeddingFitter method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.InputFitter.fit">(tensorkrowch.decompositions.InputFitter method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator.fit">(tensorkrowch.decompositions.PhiOperator method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.RecursiveSketching.fit">(tensorkrowch.decompositions.RecursiveSketching method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TrainableEmbeddingFitter.fit">(tensorkrowch.decompositions.TrainableEmbeddingFitter method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRALS.fit">(tensorkrowch.decompositions.TRALS method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRMSVD.fit">(tensorkrowch.decompositions.TRMSVD method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRRSS.fit">(tensorkrowch.decompositions.TRRSS method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRSVD.fit">(tensorkrowch.decompositions.TRSVD method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TT2TR.fit">(tensorkrowch.decompositions.TT2TR method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTALS.fit">(tensorkrowch.decompositions.TTALS method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTMSVD.fit">(tensorkrowch.decompositions.TTMSVD method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTRS.fit">(tensorkrowch.decompositions.TTRS method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTRSS.fit">(tensorkrowch.decompositions.TTRSS method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTSVD.fit">(tensorkrowch.decompositions.TTSVD method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.FixedEmbeddingFitter">FixedEmbeddingFitter (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.FormatSource">FormatSource (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.AffineCoordinateMap.forward">forward() (tensorkrowch.formats.AffineCoordinateMap method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.CoordinateMap.forward">(tensorkrowch.formats.CoordinateMap method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.ExplicitGridMap.forward">(tensorkrowch.formats.ExplicitGridMap method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.FunctionalCoordinateMap.forward">(tensorkrowch.formats.FunctionalCoordinateMap method)</a>
+</li>
+        <li><a href="models.html#tensorkrowch.models.ConvMPS.forward">(tensorkrowch.models.ConvMPS method)</a>
+</li>
+        <li><a href="models.html#tensorkrowch.models.ConvMPSLayer.forward">(tensorkrowch.models.ConvMPSLayer method)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.ConvTree.forward">(tensorkrowch.models.ConvTree method)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.ConvUMPS.forward">(tensorkrowch.models.ConvUMPS method)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.ConvUMPSLayer.forward">(tensorkrowch.models.ConvUMPSLayer method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.models.ConvUPEPS.forward">(tensorkrowch.models.ConvUPEPS method)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.ConvUTree.forward">(tensorkrowch.models.ConvUTree method)</a>
 </li>
@@ -658,21 +1190,137 @@ title="Source repository"
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="embeddings.html#tensorkrowch.embeddings.fourier">fourier() (in module tensorkrowch.embeddings)</a>
 </li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap.freeze">freeze() (tensorkrowch.decompositions.ConfigurationMap method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableQuanticsSource.from_data">from_data() (tensorkrowch.decompositions.CallableQuanticsSource class method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableSource.from_data">(tensorkrowch.decompositions.CallableSource class method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableTensorSource.from_data">(tensorkrowch.decompositions.CallableTensorSource class method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource.from_data">(tensorkrowch.decompositions.SparseTensorSource class method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.CoordinateMap.from_indices">from_indices() (tensorkrowch.formats.CoordinateMap method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.ExplicitGridMap.from_indices">(tensorkrowch.formats.ExplicitGridMap method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTRM.from_mpo">from_mpo() (tensorkrowch.formats.QTRM class method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.from_mpo">(tensorkrowch.formats.QTTM class method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.from_mpo">(tensorkrowch.formats.TRM class method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.from_mpo">(tensorkrowch.formats.TTM class method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.from_mps">from_mps() (tensorkrowch.formats.QTR class method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.from_mps">(tensorkrowch.formats.QTT class method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TR.from_mps">(tensorkrowch.formats.TR class method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TT.from_mps">(tensorkrowch.formats.TT class method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator.from_tensor">from_tensor() (tensorkrowch.decompositions.PhiOperator class method)</a>
+</li>
+      <li><a href="models.html#tensorkrowch.models.MPS.from_tr">from_tr() (tensorkrowch.models.MPS class method)</a>
+
+      <ul>
+        <li><a href="models.html#tensorkrowch.models.MPSData.from_tr">(tensorkrowch.models.MPSData class method)</a>
+</li>
+      </ul></li>
+      <li><a href="models.html#tensorkrowch.models.MPO.from_trm">from_trm() (tensorkrowch.models.MPO class method)</a>
+</li>
+      <li><a href="models.html#tensorkrowch.models.MPS.from_tt">from_tt() (tensorkrowch.models.MPS class method)</a>
+
+      <ul>
+        <li><a href="models.html#tensorkrowch.models.MPSData.from_tt">(tensorkrowch.models.MPSData class method)</a>
+</li>
+      </ul></li>
+      <li><a href="models.html#tensorkrowch.models.MPO.from_ttm">from_ttm() (tensorkrowch.models.MPO class method)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.FunctionalCoordinateMap">FunctionalCoordinateMap (class in tensorkrowch.formats)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="components.html#tensorkrowch.AbstractNode.get_axis">get_axis() (tensorkrowch.AbstractNode method)</a>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SampleBatch.gather_and_weight">gather_and_weight() (tensorkrowch.decompositions.SampleBatch method)</a>
 </li>
-      <li><a href="components.html#tensorkrowch.AbstractNode.get_axis_num">get_axis_num() (tensorkrowch.AbstractNode method)</a>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.GaugeMap">GaugeMap (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.GaugeOrbit">GaugeOrbit (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.GaugeRecord">GaugeRecord (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.GaugeRecursion">GaugeRecursion (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.gaussian_kernel">gaussian_kernel() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SamplingPolicy.generation">generation() (tensorkrowch.decompositions.SamplingPolicy method)</a>
+</li>
+      <li><a href="components.html#tensorkrowch.AbstractNode.get_axis">get_axis() (tensorkrowch.AbstractNode method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="components.html#tensorkrowch.AbstractNode.get_axis_num">get_axis_num() (tensorkrowch.AbstractNode method)</a>
+</li>
       <li><a href="components.html#tensorkrowch.AbstractNode.get_edge">get_edge() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.ParamNode.grad">grad (tensorkrowch.ParamNode property)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.GaugeOrbit.gram_imbalance">gram_imbalance() (tensorkrowch.formats.GaugeOrbit method)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.GaugeOrbit.gram_matrices">gram_matrices() (tensorkrowch.formats.GaugeOrbit method)</a>
+</li>
+      <li><a href="models.html#tensorkrowch.models.PEPS.grid_data_nodes">grid_data_nodes (tensorkrowch.models.PEPS property)</a>
+</li>
+      <li><a href="models.html#tensorkrowch.models.PEPS.grid_env">grid_env (tensorkrowch.models.PEPS property)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.ExplicitGridMap.grid_size">grid_size (tensorkrowch.formats.ExplicitGridMap property)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QuantizedLayout.grid_size">(tensorkrowch.formats.QuantizedLayout property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.H">H (tensorkrowch.formats.QTR property)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.H">(tensorkrowch.formats.QTRM property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.H">(tensorkrowch.formats.QTT property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.H">(tensorkrowch.formats.QTTM property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TR.H">(tensorkrowch.formats.TR property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.H">(tensorkrowch.formats.TRM property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TT.H">(tensorkrowch.formats.TT property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.H">(tensorkrowch.formats.TTM property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.hadamard">hadamard() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSProblem.has_fixed_objective">has_fixed_objective (tensorkrowch.decompositions.ALSProblem property)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -680,6 +1328,8 @@ title="Source repository"
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.IdentityRangeProjector">IdentityRangeProjector (class in tensorkrowch.decompositions)</a>
+</li>
       <li><a href="models.html#tensorkrowch.models.ConvMPS.in_channels">in_channels (tensorkrowch.models.ConvMPS property)</a>
 
       <ul>
@@ -698,16 +1348,32 @@ title="Source repository"
         <li><a href="models.html#tensorkrowch.models.ConvUTree.in_channels">(tensorkrowch.models.ConvUTree property)</a>
 </li>
       </ul></li>
-      <li><a href="models.html#tensorkrowch.models.MPO.in_dim">in_dim (tensorkrowch.models.MPO property)</a>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSProblem.in_dim">in_dim (tensorkrowch.decompositions.ALSProblem property)</a>
 
       <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.in_dim">(tensorkrowch.decompositions.BaseSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableSource.in_dim">(tensorkrowch.decompositions.CallableSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.DenseTensorSource.in_dim">(tensorkrowch.decompositions.DenseTensorSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.FormatSource.in_dim">(tensorkrowch.decompositions.FormatSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource.in_dim">(tensorkrowch.decompositions.SparseTensorSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRSegmentEnvironmentCache.in_dim">(tensorkrowch.decompositions.TRSegmentEnvironmentCache property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTEnvironmentCache.in_dim">(tensorkrowch.decompositions.TTEnvironmentCache property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QuantizedLayout.in_dim">(tensorkrowch.formats.QuantizedLayout property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.in_dim">(tensorkrowch.formats.TensorFormat1D property)</a>
+</li>
+        <li><a href="models.html#tensorkrowch.models.MPO.in_dim">(tensorkrowch.models.MPO property)</a>
+</li>
         <li><a href="models.html#tensorkrowch.models.MPSLayer.in_dim">(tensorkrowch.models.MPSLayer property)</a>
 </li>
-        <li><a href="models.html#tensorkrowch.models.PEPS.in_dim">(tensorkrowch.models.PEPS property)</a>
-</li>
         <li><a href="models.html#tensorkrowch.models.UMPSLayer.in_dim">(tensorkrowch.models.UMPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.models.UPEPS.in_dim">(tensorkrowch.models.UPEPS property)</a>
 </li>
       </ul></li>
       <li><a href="models.html#tensorkrowch.models.MPS.in_env">in_env (tensorkrowch.models.MPS property)</a>
@@ -716,7 +1382,15 @@ title="Source repository"
 </li>
       <li><a href="models.html#tensorkrowch.models.MPS.in_regions">in_regions (tensorkrowch.models.MPS property)</a>
 </li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.in_sites">in_sites (tensorkrowch.decompositions.BaseSource property)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.in_sites">(tensorkrowch.formats.TensorFormat1D property)</a>
+</li>
+      </ul></li>
       <li><a href="components.html#tensorkrowch.AbstractNode.in_which_axis">in_which_axis() (tensorkrowch.AbstractNode method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationBatch.index_select">index_select() (tensorkrowch.decompositions.ConfigurationBatch method)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.MPO.initialize">initialize() (tensorkrowch.models.MPO method)</a>
 
@@ -744,6 +1418,32 @@ title="Source repository"
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.inner">inner() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.InputFitRecord">InputFitRecord (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.InputFitter">InputFitter (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.EnvironmentCache.invalidate">invalidate() (tensorkrowch.decompositions.EnvironmentCache method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRSegmentEnvironmentCache.invalidate">(tensorkrowch.decompositions.TRSegmentEnvironmentCache method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTEnvironmentCache.invalidate">(tensorkrowch.decompositions.TTEnvironmentCache method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.AffineCoordinateMap.inverse">inverse() (tensorkrowch.formats.AffineCoordinateMap method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.CoordinateMap.inverse">(tensorkrowch.formats.CoordinateMap method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.ExplicitGridMap.inverse">(tensorkrowch.formats.ExplicitGridMap method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.FunctionalCoordinateMap.inverse">(tensorkrowch.formats.FunctionalCoordinateMap method)</a>
+</li>
+      </ul></li>
+      <li><a href="utils.html#tensorkrowch.utils.inverse_permutation">inverse_permutation() (in module tensorkrowch.utils)</a>
+</li>
       <li><a href="components.html#tensorkrowch.Edge.is_attached_to">is_attached_to() (tensorkrowch.Edge method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.Axis.is_batch">is_batch() (tensorkrowch.Axis method)</a>
@@ -762,9 +1462,17 @@ title="Source repository"
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.is_data">is_data() (tensorkrowch.AbstractNode method)</a>
 </li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.is_discrete_tensor">is_discrete_tensor (tensorkrowch.decompositions.BaseSource property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.GaugeMap.is_dual">is_dual (tensorkrowch.decompositions.GaugeMap property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SampleBatch.is_exact_for">is_exact_for() (tensorkrowch.decompositions.SampleBatch method)</a>
+</li>
       <li><a href="components.html#tensorkrowch.AbstractNode.is_floating_point">is_floating_point() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.is_leaf">is_leaf() (tensorkrowch.AbstractNode method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.is_matrix">is_matrix (tensorkrowch.decompositions.BaseSource property)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.is_node1">is_node1() (tensorkrowch.AbstractNode method)</a>
 
@@ -772,8 +1480,20 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.Axis.is_node1">(tensorkrowch.Axis method)</a>
 </li>
       </ul></li>
+      <li><a href="utils.html#tensorkrowch.utils.is_permutation">is_permutation() (in module tensorkrowch.utils)</a>
+</li>
       <li><a href="components.html#tensorkrowch.AbstractNode.is_resultant">is_resultant() (tensorkrowch.AbstractNode method)</a>
 </li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.is_row">is_row (tensorkrowch.formats.QTR property)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.is_row">(tensorkrowch.formats.QTT property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TR.is_row">(tensorkrowch.formats.TR property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TT.is_row">(tensorkrowch.formats.TT property)</a>
+</li>
+      </ul></li>
       <li><a href="components.html#tensorkrowch.AbstractNode.is_virtual">is_virtual() (tensorkrowch.AbstractNode method)</a>
 </li>
   </ul></td>
@@ -806,7 +1526,15 @@ title="Source repository"
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator.last_stats">last_stats (tensorkrowch.decompositions.PhiOperator property)</a>
+</li>
       <li><a href="components.html#tensorkrowch.TensorNetwork.leaf_nodes">leaf_nodes (tensorkrowch.TensorNetwork property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.LeastSquaresSolver">LeastSquaresSolver (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="models.html#tensorkrowch.models.PEPS.left_border">left_border (tensorkrowch.models.PEPS property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.FormatSource.left_envs">left_envs() (tensorkrowch.decompositions.FormatSource method)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.MPO.left_node">left_node (tensorkrowch.models.MPO property)</a>
 
@@ -817,6 +1545,24 @@ title="Source repository"
 </li>
       </ul></li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="utils.html#tensorkrowch.utils.list2slice">list2slice() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.FormatSource.local_phi">local_phi() (tensorkrowch.decompositions.FormatSource method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.GaugeMap.local_rank">local_rank (tensorkrowch.decompositions.GaugeMap property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.LocalSolveRecord">LocalSolveRecord (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="utils.html#tensorkrowch.utils.log_tensor_norm">log_tensor_norm() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.LoopOpener">LoopOpener (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.LoopOpenerCapabilities">LoopOpenerCapabilities (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.LoopOpening">LoopOpening (class in tensorkrowch.decompositions)</a>
+</li>
+  </ul></td>
 </tr></table>
 
 <h2 id="M">M</h2>
@@ -824,8 +1570,50 @@ title="Source repository"
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.AbstractNode.make_tensor">make_tensor() (tensorkrowch.AbstractNode method)</a>
 </li>
-      <li><a href="decompositions.html#tensorkrowch.decompositions.mat_to_mpo">mat_to_mpo() (in module tensorkrowch.decompositions)</a>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.FormatSource.marginal_phi">marginal_phi() (tensorkrowch.decompositions.FormatSource method)</a>
 </li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.MarginalSketch">MarginalSketch (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.mat_to_mpo">mat_to_mpo() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator.materialize">materialize() (tensorkrowch.decompositions.PhiOperator method)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.materialize_bonds">materialize_bonds() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.matmul">matmul() (tensorkrowch.formats.QTR method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.matmul">(tensorkrowch.formats.QTRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.matmul">(tensorkrowch.formats.QTT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.matmul">(tensorkrowch.formats.QTTM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TR.matmul">(tensorkrowch.formats.TR method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.matmul">(tensorkrowch.formats.TRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TT.matmul">(tensorkrowch.formats.TT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.matmul">(tensorkrowch.formats.TTM method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.GaugeMap.matrix">matrix (tensorkrowch.decompositions.GaugeMap property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableQuanticsSource.matrix">matrix() (tensorkrowch.decompositions.CallableQuanticsSource class method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableSource.matrix">(tensorkrowch.decompositions.CallableSource class method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableTensorSource.matrix">(tensorkrowch.decompositions.CallableTensorSource class method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.DenseTensorSource.matrix">(tensorkrowch.decompositions.DenseTensorSource class method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource.matrix">(tensorkrowch.decompositions.SparseTensorSource class method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="models.html#tensorkrowch.models.MPO.mats_env">mats_env (tensorkrowch.models.MPO property)</a>
 
       <ul>
@@ -836,29 +1624,43 @@ title="Source repository"
       </ul></li>
       <li><a href="components.html#tensorkrowch.AbstractNode.mean">mean() (tensorkrowch.AbstractNode method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="components.html#tensorkrowch.AbstractNode.merge_edges">merge_edges() (tensorkrowch.AbstractNode method)</a>
+</li>
+      <li><a href="components.html#tensorkrowch.AbstractNode.merge_edges_">merge_edges_() (tensorkrowch.AbstractNode method)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.MinimalCanonicalInfo">MinimalCanonicalInfo (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.GaugeMap.mirror">mirror() (tensorkrowch.decompositions.GaugeMap method)</a>
+</li>
       <li><a href="components.html#tensorkrowch.AbstractNode.move_to_network">move_to_network() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.MPO">MPO (class in tensorkrowch.models)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.MPS">MPS (class in tensorkrowch.models)</a>
 </li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat.mps">mps() (tensorkrowch.formats.TensorFormat method)</a>
+</li>
       <li><a href="models.html#tensorkrowch.models.MPSData">MPSData (class in tensorkrowch.models)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.MPSLayer">MPSLayer (class in tensorkrowch.models)</a>
 </li>
       <li><a href="operations.html#tensorkrowch.mul">mul() (in module tensorkrowch)</a>
+
+      <ul>
+        <li><a href="components.html#tensorkrowch.AbstractNode.mul">(tensorkrowch.AbstractNode method)</a>
 </li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.models.MPO.n_batches">n_batches (tensorkrowch.models.MPO property)</a>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.n_batches">n_batches (tensorkrowch.formats.TensorFormat1D property)</a>
 
       <ul>
+        <li><a href="models.html#tensorkrowch.models.MPO.n_batches">(tensorkrowch.models.MPO property)</a>
+</li>
         <li><a href="models.html#tensorkrowch.models.MPS.n_batches">(tensorkrowch.models.MPS property)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.MPSData.n_batches">(tensorkrowch.models.MPSData property)</a>
@@ -867,17 +1669,11 @@ title="Source repository"
 </li>
         <li><a href="models.html#tensorkrowch.models.Tree.n_batches">(tensorkrowch.models.Tree property)</a>
 </li>
-        <li><a href="models.html#tensorkrowch.models.UPEPS.n_batches">(tensorkrowch.models.UPEPS property)</a>
-</li>
         <li><a href="models.html#tensorkrowch.models.UTree.n_batches">(tensorkrowch.models.UTree property)</a>
 </li>
       </ul></li>
       <li><a href="models.html#tensorkrowch.models.PEPS.n_cols">n_cols (tensorkrowch.models.PEPS property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.models.UPEPS.n_cols">(tensorkrowch.models.UPEPS property)</a>
 </li>
-      </ul></li>
       <li><a href="models.html#tensorkrowch.models.MPO.n_features">n_features (tensorkrowch.models.MPO property)</a>
 
       <ul>
@@ -886,10 +1682,16 @@ title="Source repository"
         <li><a href="models.html#tensorkrowch.models.MPSData.n_features">(tensorkrowch.models.MPSData property)</a>
 </li>
       </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationBatch.n_inputs">n_inputs (tensorkrowch.decompositions.ConfigurationBatch property)</a>
+</li>
       <li><a href="models.html#tensorkrowch.models.PEPS.n_rows">n_rows (tensorkrowch.models.PEPS property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.n_sites">n_sites (tensorkrowch.decompositions.BaseSource property)</a>
 
       <ul>
-        <li><a href="models.html#tensorkrowch.models.UPEPS.n_rows">(tensorkrowch.models.UPEPS property)</a>
+        <li><a href="formats_api.html#tensorkrowch.formats.QuantizedLayout.n_sites">(tensorkrowch.formats.QuantizedLayout property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.n_sites">(tensorkrowch.formats.TensorFormat1D property)</a>
 </li>
       </ul></li>
       <li><a href="components.html#tensorkrowch.AbstractNode.name">name (tensorkrowch.AbstractNode property)</a>
@@ -900,10 +1702,12 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.Edge.name">(tensorkrowch.Edge property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="components.html#tensorkrowch.AbstractNode.ndim">ndim (tensorkrowch.AbstractNode property)</a>
+</li>
       <li><a href="components.html#tensorkrowch.AbstractNode.neighbours">neighbours() (tensorkrowch.AbstractNode method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.AbstractNode.network">network (tensorkrowch.AbstractNode property)</a>
 </li>
       <li><a href="components.html#tensorkrowch.Node">Node (class in tensorkrowch)</a>
@@ -935,9 +1739,19 @@ title="Source repository"
       <li><a href="components.html#tensorkrowch.AbstractNode.norm">norm() (tensorkrowch.AbstractNode method)</a>
 
       <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.norm">(tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
         <li><a href="models.html#tensorkrowch.models.MPS.norm">(tensorkrowch.models.MPS method)</a>
 </li>
       </ul></li>
+      <li><a href="utils.html#tensorkrowch.utils.norm_from_log">norm_from_log() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.normalize">normalize() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      <li><a href="utils.html#tensorkrowch.utils.normalize_tensor">normalize_tensor() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.normalized_overlap">normalized_overlap() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
       <li><a href="components.html#tensorkrowch.Axis.num">num (tensorkrowch.Axis property)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.numel">numel() (tensorkrowch.AbstractNode method)</a>
@@ -948,9 +1762,33 @@ title="Source repository"
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="formats_api.html#tensorkrowch.formats.GaugeOrbit.objective">objective() (tensorkrowch.formats.GaugeOrbit method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSProblem.objective_error">objective_error() (tensorkrowch.decompositions.ALSProblem method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ObservedRows">ObservedRows (class in tensorkrowch.decompositions)</a>
+</li>
       <li><a href="initializers.html#tensorkrowch.ones">ones() (in module tensorkrowch)</a>
 </li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSLoopOpener.open">open() (tensorkrowch.decompositions.ALSLoopOpener method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.BLOSTRLoopOpener.open">(tensorkrowch.decompositions.BLOSTRLoopOpener method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableLoopOpener.open">(tensorkrowch.decompositions.CallableLoopOpener method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.LoopOpener.open">(tensorkrowch.decompositions.LoopOpener method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.QRLoopOpener.open">(tensorkrowch.decompositions.QRLoopOpener method)</a>
+</li>
+      </ul></li>
       <li><a href="operations.html#tensorkrowch.Operation">Operation (class in tensorkrowch)</a>
+</li>
+      <li><a href="components.html#tensorkrowch.AbstractNode.order">order (tensorkrowch.AbstractNode property)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.orth_center">orth_center (tensorkrowch.formats.TensorFormat1D property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.OrthGaugeRecursion">OrthGaugeRecursion (class in tensorkrowch.decompositions)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.ConvMPSLayer.out_channels">out_channels (tensorkrowch.models.ConvMPSLayer property)</a>
 
@@ -958,9 +1796,13 @@ title="Source repository"
         <li><a href="models.html#tensorkrowch.models.ConvUMPSLayer.out_channels">(tensorkrowch.models.ConvUMPSLayer property)</a>
 </li>
       </ul></li>
-      <li><a href="models.html#tensorkrowch.models.MPO.out_dim">out_dim (tensorkrowch.models.MPO property)</a>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.out_dim">out_dim (tensorkrowch.decompositions.BaseSource property)</a>
 
       <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.out_dim">(tensorkrowch.formats.TensorFormat1D property)</a>
+</li>
+        <li><a href="models.html#tensorkrowch.models.MPO.out_dim">(tensorkrowch.models.MPO property)</a>
+</li>
         <li><a href="models.html#tensorkrowch.models.MPSLayer.out_dim">(tensorkrowch.models.MPSLayer property)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.UMPSLayer.out_dim">(tensorkrowch.models.UMPSLayer property)</a>
@@ -986,12 +1828,36 @@ title="Source repository"
       </ul></li>
       <li><a href="models.html#tensorkrowch.models.MPS.out_regions">out_regions (tensorkrowch.models.MPS property)</a>
 </li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSProblem.out_shape">out_shape (tensorkrowch.decompositions.ALSProblem property)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.out_shape">(tensorkrowch.decompositions.BaseSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableQuanticsSource.out_shape">(tensorkrowch.decompositions.CallableQuanticsSource property)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.CallableSource.out_shape">(tensorkrowch.decompositions.CallableSource property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.out_shape">(tensorkrowch.formats.TensorFormat1D property)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTRM.out_sites">out_sites (tensorkrowch.formats.QTRM property)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.out_sites">(tensorkrowch.formats.QTTM property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.out_sites">(tensorkrowch.formats.TRM property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.out_sites">(tensorkrowch.formats.TTM property)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationBatch.packed">packed (tensorkrowch.decompositions.ConfigurationBatch property)</a>
+</li>
       <li><a href="models.html#tensorkrowch.models.ConvMPS.padding">padding (tensorkrowch.models.ConvMPS property)</a>
 
       <ul>
@@ -1015,11 +1881,15 @@ title="Source repository"
       <ul>
         <li><a href="models.html#tensorkrowch.models.MPS.parameterize">(tensorkrowch.models.MPS method)</a>
 </li>
+        <li><a href="models.html#tensorkrowch.models.PEPS.parameterize">(tensorkrowch.models.PEPS method)</a>
+</li>
         <li><a href="models.html#tensorkrowch.models.UMPO.parameterize">(tensorkrowch.models.UMPO method)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.UMPS.parameterize">(tensorkrowch.models.UMPS method)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.UMPSLayer.parameterize">(tensorkrowch.models.UMPSLayer method)</a>
+</li>
+        <li><a href="models.html#tensorkrowch.models.UPEPS.parameterize">(tensorkrowch.models.UPEPS method)</a>
 </li>
         <li><a href="components.html#tensorkrowch.Node.parameterize">(tensorkrowch.Node method)</a>
 </li>
@@ -1028,8 +1898,6 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.TensorNetwork.parameterize">(tensorkrowch.TensorNetwork method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.ParamNode">ParamNode (class in tensorkrowch)</a>
 </li>
       <li><a href="components.html#tensorkrowch.ParamStackNode">ParamStackNode (class in tensorkrowch)</a>
@@ -1042,20 +1910,64 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.AbstractNode.permute">(tensorkrowch.AbstractNode method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="operations.html#tensorkrowch.permute_">permute_() (in module tensorkrowch)</a>
 
       <ul>
         <li><a href="components.html#tensorkrowch.AbstractNode.permute_">(tensorkrowch.AbstractNode method)</a>
 </li>
       </ul></li>
+      <li><a href="utils.html#tensorkrowch.utils.permute_list">permute_list() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator">PhiOperator (class in tensorkrowch.decompositions)</a>
+</li>
       <li><a href="models.html#tensorkrowch.models.MPS.phys_dim">phys_dim (tensorkrowch.models.MPS property)</a>
 
       <ul>
         <li><a href="models.html#tensorkrowch.models.MPSData.phys_dim">(tensorkrowch.models.MPSData property)</a>
 </li>
+        <li><a href="models.html#tensorkrowch.models.PEPS.phys_dim">(tensorkrowch.models.PEPS property)</a>
+</li>
       </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.GaugeMap.pinv">pinv() (tensorkrowch.decompositions.GaugeMap method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.PinvGaugeRecursion">PinvGaugeRecursion (class in tensorkrowch.decompositions)</a>
+</li>
       <li><a href="embeddings.html#tensorkrowch.embeddings.poly">poly() (in module tensorkrowch.embeddings)</a>
 </li>
+      <li><a href="formats_api.html#tensorkrowch.formats.VidalGauge.powers">powers (tensorkrowch.formats.VidalGauge property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ALSProblem.prepare_evaluation">prepare_evaluation() (tensorkrowch.decompositions.ALSProblem method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.EnvironmentCache.prepare_sweep">prepare_sweep() (tensorkrowch.decompositions.EnvironmentCache method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRSegmentEnvironmentCache.prepare_sweep">(tensorkrowch.decompositions.TRSegmentEnvironmentCache method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTEnvironmentCache.prepare_sweep">(tensorkrowch.decompositions.TTEnvironmentCache method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap.prepare_values">prepare_values() (tensorkrowch.decompositions.ConfigurationMap method)</a>
+</li>
+      <li><a href="utils.html#tensorkrowch.utils.print_list">print_list() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRExactLeverageRows.probabilities">probabilities() (tensorkrowch.decompositions.TRExactLeverageRows method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRProductLeverageRows.probabilities">(tensorkrowch.decompositions.TRProductLeverageRows method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTLeverageRows.probabilities">(tensorkrowch.decompositions.TTLeverageRows method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.IdentityRangeProjector.project">project() (tensorkrowch.decompositions.IdentityRangeProjector method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.RandomizedRangeProjector.project">(tensorkrowch.decompositions.RandomizedRangeProjector method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.RangeProjector.project">(tensorkrowch.decompositions.RangeProjector method)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -1068,14 +1980,46 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.Edge.qr">(tensorkrowch.Edge method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="operations.html#tensorkrowch.qr_">qr_() (in module tensorkrowch)</a>
 
       <ul>
         <li><a href="components.html#tensorkrowch.Edge.qr_">(tensorkrowch.Edge method)</a>
 </li>
       </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.QRLoopOpener">QRLoopOpener (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR">QTR (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.qtr_rss">qtr_rss() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.qtr_svd">qtr_svd() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.QTRDecomposition">QTRDecomposition (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTRM">QTRM (class in tensorkrowch.formats)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.qtrm_svd">qtrm_svd() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.QTRMDecomposition">QTRMDecomposition (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTT">QTT (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.qtt_rss">qtt_rss() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.qtt_svd">qtt_svd() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.QTTDecomposition">QTTDecomposition (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTTM">QTTM (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.qttm_svd">qttm_svd() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.QTTMDecomposition">QTTMDecomposition (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QuantizedLayout">QuantizedLayout (class in tensorkrowch.formats)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -1086,7 +2030,21 @@ title="Source repository"
 </li>
       <li><a href="initializers.html#tensorkrowch.randn">randn() (in module tensorkrowch)</a>
 </li>
+      <li><a href="utils.html#tensorkrowch.utils.random_unitary">random_unitary() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.RandomizedRangeProjector">RandomizedRangeProjector (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.RangeProjectionRecord">RangeProjectionRecord (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.RangeProjector">RangeProjector (class in tensorkrowch.decompositions)</a>
+</li>
       <li><a href="components.html#tensorkrowch.AbstractNode.rank">rank (tensorkrowch.AbstractNode property)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.rank">(tensorkrowch.formats.TensorFormat1D property)</a>
+</li>
+      </ul></li>
+      <li><a href="utils.html#tensorkrowch.utils.ratio_from_log">ratio_from_log() (in module tensorkrowch.utils)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.reattach_edges">reattach_edges() (tensorkrowch.AbstractNode method)</a>
 </li>
@@ -1096,7 +2054,21 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.StackNode.reconnect">(tensorkrowch.StackNode method)</a>
 </li>
       </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.RecursiveSketching">RecursiveSketching (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTT.redistribute_vidal">redistribute_vidal() (tensorkrowch.formats.QTT method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.redistribute_vidal">(tensorkrowch.formats.QTTM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TT.redistribute_vidal">(tensorkrowch.formats.TT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.redistribute_vidal">(tensorkrowch.formats.TTM method)</a>
+</li>
+      </ul></li>
       <li><a href="models.html#tensorkrowch.models.MPS.reduced_density">reduced_density() (tensorkrowch.models.MPS method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap.register">register() (tensorkrowch.decompositions.ConfigurationMap method)</a>
 </li>
       <li><a href="operations.html#tensorkrowch.renormalize">renormalize() (in module tensorkrowch)</a>
 
@@ -1104,13 +2076,25 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.AbstractNode.renormalize">(tensorkrowch.AbstractNode method)</a>
 </li>
       </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QuantizedLayout.reorder_configurations">reorder_configurations() (tensorkrowch.formats.QuantizedLayout method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.replace_cores">replace_cores() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.LoopOpenerCapabilities.require">require() (tensorkrowch.decompositions.LoopOpenerCapabilities method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConvergencePolicy.requires_fixed_objective">requires_fixed_objective (tensorkrowch.decompositions.ConvergencePolicy property)</a>
+</li>
       <li><a href="components.html#tensorkrowch.TensorNetwork.reset">reset() (tensorkrowch.TensorNetwork method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.reset_tensor_address">reset_tensor_address() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.TensorNetwork.resultant_nodes">resultant_nodes (tensorkrowch.TensorNetwork property)</a>
+</li>
+      <li><a href="models.html#tensorkrowch.models.PEPS.right_border">right_border (tensorkrowch.models.PEPS property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.FormatSource.right_envs">right_envs() (tensorkrowch.decompositions.FormatSource method)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.MPO.right_node">right_node (tensorkrowch.models.MPO property)</a>
 
@@ -1120,6 +2104,22 @@ title="Source repository"
         <li><a href="models.html#tensorkrowch.models.MPSData.right_node">(tensorkrowch.models.MPSData property)</a>
 </li>
       </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.rotate">rotate() (tensorkrowch.formats.QTR method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.rotate">(tensorkrowch.formats.QTRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TR.rotate">(tensorkrowch.formats.TR method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.rotate">(tensorkrowch.formats.TRM method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.rounding">rounding() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.RoundingInfo">RoundingInfo (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.RowSampler">RowSampler (class in tensorkrowch.decompositions)</a>
+</li>
       <li><a href="operations.html#tensorkrowch.rq">rq() (in module tensorkrowch)</a>
 
       <ul>
@@ -1138,6 +2138,28 @@ title="Source repository"
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="utils.html#tensorkrowch.utils.safe_divide">safe_divide() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SamplingPolicy.sample">sample() (tensorkrowch.decompositions.SamplingPolicy method)</a>
+
+      <ul>
+        <li><a href="models.html#tensorkrowch.models.MPS.sample">(tensorkrowch.models.MPS method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SampleBatch">SampleBatch (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SampledSketch">SampledSketch (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.SampleError">SampleError (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SamplingPolicy">SamplingPolicy (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="utils.html#tensorkrowch.utils.scale_tensor">scale_tensor() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRSegmentEnvironmentCache.segments">segments (tensorkrowch.decompositions.TRSegmentEnvironmentCache property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator.select">select() (tensorkrowch.decompositions.PhiOperator method)</a>
+</li>
       <li><a href="models.html#tensorkrowch.models.MPO.set_data_nodes">set_data_nodes() (tensorkrowch.models.MPO method)</a>
 
       <ul>
@@ -1147,18 +2169,20 @@ title="Source repository"
 </li>
         <li><a href="models.html#tensorkrowch.models.Tree.set_data_nodes">(tensorkrowch.models.Tree method)</a>
 </li>
-        <li><a href="models.html#tensorkrowch.models.UPEPS.set_data_nodes">(tensorkrowch.models.UPEPS method)</a>
-</li>
         <li><a href="models.html#tensorkrowch.models.UTree.set_data_nodes">(tensorkrowch.models.UTree method)</a>
 </li>
         <li><a href="components.html#tensorkrowch.TensorNetwork.set_data_nodes">(tensorkrowch.TensorNetwork method)</a>
 </li>
       </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.set_svd_method">set_svd_method() (in module tensorkrowch)</a>
+</li>
       <li><a href="components.html#tensorkrowch.AbstractNode.set_tensor">set_tensor() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.set_tensor_from">set_tensor_from() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.shape">shape (tensorkrowch.AbstractNode property)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QuantizedLayout.sites">sites() (tensorkrowch.formats.QuantizedLayout method)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.Tree.sites_per_layer">sites_per_layer (tensorkrowch.models.Tree property)</a>
 
@@ -1172,6 +2196,20 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.Edge.size">(tensorkrowch.Edge method)</a>
 </li>
       </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SketchOperator">SketchOperator (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.CoreDeterminingSystem.solve">solve() (tensorkrowch.decompositions.CoreDeterminingSystem method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.LeastSquaresSolver.solve">(tensorkrowch.decompositions.LeastSquaresSolver method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.RecursiveSketching.source">source (tensorkrowch.decompositions.RecursiveSketching property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource">SparseTensorSource (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.VidalGauge.spectra">spectra (tensorkrowch.formats.VidalGauge property)</a>
+</li>
       <li><a href="operations.html#tensorkrowch.split">split() (in module tensorkrowch)</a>
 
       <ul>
@@ -1184,17 +2222,43 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.AbstractNode.split_">(tensorkrowch.AbstractNode method)</a>
 </li>
       </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.split_block">split_block() (in module tensorkrowch.formats)</a>
+</li>
+      <li><a href="components.html#tensorkrowch.AbstractNode.split_edge">split_edge() (tensorkrowch.AbstractNode method)</a>
+
+      <ul>
+        <li><a href="components.html#tensorkrowch.Edge.split_edge">(tensorkrowch.Edge method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="components.html#tensorkrowch.AbstractNode.split_edge_">split_edge_() (tensorkrowch.AbstractNode method)</a>
+
+      <ul>
+        <li><a href="components.html#tensorkrowch.Edge.split_edge_">(tensorkrowch.Edge method)</a>
+</li>
+      </ul></li>
+      <li><a href="utils.html#tensorkrowch.utils.split_sequence_into_regions">split_sequence_into_regions() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.SplitBlock">SplitBlock (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="utils.html#tensorkrowch.utils.stable_norm">stable_norm() (in module tensorkrowch.utils)</a>
+</li>
       <li><a href="operations.html#tensorkrowch.stack">stack() (in module tensorkrowch)</a>
+</li>
+      <li><a href="utils.html#tensorkrowch.utils.stack_unequal_tensors">stack_unequal_tensors() (in module tensorkrowch.utils)</a>
 </li>
       <li><a href="operations.html#tensorkrowch.stacked_einsum">stacked_einsum() (in module tensorkrowch)</a>
 </li>
       <li><a href="components.html#tensorkrowch.StackEdge">StackEdge (class in tensorkrowch)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.StackNode">StackNode (class in tensorkrowch)</a>
 </li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap.stats">stats (tensorkrowch.decompositions.ConfigurationMap property)</a>
+</li>
       <li><a href="components.html#tensorkrowch.AbstractNode.std">std() (tensorkrowch.AbstractNode method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConvergencePolicy.stopping_reason">stopping_reason() (tensorkrowch.decompositions.ConvergencePolicy method)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.ConvMPS.stride">stride (tensorkrowch.models.ConvMPS property)</a>
 
@@ -1215,12 +2279,22 @@ title="Source repository"
 </li>
       </ul></li>
       <li><a href="operations.html#tensorkrowch.sub">sub() (in module tensorkrowch)</a>
+
+      <ul>
+        <li><a href="components.html#tensorkrowch.AbstractNode.sub">(tensorkrowch.AbstractNode method)</a>
 </li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.sub">(tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      </ul></li>
       <li><a href="components.html#tensorkrowch.Successor">Successor (class in tensorkrowch)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.successors">successors (tensorkrowch.AbstractNode property)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.sum">sum() (tensorkrowch.AbstractNode method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource.support">support (tensorkrowch.decompositions.SparseTensorSource property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource.support_values">support_values (tensorkrowch.decompositions.SparseTensorSource property)</a>
 </li>
       <li><a href="operations.html#tensorkrowch.svd">svd() (in module tensorkrowch)</a>
 
@@ -1234,6 +2308,8 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.Edge.svd_">(tensorkrowch.Edge method)</a>
 </li>
       </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.svd_method">svd_method() (in module tensorkrowch)</a>
+</li>
       <li><a href="operations.html#tensorkrowch.svdr">svdr() (in module tensorkrowch)</a>
 
       <ul>
@@ -1246,17 +2322,47 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.Edge.svdr_">(tensorkrowch.Edge method)</a>
 </li>
       </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SweepRecord">SweepRecord (class in tensorkrowch.decompositions)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.T">T (tensorkrowch.formats.QTR property)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.T">(tensorkrowch.formats.QTRM property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.T">(tensorkrowch.formats.QTT property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.T">(tensorkrowch.formats.QTTM property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TR.T">(tensorkrowch.formats.TR property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.T">(tensorkrowch.formats.TRM property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TT.T">(tensorkrowch.formats.TT property)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.T">(tensorkrowch.formats.TTM property)</a>
+</li>
+      </ul></li>
+      <li><a href="utils.html#tensorkrowch.utils.tab_string">tab_string() (in module tensorkrowch.utils)</a>
+</li>
       <li><a href="components.html#tensorkrowch.AbstractNode.tensor">tensor (tensorkrowch.AbstractNode property)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.tensor_address">tensor_address() (tensorkrowch.AbstractNode method)</a>
 </li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TensorDecomposition">TensorDecomposition (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat">TensorFormat (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D">TensorFormat1D (class in tensorkrowch.formats)</a>
+</li>
       <li><a href="components.html#tensorkrowch.TensorNetwork">TensorNetwork (class in tensorkrowch)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorRingOrbit">TensorRingOrbit (class in tensorkrowch.formats)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.MPO.tensors">tensors (tensorkrowch.models.MPO property)</a>
 
@@ -1265,16 +2371,216 @@ title="Source repository"
 </li>
         <li><a href="models.html#tensorkrowch.models.MPSData.tensors">(tensorkrowch.models.MPSData property)</a>
 </li>
+        <li><a href="models.html#tensorkrowch.models.PEPS.tensors">(tensorkrowch.models.PEPS property)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TimingRecord">TimingRecord (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="components.html#tensorkrowch.AbstractNode.to">to() (tensorkrowch.AbstractNode method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationBatch.to">(tensorkrowch.decompositions.ConfigurationBatch method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat.to">(tensorkrowch.formats.TensorFormat method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.to">(tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+        <li><a href="components.html#tensorkrowch.TensorNetwork.to">(tensorkrowch.TensorNetwork method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TensorDecomposition.to_format">to_format() (tensorkrowch.decompositions.TensorDecomposition method)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.CoordinateMap.to_indices">to_indices() (tensorkrowch.formats.CoordinateMap method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.ExplicitGridMap.to_indices">(tensorkrowch.formats.ExplicitGridMap method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTRM.to_mpo">to_mpo() (tensorkrowch.formats.QTRM method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.to_mpo">(tensorkrowch.formats.QTTM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.to_mpo">(tensorkrowch.formats.TRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.to_mpo">(tensorkrowch.formats.TTM method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.to_mps">to_mps() (tensorkrowch.formats.QTR method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.to_mps">(tensorkrowch.formats.QTT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TR.to_mps">(tensorkrowch.formats.TR method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TT.to_mps">(tensorkrowch.formats.TT method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.to_qtt">to_qtt() (tensorkrowch.formats.QTR method)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTRM.to_qttm">to_qttm() (tensorkrowch.formats.QTRM method)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.to_tr">to_tr() (tensorkrowch.formats.QTR method)</a>
+
+      <ul>
+        <li><a href="models.html#tensorkrowch.models.MPS.to_tr">(tensorkrowch.models.MPS method)</a>
+</li>
+        <li><a href="models.html#tensorkrowch.models.MPSData.to_tr">(tensorkrowch.models.MPSData method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTRM.to_trm">to_trm() (tensorkrowch.formats.QTRM method)</a>
+
+      <ul>
+        <li><a href="models.html#tensorkrowch.models.MPO.to_trm">(tensorkrowch.models.MPO method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.to_tt">to_tt() (tensorkrowch.formats.QTR method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.to_tt">(tensorkrowch.formats.QTT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TR.to_tt">(tensorkrowch.formats.TR method)</a>
+</li>
+        <li><a href="models.html#tensorkrowch.models.MPS.to_tt">(tensorkrowch.models.MPS method)</a>
+</li>
+        <li><a href="models.html#tensorkrowch.models.MPSData.to_tt">(tensorkrowch.models.MPSData method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTRM.to_ttm">to_ttm() (tensorkrowch.formats.QTRM method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.to_ttm">(tensorkrowch.formats.QTTM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.to_ttm">(tensorkrowch.formats.TRM method)</a>
+</li>
+        <li><a href="models.html#tensorkrowch.models.MPO.to_ttm">(tensorkrowch.models.MPO method)</a>
+</li>
+      </ul></li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.topology">topology (tensorkrowch.formats.TensorFormat1D property)</a>
+</li>
+      <li><a href="operations.html#tensorkrowch.tprod">tprod() (in module tensorkrowch)</a>
+
+      <ul>
+        <li><a href="components.html#tensorkrowch.AbstractNode.tprod">(tensorkrowch.AbstractNode method)</a>
+</li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="operations.html#tensorkrowch.tprod">tprod() (in module tensorkrowch)</a>
+      <li><a href="formats_api.html#tensorkrowch.formats.TR">TR (class in tensorkrowch.formats)</a>
 </li>
-      <li><a href="components.html#tensorkrowch.TensorNetwork.trace">trace() (tensorkrowch.TensorNetwork method)</a>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.tr_als">tr_als() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.tr_blostr">tr_blostr() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.tr_blostr_svd">tr_blostr_svd() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.tr_rss">tr_rss() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.tr_svd">tr_svd() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTRM.trace">trace() (tensorkrowch.formats.QTRM method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.trace">(tensorkrowch.formats.QTTM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.trace">(tensorkrowch.formats.TRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.trace">(tensorkrowch.formats.TTM method)</a>
+</li>
+        <li><a href="components.html#tensorkrowch.TensorNetwork.trace">(tensorkrowch.TensorNetwork method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TrainableEmbeddingFitter">TrainableEmbeddingFitter (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRALS">TRALS (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.LoopOpening.transform_gauges">transform_gauges() (tensorkrowch.decompositions.LoopOpening method)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.QTR.transpose">transpose() (tensorkrowch.formats.QTR method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.transpose">(tensorkrowch.formats.QTRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.transpose">(tensorkrowch.formats.QTT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.transpose">(tensorkrowch.formats.QTTM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TR.transpose">(tensorkrowch.formats.TR method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TRM.transpose">(tensorkrowch.formats.TRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TT.transpose">(tensorkrowch.formats.TT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TTM.transpose">(tensorkrowch.formats.TTM method)</a>
+</li>
+      </ul></li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRDecomposition">TRDecomposition (class in tensorkrowch.decompositions)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.Tree">Tree (class in tensorkrowch.models)</a>
 </li>
-      <li><a href="decompositions.html#tensorkrowch.decompositions.tt_rss">tt_rss() (in module tensorkrowch.decompositions)</a>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRExactLeverageRows">TRExactLeverageRows (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TRM">TRM (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.trm_svd">trm_svd() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRMDecomposition">TRMDecomposition (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRMSVD">TRMSVD (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRProductLeverageRows">TRProductLeverageRows (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRRSS">TRRSS (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRSegmentEnvironmentCache">TRSegmentEnvironmentCache (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRSVD">TRSVD (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator.truncate">truncate() (tensorkrowch.decompositions.PhiOperator method)</a>
+</li>
+      <li><a href="utils.html#tensorkrowch.utils.truncated_svd">truncated_svd() (in module tensorkrowch.utils)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TruncationRecord">TruncationRecord (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TT">TT (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TT2TR">TT2TR (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.tt2tr">tt2tr() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.tt_als">tt_als() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.tt_rs">tt_rs() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.tt_rss">tt_rss() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.FormatSource.tt_sketch_phis">tt_sketch_phis() (tensorkrowch.decompositions.FormatSource method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.tt_svd">tt_svd() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTALS">TTALS (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTDecomposition">TTDecomposition (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTEnvironmentCache">TTEnvironmentCache (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTLeverageRows">TTLeverageRows (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.TTM">TTM (class in tensorkrowch.formats)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ttm_svd">ttm_svd() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTMDecomposition">TTMDecomposition (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTMSVD">TTMSVD (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTRS">TTRS (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTRSS">TTRSS (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTStackSketch">TTStackSketch (class in tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTSVD">TTSVD (class in tensorkrowch.decompositions)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1296,14 +2602,28 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.StackNode.unbind">(tensorkrowch.StackNode method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.unblock">unblock() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.UniformRows">UniformRows (class in tensorkrowch.decompositions)</a>
+</li>
       <li><a href="embeddings.html#tensorkrowch.embeddings.unit">unit() (in module tensorkrowch.embeddings)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.TensorNetwork.unset_data_nodes">unset_data_nodes() (tensorkrowch.TensorNetwork method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.unset_tensor">unset_tensor() (tensorkrowch.AbstractNode method)</a>
 </li>
+      <li><a href="models.html#tensorkrowch.models.PEPS.up_border">up_border (tensorkrowch.models.PEPS property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.EnvironmentCache.update">update() (tensorkrowch.decompositions.EnvironmentCache method)</a>
+
+      <ul>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TRSegmentEnvironmentCache.update">(tensorkrowch.decompositions.TRSegmentEnvironmentCache method)</a>
+</li>
+        <li><a href="decompositions_api.html#tensorkrowch.decompositions.TTEnvironmentCache.update">(tensorkrowch.decompositions.TTEnvironmentCache method)</a>
+</li>
+      </ul></li>
       <li><a href="models.html#tensorkrowch.models.MPO.update_bond_dim">update_bond_dim() (tensorkrowch.models.MPO method)</a>
 
       <ul>
@@ -1320,11 +2640,43 @@ title="Source repository"
 <h2 id="V">V</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="decompositions.html#tensorkrowch.decompositions.vec_to_mps">vec_to_mps() (in module tensorkrowch.decompositions)</a>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.SamplingPolicy.validate">validate() (tensorkrowch.decompositions.SamplingPolicy method)</a>
+
+      <ul>
+        <li><a href="formats_api.html#tensorkrowch.formats.BondFactors1D.validate">(tensorkrowch.formats.BondFactors1D method)</a>
 </li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTR.validate">(tensorkrowch.formats.QTR method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTRM.validate">(tensorkrowch.formats.QTRM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTT.validate">(tensorkrowch.formats.QTT method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.QTTM.validate">(tensorkrowch.formats.QTTM method)</a>
+</li>
+        <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.validate">(tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="formats_api.html#tensorkrowch.formats.TensorFormat1D.validate_bonds">validate_bonds() (tensorkrowch.formats.TensorFormat1D method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConvergencePolicy.validate_objective">validate_objective() (tensorkrowch.decompositions.ConvergencePolicy method)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap.values">values (tensorkrowch.decompositions.ConfigurationMap property)</a>
+</li>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.vec_to_mps">vec_to_mps() (in module tensorkrowch.decompositions)</a>
+</li>
+      <li><a href="formats_api.html#tensorkrowch.formats.VidalGauge">VidalGauge (class in tensorkrowch.formats)</a>
+</li>
       <li><a href="components.html#tensorkrowch.TensorNetwork.virtual_nodes">virtual_nodes (tensorkrowch.TensorNetwork property)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator.with_axis_values">with_axis_values() (tensorkrowch.decompositions.PhiOperator method)</a>
 </li>
   </ul></td>
 </tr></table>

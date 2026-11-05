@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
     <title>Decompositions &#8212; TensorKrowch 1.1.6 documentation</title>
     
@@ -35,11 +35,10 @@
     <script src="_static/copybutton.js"></script>
     <script src="_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="shortcut icon" href="_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Decomposition API reference" href="decompositions_api.html" />
     <link rel="prev" title="Embeddings" href="embeddings.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
@@ -220,9 +219,31 @@
      Embeddings
     </a>
    </li>
-   <li class="toctree-l2 current active">
+   <li class="toctree-l2 current active has-children">
     <a class="current reference internal" href="#">
      Decompositions
+    </a>
+    <input checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="utils.html">
+     Utilities
     </a>
    </li>
   </ul>
@@ -373,18 +394,165 @@ title="Print to PDF"
     <nav id="bd-toc-nav" aria-label="Page">
         <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#vec-to-mps">
-   vec_to_mps
+  <a class="reference internal nav-link" href="#choosing-a-method">
+   Choosing a method
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#mat-to-mpo">
-   mat_to_mpo
+  <a class="reference internal nav-link" href="#describing-the-input">
+   Describing the input
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#dataset-constructors">
+     Dataset constructors
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#svd-decompositions">
+   SVD decompositions
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tt-svd">
+     TT-SVD
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tr-svd">
+     TR-SVD
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#repeated-fits-and-numerical-options">
+     Repeated fits and numerical options
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#alternating-least-squares">
+   Alternating least squares
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tt-als">
+     TT-ALS
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tr-als">
+     TR-ALS
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#configuring-convergence-and-local-solves">
+     Configuring convergence and local solves
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sampling-and-partial-observations">
+     Sampling and partial observations
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#tt-to-tr-conversion-and-spectral-recovery">
+   TT to TR conversion and spectral recovery
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#converting-an-existing-tt">
+     Converting an existing TT
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#choosing-a-loop-opener">
+     Choosing a loop opener
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#recursion-and-enrichment">
+     Recursion and enrichment
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#exact-spectral-recovery">
+     Exact spectral recovery
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#recursive-sketching">
+   Recursive sketching
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tt-rss-a-tensor-train-from-evaluations">
+     TT-RSS: a tensor train from evaluations
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tr-rss-a-tensor-ring-from-evaluations">
+     TR-RSS: a tensor ring from evaluations
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#choosing-fitters-and-projectors">
+     Choosing fitters and projectors
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#transforming-evaluations">
+     Transforming evaluations
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tensor-valued-functions">
+     Tensor-valued functions
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tt-rs-explicit-contraction-sketches">
+     TT-RS: explicit contraction sketches
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#matrix-and-quantics-extensions">
+   Matrix and Quantics extensions
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#matrices">
+     Matrices
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#quantics">
+     Quantics
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#results-progress-and-diagnostics">
+   Results, progress and diagnostics
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#tt-rss">
-   tt_rss
+  <a class="reference internal nav-link" href="#api-reference">
+   API reference
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#references">
+   References
   </a>
  </li>
 </ul>
@@ -407,18 +575,165 @@ title="Print to PDF"
                         <nav aria-label="Page">
                             <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#vec-to-mps">
-   vec_to_mps
+  <a class="reference internal nav-link" href="#choosing-a-method">
+   Choosing a method
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#mat-to-mpo">
-   mat_to_mpo
+  <a class="reference internal nav-link" href="#describing-the-input">
+   Describing the input
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#dataset-constructors">
+     Dataset constructors
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#svd-decompositions">
+   SVD decompositions
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tt-svd">
+     TT-SVD
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tr-svd">
+     TR-SVD
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#repeated-fits-and-numerical-options">
+     Repeated fits and numerical options
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#alternating-least-squares">
+   Alternating least squares
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tt-als">
+     TT-ALS
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tr-als">
+     TR-ALS
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#configuring-convergence-and-local-solves">
+     Configuring convergence and local solves
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sampling-and-partial-observations">
+     Sampling and partial observations
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#tt-to-tr-conversion-and-spectral-recovery">
+   TT to TR conversion and spectral recovery
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#converting-an-existing-tt">
+     Converting an existing TT
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#choosing-a-loop-opener">
+     Choosing a loop opener
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#recursion-and-enrichment">
+     Recursion and enrichment
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#exact-spectral-recovery">
+     Exact spectral recovery
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#recursive-sketching">
+   Recursive sketching
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tt-rss-a-tensor-train-from-evaluations">
+     TT-RSS: a tensor train from evaluations
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tr-rss-a-tensor-ring-from-evaluations">
+     TR-RSS: a tensor ring from evaluations
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#choosing-fitters-and-projectors">
+     Choosing fitters and projectors
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#transforming-evaluations">
+     Transforming evaluations
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tensor-valued-functions">
+     Tensor-valued functions
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tt-rs-explicit-contraction-sketches">
+     TT-RS: explicit contraction sketches
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#matrix-and-quantics-extensions">
+   Matrix and Quantics extensions
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#matrices">
+     Matrices
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#quantics">
+     Quantics
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#results-progress-and-diagnostics">
+   Results, progress and diagnostics
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#tt-rss">
-   tt_rss
+  <a class="reference internal nav-link" href="#api-reference">
+   API reference
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#references">
+   References
   </a>
  </li>
 </ul>
@@ -433,201 +748,822 @@ title="Print to PDF"
                 
   <section id="decompositions">
 <h1>Decompositions<a class="headerlink" href="#decompositions" title="Permalink to this headline">#</a></h1>
-<section id="vec-to-mps">
-<h2>vec_to_mps<a class="headerlink" href="#vec-to-mps" title="Permalink to this headline">#</a></h2>
-<dl class="py function">
-<dt class="sig sig-object py" id="tensorkrowch.decompositions.vec_to_mps">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.decompositions.</span></span><span class="sig-name descname"><span class="pre">vec_to_mps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">renormalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/decompositions/svd_decompositions.html#vec_to_mps"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.decompositions.vec_to_mps" title="Permalink to this definition">#</a></dt>
-<dd><p>Splits a vector into a sequence of MPS tensors via consecutive SVD
-decompositions. The resultant tensors can be used to instantiate a
-<a class="reference internal" href="models.html#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a> with <code class="docutils literal notranslate"><span class="pre">boundary</span> <span class="pre">=</span> <span class="pre">&quot;obc&quot;</span></code>.</p>
-<p>The number of resultant tensors and their respective physical dimensions
-depend on the shape of the input vector. That is, if one expects to recover
-a MPS with physical dimensions</p>
-<div class="math notranslate nohighlight">
-\[d_1 \times \cdots \times d_n\]</div>
-<p>the input vector will have to be provided with that shape. This can be done
-with <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.reshape.html">reshape</a>.</p>
-<p>If the input vector has batch dimensions, having as shape</p>
-<div class="math notranslate nohighlight">
-\[b_1 \times \cdots \times b_m \times d_1 \times \cdots \times d_n\]</div>
-<p>the number of batch dimensions <span class="math notranslate nohighlight">\(m\)</span> can be specified in <code class="docutils literal notranslate"><span class="pre">n_batches</span></code>.
-In this case, the resultant tensors will all have the extra batch dimensions.
-These tensors can be used to instantiate a <a class="reference internal" href="models.html#tensorkrowch.models.MPSData" title="tensorkrowch.models.MPSData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSData</span></code></a>
-with <code class="docutils literal notranslate"><span class="pre">boundary</span> <span class="pre">=</span> <span class="pre">&quot;obc&quot;</span></code>.</p>
-<p>To specify the bond dimension of each cut done via SVD, one can use the
-arguments <code class="docutils literal notranslate"><span class="pre">rank</span></code>, <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> and <code class="docutils literal notranslate"><span class="pre">cutoff</span></code>. If more than
-one is specified, the resulting rank will be the one that satisfies all
-conditions.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>vec</strong> (<em>torch.Tensor</em>) – Input vector to decompose.</p></li>
-<li><p><strong>n_batches</strong> (<em>int</em>) – Number of batch dimensions of the input vector. Each resultant tensor
-will have also the corresponding batch dimensions. It should be between
-0 and the rank of <code class="docutils literal notranslate"><span class="pre">vec</span></code>.</p></li>
-<li><p><strong>rank</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of singular values to keep.</p></li>
-<li><p><strong>cum_percentage</strong> (<em>float</em><em>, </em><em>optional</em>) – <p>Proportion that should be satisfied between the sum of all singular
-values kept and the total sum of all singular values.</p>
-<div class="math notranslate nohighlight">
-\[\frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
-cum\_percentage\]</div>
-</p></li>
-<li><p><strong>cutoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Quantity that lower bounds singular values in order to be kept.</p></li>
-<li><p><strong>renormalize</strong> (<em>bool</em>) – Indicates whether nodes should be renormalized after SVD/QR
-decompositions. If not, it may happen that the norm explodes as it
-is being accumulated from all nodes. Renormalization aims to avoid
-this undesired behavior by extracting the norm of each node on a
-logarithmic scale after SVD/QR decompositions are computed. Finally,
-the normalization factor is evenly distributed among all nodes of
-the MPS.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>List[torch.Tensor]</p>
-</dd>
-</dl>
-</dd></dl>
+<p>Decomposition algorithms approximate tensors and functions as tensor trains
+(TT), tensor rings (TR), or their matrix and Quantics extensions. The usual
+workflow is to describe the input with a <strong>source</strong>, construct a decomposition
+<strong>engine</strong>, and call its <strong>fit</strong> method. Optional strategy objects configure
+steps such as sampling, local optimization and convergence.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tensorkrowch</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tk</span>
 
+<span class="n">d</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">decompositions</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">DenseTensorSource</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTSVD</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">approximation</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Results are numerical <a class="reference internal" href="formats.html"><span class="doc">Formats</span></a> with additional fit diagnostics. A TT
+has open boundaries; a TR connects the first and last core with a cyclic
+bond. Both are supported throughout the guide.</p>
+<section id="choosing-a-method">
+<h2>Choosing a method<a class="headerlink" href="#choosing-a-method" title="Permalink to this headline">#</a></h2>
+<table class="colwidths-given table">
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 28%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Approach</p></th>
+<th class="head"><p>Input and intended use</p></th>
+<th class="head"><p>Tensor train</p></th>
+<th class="head"><p>Tensor ring</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>SVD</p></td>
+<td><p>A finite tensor that fits in memory; successive matrix factorizations.</p></td>
+<td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TTSVD" title="tensorkrowch.decompositions.TTSVD"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTSVD</span></code></a></p></td>
+<td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TRSVD" title="tensorkrowch.decompositions.TRSVD"><code class="xref py py-class docutils literal notranslate"><span class="pre">TRSVD</span></code></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Alternating least squares</p></td>
+<td><p>Fit chosen ranks by optimizing cores, using all entries or sampled rows.</p></td>
+<td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TTALS" title="tensorkrowch.decompositions.TTALS"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTALS</span></code></a></p></td>
+<td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TRALS" title="tensorkrowch.decompositions.TRALS"><code class="xref py py-class docutils literal notranslate"><span class="pre">TRALS</span></code></a></p></td>
+</tr>
+<tr class="row-even"><td><p>Recursive sketching from samples</p></td>
+<td><p>An evaluable source and configurations defining the region of interest.</p></td>
+<td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TTRSS" title="tensorkrowch.decompositions.TTRSS"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTRSS</span></code></a></p></td>
+<td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TRRSS" title="tensorkrowch.decompositions.TRRSS"><code class="xref py py-class docutils literal notranslate"><span class="pre">TRRSS</span></code></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Recursive sketching with operators</p></td>
+<td><p>A finite source and selected fibers, marginalizations or TT sketches.</p></td>
+<td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TTRS" title="tensorkrowch.decompositions.TTRS"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTRS</span></code></a></p></td>
+<td><p>Apply <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TT2TR" title="tensorkrowch.decompositions.TT2TR"><code class="xref py py-class docutils literal notranslate"><span class="pre">TT2TR</span></code></a> to the resulting TT if needed.</p></td>
+</tr>
+<tr class="row-even"><td><p>Conversion and spectral recovery</p></td>
+<td><p>Convert an existing TT, or recover an exact TR by spectral methods.</p></td>
+<td><p>The TT is the input to conversion.</p></td>
+<td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TT2TR" title="tensorkrowch.decompositions.TT2TR"><code class="xref py py-class docutils literal notranslate"><span class="pre">TT2TR</span></code></a>, <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.tr_blostr" title="tensorkrowch.decompositions.tr_blostr"><code class="xref py py-func docutils literal notranslate"><span class="pre">tr_blostr()</span></code></a>, <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.tr_blostr_svd" title="tensorkrowch.decompositions.tr_blostr_svd"><code class="xref py py-func docutils literal notranslate"><span class="pre">tr_blostr_svd()</span></code></a></p></td>
+</tr>
+</tbody>
+</table>
+<p>The examples use engine objects. Functions such as <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.tt_svd" title="tensorkrowch.decompositions.tt_svd"><code class="xref py py-func docutils literal notranslate"><span class="pre">tt_svd()</span></code></a>,
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.tr_als" title="tensorkrowch.decompositions.tr_als"><code class="xref py py-func docutils literal notranslate"><span class="pre">tr_als()</span></code></a> and <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.tt_rss" title="tensorkrowch.decompositions.tt_rss"><code class="xref py py-func docutils literal notranslate"><span class="pre">tt_rss()</span></code></a> provide shorter interfaces for a single fit.
+The <a class="reference internal" href="decompositions_api.html"><span class="doc">Decomposition API reference</span></a> lists their complete signatures and all
+configurable components.</p>
 </section>
-<section id="mat-to-mpo">
-<h2>mat_to_mpo<a class="headerlink" href="#mat-to-mpo" title="Permalink to this headline">#</a></h2>
-<dl class="py function">
-<dt class="sig sig-object py" id="tensorkrowch.decompositions.mat_to_mpo">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.decompositions.</span></span><span class="sig-name descname"><span class="pre">mat_to_mpo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">renormalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/decompositions/svd_decompositions.html#mat_to_mpo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.decompositions.mat_to_mpo" title="Permalink to this definition">#</a></dt>
-<dd><p>Splits a matrix into a sequence of MPO tensors via consecutive SVD
-decompositions. The resultant tensors can be used to instantiate a
-<a class="reference internal" href="models.html#tensorkrowch.models.MPO" title="tensorkrowch.models.MPO"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPO</span></code></a> with <code class="docutils literal notranslate"><span class="pre">boundary</span> <span class="pre">=</span> <span class="pre">&quot;obc&quot;</span></code>.</p>
-<p>The number of resultant tensors and their respective input/output dimensions
-depend on the shape of the input matrix. That is, if one expects to recover
-a MPO with input/output dimensions</p>
-<div class="math notranslate nohighlight">
-\[in_1 \times out_1 \times \cdots \times in_n \times out_n\]</div>
-<p>the input matrix will have to be provided with that shape. Thus it must
-have an even number of dimensions. To accomplish this, it may happen that
-some input/output dimensions are 1. This can be done with
-<a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.reshape.html">reshape</a>.</p>
-<p>To specify the bond dimension of each cut done via SVD, one can use the
-arguments <code class="docutils literal notranslate"><span class="pre">rank</span></code>, <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> and <code class="docutils literal notranslate"><span class="pre">cutoff</span></code>. If more than
-one is specified, the resulting rank will be the one that satisfies all
-conditions.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>mat</strong> (<em>torch.Tensor</em>) – Input matrix to decompose. It must have an even number of dimensions.</p></li>
-<li><p><strong>rank</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of singular values to keep.</p></li>
-<li><p><strong>cum_percentage</strong> (<em>float</em><em>, </em><em>optional</em>) – <p>Proportion that should be satisfied between the sum of all singular
-values kept and the total sum of all singular values.</p>
-<div class="math notranslate nohighlight">
-\[\frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
-cum\_percentage\]</div>
-</p></li>
-<li><p><strong>cutoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Quantity that lower bounds singular values in order to be kept.</p></li>
-<li><p><strong>renormalize</strong> (<em>bool</em>) – Indicates whether nodes should be renormalized after SVD/QR
-decompositions. If not, it may happen that the norm explodes as it
-is being accumulated from all nodes. Renormalization aims to avoid
-this undesired behavior by extracting the norm of each node on a
-logarithmic scale after SVD/QR decompositions are computed. Finally,
-the normalization factor is evenly distributed among all nodes of
-the MPS.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>List[torch.Tensor]</p>
-</dd>
-</dl>
-</dd></dl>
+<section id="describing-the-input">
+<h2>Describing the input<a class="headerlink" href="#describing-the-input" title="Permalink to this headline">#</a></h2>
+<p>A source separates how values are obtained from how they are decomposed.
+Choose one of the following <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.BaseSource" title="tensorkrowch.decompositions.BaseSource"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseSource</span></code></a> implementations:</p>
+<table class="colwidths-given table">
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 65%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Source</p></th>
+<th class="head"><p>Use it for</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.DenseTensorSource" title="tensorkrowch.decompositions.DenseTensorSource"><code class="xref py py-class docutils literal notranslate"><span class="pre">DenseTensorSource</span></code></a></p></td>
+<td><p>A PyTorch tensor with one axis per variable.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.SparseTensorSource" title="tensorkrowch.decompositions.SparseTensorSource"><code class="xref py py-class docutils literal notranslate"><span class="pre">SparseTensorSource</span></code></a></p></td>
+<td><p>Indexed entries of a finite tensor; unstored entries are zero.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.FormatSource" title="tensorkrowch.decompositions.FormatSource"><code class="xref py py-class docutils literal notranslate"><span class="pre">FormatSource</span></code></a></p></td>
+<td><p>An existing tensor format, TT cores, or an MPS/MPO model.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.CallableTensorSource" title="tensorkrowch.decompositions.CallableTensorSource"><code class="xref py py-class docutils literal notranslate"><span class="pre">CallableTensorSource</span></code></a></p></td>
+<td><p>A function of finite discrete indices, with explicit input dimensions.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.CallableSource" title="tensorkrowch.decompositions.CallableSource"><code class="xref py py-class docutils literal notranslate"><span class="pre">CallableSource</span></code></a></p></td>
+<td><p>A function of continuous inputs, for sampled sketching with embeddings.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.CallableQuanticsSource" title="tensorkrowch.decompositions.CallableQuanticsSource"><code class="xref py py-class docutils literal notranslate"><span class="pre">CallableQuanticsSource</span></code></a></p></td>
+<td><p>A coordinate function discretized into digit sites on a Quantics grid.</p></td>
+</tr>
+</tbody>
+</table>
+<p>For example, a discrete callable evaluates a batch of index configurations:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">function</span><span class="p">(</span><span class="n">indices</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">indices</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">CallableTensorSource</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">in_dim</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTSVD</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Sources expose <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.evaluate" title="tensorkrowch.decompositions.BaseSource.evaluate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">BaseSource.evaluate()</span></code></a> for configurations,
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.fiber" title="tensorkrowch.decompositions.BaseSource.fiber"><code class="xref py py-meth docutils literal notranslate"><span class="pre">BaseSource.fiber()</span></code></a> to vary one input, and
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.BaseSource.contract_dense" title="tensorkrowch.decompositions.BaseSource.contract_dense"><code class="xref py py-meth docutils literal notranslate"><span class="pre">BaseSource.contract_dense()</span></code></a> to materialize a finite tensor. Configuration
+columns follow <code class="docutils literal notranslate"><span class="pre">in_sites</span></code>; <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationBatch" title="tensorkrowch.decompositions.ConfigurationBatch"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConfigurationBatch</span></code></a> can explicitly group
+index or feature inputs. Vector sources use <code class="docutils literal notranslate"><span class="pre">in_sites</span></code> to select evaluated
+variables; unselected axes remain open in the output.</p>
+<p>Dense tensors can also be passed directly to engines that accept them.
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.as_tensor_source" title="tensorkrowch.decompositions.as_tensor_source"><code class="xref py py-func docutils literal notranslate"><span class="pre">as_tensor_source()</span></code></a> provides the corresponding adaptation explicitly.
+SVD materializes even sparse or callable sources; ALS and sampled sketching
+can query their entries without constructing the complete tensor.</p>
+<section id="dataset-constructors">
+<h3>Dataset constructors<a class="headerlink" href="#dataset-constructors" title="Permalink to this headline">#</a></h3>
+<p>Use <code class="docutils literal notranslate"><span class="pre">SparseTensorSource.from_data</span></code> for discrete empirical masses.
+<code class="docutils literal notranslate"><span class="pre">CallableSource.from_data</span></code> describes continuous data, optionally smoothed
+with a kernel. <code class="docutils literal notranslate"><span class="pre">CallableTensorSource.from_data</span></code> and
+<code class="docutils literal notranslate"><span class="pre">CallableQuanticsSource.from_data</span></code> provide the corresponding finite and
+quantized constructions. For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">dataset</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">CallableSource</span><span class="o">.</span><span class="n">from_data</span><span class="p">(</span>
+    <span class="n">dataset</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">gaussian_kernel</span><span class="p">,</span> <span class="n">bandwidth</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.gaussian_kernel" title="tensorkrowch.decompositions.gaussian_kernel"><code class="xref py py-func docutils literal notranslate"><span class="pre">gaussian_kernel()</span></code></a> also works independently on query coordinates and
+kernel centers. See each <code class="docutils literal notranslate"><span class="pre">from_data</span></code> method for weights and domain options.</p>
 </section>
-<section id="tt-rss">
-<h2>tt_rss<a class="headerlink" href="#tt-rss" title="Permalink to this headline">#</a></h2>
-<dl class="py function">
-<dt class="sig sig-object py" id="tensorkrowch.decompositions.tt_rss">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.decompositions.</span></span><span class="sig-name descname"><span class="pre">tt_rss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embedding</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sketch_samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">domain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">domain_multiplier</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/decompositions/tt_decompositions.html#tt_rss"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.decompositions.tt_rss" title="Permalink to this definition">#</a></dt>
-<dd><p>Tensor Train via Recursive Sketching from Samples.</p>
-<p>Decomposes a scalar or vector-valued function of <span class="math notranslate nohighlight">\(N\)</span> input variables
-in a Matrix Product State of <span class="math notranslate nohighlight">\(N\)</span> cores, each corresponding to one
-input variable, in the same order as they are provided to the function. To
-turn each input variable into a vector that can be contracted with the
-corresponding MPS core, an embedding function is required. The dimension of
-the embedding will be used as the input dimension of the MPS.</p>
-<p>If the function is vector-valued, it will be seen as a <span class="math notranslate nohighlight">\(N + 1\)</span> scalar
-function, returning a MPS with <span class="math notranslate nohighlight">\(N + 1\)</span> cores. The output variable will
-use the embedding <code class="xref py py-func docutils literal notranslate"><span class="pre">basis()</span></code>, which maps integers
-(corresponding to indices of the output vector) to basis vectors:
-<span class="math notranslate nohighlight">\(i \mapsto \langle i \rvert\)</span>. It can be specified the position in
-which the output core will be. By default, it will be in the middle of the
-MPS.</p>
-<p>To specify the bond dimension of each MPS core, one can use the arguments
-<code class="docutils literal notranslate"><span class="pre">rank</span></code> and <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code>. If more than one is specified, the
-resulting rank will be the one that satisfies all conditions.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>function</strong> (<em>Callable</em>) – Function that is going to be decomposed. It needs to have a single
-input argument, the data, which is a tensor of shape
-<code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span></code> or <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span> <span class="pre">x</span> <span class="pre">in_dim</span></code>. It
-must return a tensor of shape <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">out_dim</span></code>. If the function
-is scalar, <code class="docutils literal notranslate"><span class="pre">out_dim</span> <span class="pre">=</span> <span class="pre">1</span></code>.</p></li>
-<li><p><strong>embedding</strong> (<em>Callable</em>) – Embedding function that maps the data tensor to a higher dimensional
-space. It needs to have a single argument. It is a function that
-transforms the given data tensor of shape <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span></code> or
-<code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span> <span class="pre">x</span> <span class="pre">in_dim</span></code> and returns an embedded tensor of
-shape <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span> <span class="pre">x</span> <span class="pre">embed_dim</span></code>.</p></li>
-<li><p><strong>sketch_samples</strong> (<em>torch.Tensor</em>) – Samples that will be used as sketches to decompose the function. It has
-to be a tensor of shape <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span></code> or
-<code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span> <span class="pre">x</span> <span class="pre">in_dim</span></code>.</p></li>
-<li><p><strong>labels</strong> (<em>torch.Tensor</em><em>, </em><em>optional</em>) – Tensor of output labels of the <code class="docutils literal notranslate"><span class="pre">function</span></code> with shape <code class="docutils literal notranslate"><span class="pre">batch_size</span></code>.
-If <code class="docutils literal notranslate"><span class="pre">function</span></code> is vector-valued, <code class="docutils literal notranslate"><span class="pre">labels</span></code> will be used to select
-an element from each output vector. If <code class="docutils literal notranslate"><span class="pre">labels</span></code> are not given, these
-will be obtained according to the distribution represented by the output
-vectors (assuming these represent square roots of probabilities for each
-class).</p></li>
-<li><p><strong>domain</strong> (<em>torch.Tensor</em><em> or </em><em>list</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Domain of the input variables. It should be given as a finite set of
-possible values that can take each variable. If all variables live in
-the same domain, it should be given as a tensor with shape <code class="docutils literal notranslate"><span class="pre">n_values</span></code>
-or <code class="docutils literal notranslate"><span class="pre">n_values</span> <span class="pre">x</span> <span class="pre">in_dim</span></code>, where the possible <code class="docutils literal notranslate"><span class="pre">n_values</span></code> should be at
-least as large as the desired input dimension of the MPS cores, which
-is the <code class="docutils literal notranslate"><span class="pre">embed_dim</span></code> of the <code class="docutils literal notranslate"><span class="pre">embedding</span></code>. The more values are given,
-the more accurate will be the tensorization but more costly will be to
-do it. If <code class="docutils literal notranslate"><span class="pre">domain</span></code> is given as a list, it should have the same
-number of elements as input variables, so that each variable can live
-in a different domain. If <code class="docutils literal notranslate"><span class="pre">domain</span></code> is not given, it will be obtained
-from the values each variable takes in the <code class="docutils literal notranslate"><span class="pre">sketch_samples</span></code>.</p></li>
-<li><p><strong>domain_multiplier</strong> (<em>int</em>) – Upper bound for how many values are used for the input variable domain
-if <code class="docutils literal notranslate"><span class="pre">domain</span></code> is not provided. If <code class="docutils literal notranslate"><span class="pre">domain</span></code> is not provided, the
-domain of the input variables will be inferred from the unique values
-each variable takes in the <code class="docutils literal notranslate"><span class="pre">sketch_samples</span></code>. In this case, only
-<code class="docutils literal notranslate"><span class="pre">domain_multiplier</span> <span class="pre">*</span> <span class="pre">embed_dim</span></code> values will be taken randomly.</p></li>
-<li><p><strong>out_position</strong> (<em>int</em><em>, </em><em>optional</em>) – If the <code class="docutils literal notranslate"><span class="pre">function</span></code> is vector-valued, position of the output core in
-the resulting MPS.</p></li>
-<li><p><strong>rank</strong> (<em>int</em><em>, </em><em>optional</em>) – Upper bound for the bond dimension of all cores.</p></li>
-<li><p><strong>cum_percentage</strong> (<em>float</em><em>, </em><em>optional</em>) – When getting the proper bond dimension of each core via truncated SVD,
-this is the proportion that should be satisfied between the sum of all
-singular values kept and the total sum of all singular values. Therefore,
-it specifies the rank of each core independently, allowing for
-varying bond dimensions.</p></li>
-<li><p><strong>batch_size</strong> (<em>int</em>) – Batch size used to process <code class="docutils literal notranslate"><span class="pre">sketch_samples</span></code> with <code class="docutils literal notranslate"><span class="pre">DataLoaders</span></code>
-during the decomposition.</p></li>
-<li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device to which <code class="docutils literal notranslate"><span class="pre">sketch_samples</span></code> will be sent to compute sketches. It
-should coincide with the device the <code class="docutils literal notranslate"><span class="pre">function</span></code> is in, in the case the
-function is a call to a <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> or uses tensors that are in a
-specific device. This also applies to the <code class="docutils literal notranslate"><span class="pre">embedding</span></code> function.</p></li>
-<li><p><strong>verbose</strong> (<em>bool</em>) – Default is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
-<li><p><strong>return_info</strong> (<em>bool</em>) – Boolean indicating if an additional dictionary with total time and
-validation error should be returned.</p></li>
+</section>
+<section id="svd-decompositions">
+<h2>SVD decompositions<a class="headerlink" href="#svd-decompositions" title="Permalink to this headline">#</a></h2>
+<p>SVD methods factor a finite tensor into smaller cores. They provide direct
+decompositions without iterative core optimization. The engine materializes
+the source at construction; repeated fits reuse that prepared tensor.</p>
+<section id="tt-svd">
+<h3>TT-SVD<a class="headerlink" href="#tt-svd" title="Permalink to this headline">#</a></h3>
+<p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TTSVD" title="tensorkrowch.decompositions.TTSVD"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTSVD</span></code></a> applies successive truncated SVDs along an open chain, following
+Oseledets’ tensor train construction <a class="reference internal" href="#ttsvd" id="id1"><span>[ttsvd]</span></a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">axis</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;i,j,k,l-&gt;ijkl&#39;</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">DenseTensorSource</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTSVD</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">collect_metrics</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">approximation</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">rank</span></code> is an upper bound at each cut. <code class="docutils literal notranslate"><span class="pre">cutoff</span></code>, <code class="docutils literal notranslate"><span class="pre">atol</span></code>, <code class="docutils literal notranslate"><span class="pre">rtol</span></code> and
+<code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> select singular values according to
+<a class="reference internal" href="utils.html#tensorkrowch.utils.truncated_svd" title="tensorkrowch.utils.truncated_svd"><code class="xref py py-func docutils literal notranslate"><span class="pre">truncated_svd()</span></code></a>. In particular, SVD <code class="docutils literal notranslate"><span class="pre">rtol</span></code> limits
+the discarded <strong>squared</strong> singular-value mass relative to the total squared
+mass; it is not a relative residual stopping criterion. Multiple criteria
+use the most restrictive retained rank.</p>
+<p>TT-SVD accepts a shared integer rank cap. It supports leading structural
+batches declared through <code class="docutils literal notranslate"><span class="pre">DenseTensorSource(...,</span> <span class="pre">n_batches=...)</span></code>.</p>
+</section>
+<section id="tr-svd">
+<h3>TR-SVD<a class="headerlink" href="#tr-svd" title="Permalink to this headline">#</a></h3>
+<p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TRSVD" title="tensorkrowch.decompositions.TRSVD"><code class="xref py py-class docutils literal notranslate"><span class="pre">TRSVD</span></code></a> constructs a cyclic chain, based on the TR-SVD approach of
+Zhao et al. <a class="reference internal" href="#trdecomp" id="id2"><span>[trdecomp]</span></a>. This implementation starts with an interior
+bipartition and decomposes the two resulting subchains, rather than using
+the original one-direction construction.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">axis</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;i,j,k,l-&gt;ijkl&#39;</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">DenseTensorSource</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TRSVD</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">collect_metrics</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">approximation</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Here <code class="docutils literal notranslate"><span class="pre">center</span></code> specifies the cut between sites <code class="docutils literal notranslate"><span class="pre">center</span> <span class="pre">-</span> <span class="pre">1</span></code> and <code class="docutils literal notranslate"><span class="pre">center</span></code>.
+An integer <code class="docutils literal notranslate"><span class="pre">rank</span></code> caps every TR bond, including the cyclic bond; its square
+caps the initial matrix rank. The initial retained dimension is factored
+into two TR dimensions. Any structural zero padding needed for that
+factorization is recorded in <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p>
+<p>The singular-value criteria are the same as in TT-SVD. TR-SVD does not support
+structural batches, and its local truncation diagnostics are not a global
+reconstruction bound.</p>
+</section>
+<section id="repeated-fits-and-numerical-options">
+<h3>Repeated fits and numerical options<a class="headerlink" href="#repeated-fits-and-numerical-options" title="Permalink to this headline">#</a></h3>
+<p>Both engines allow independent fits with different truncation controls:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">DenseTensorSource</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTSVD</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="n">rank_one</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">rank_two</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">renormalize</span></code> controls numerical scaling, and <code class="docutils literal notranslate"><span class="pre">out_device</span></code> selects where
+final cores are stored. The exact SVD backend is configured through
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.set_svd_method" title="tensorkrowch.set_svd_method"><code class="xref py py-func docutils literal notranslate"><span class="pre">set_svd_method()</span></code></a> or
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.svd_method" title="tensorkrowch.svd_method"><code class="xref py py-func docutils literal notranslate"><span class="pre">svd_method()</span></code></a>. These methods need no extra strategy object
+for ordinary truncation. Matrix engines are <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TTMSVD" title="tensorkrowch.decompositions.TTMSVD"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTMSVD</span></code></a> and
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TRMSVD" title="tensorkrowch.decompositions.TRMSVD"><code class="xref py py-class docutils literal notranslate"><span class="pre">TRMSVD</span></code></a>; input preparation is described below.</p>
+</section>
+</section>
+<section id="alternating-least-squares">
+<h2>Alternating least squares<a class="headerlink" href="#alternating-least-squares" title="Permalink to this headline">#</a></h2>
+<p>ALS optimizes one core while holding the others fixed, then visits the next
+site. Use it to fit prescribed ranks, refine an existing approximation, or
+fit selected observations. Unlike a direct SVD, an ALS fit depends on its
+initialization and stopping criteria.</p>
+<section id="tt-als">
+<h3>TT-ALS<a class="headerlink" href="#tt-als" title="Permalink to this headline">#</a></h3>
+<p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TTALS" title="tensorkrowch.decompositions.TTALS"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTALS</span></code></a> uses alternating forward and reverse passes over an open
+chain. This is the one-core alternating linear scheme underlying TT
+optimization <a class="reference internal" href="#ttals" id="id3"><span>[ttals]</span></a>; it does not implement two-core MALS rank adaptation.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">axis</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;i,j,k,l-&gt;ijkl&#39;</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">DenseTensorSource</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTALS</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="n">convergence</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">ConvergencePolicy</span><span class="p">(</span><span class="n">max_sweeps</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">convergence</span><span class="o">=</span><span class="n">convergence</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Without <code class="docutils literal notranslate"><span class="pre">initial_cores</span></code>, initialization is random. To refine another fit,
+pass its result or cores as <code class="docutils literal notranslate"><span class="pre">initial_cores</span></code>; an SVD initialization is an
+explicit composition with <code class="docutils literal notranslate"><span class="pre">TTSVD</span></code>. <code class="docutils literal notranslate"><span class="pre">fixed_cores</span></code> freezes selected cores.
+The default <code class="docutils literal notranslate"><span class="pre">gauge=&quot;qr&quot;</span></code> moves the orthogonality center between updates;
+<code class="docutils literal notranslate"><span class="pre">gauge=&quot;none&quot;</span></code> replaces cores without that QR preparation.</p>
+<p>A rank sequence has one entry per open-chain bond, so a four-site TT uses
+three entries. Each directional pass counts as one sweep.</p>
+</section>
+<section id="tr-als">
+<h3>TR-ALS<a class="headerlink" href="#tr-als" title="Permalink to this headline">#</a></h3>
+<p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TRALS" title="tensorkrowch.decompositions.TRALS"><code class="xref py py-class docutils literal notranslate"><span class="pre">TRALS</span></code></a> optimizes a cyclic chain using forward passes. Its cyclic
+least-squares formulation follows the tensor ring approach <a class="reference internal" href="#trdecomp" id="id4"><span>[trdecomp]</span></a>.
+Initialization, conditioning and convergence can differ from TT-ALS because
+every core participates in a closed loop.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)]</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">FormatSource</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">formats</span><span class="o">.</span><span class="n">TR</span><span class="p">(</span><span class="n">cores</span><span class="p">))</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TRALS</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="n">convergence</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">ConvergencePolicy</span><span class="p">(</span>
+    <span class="n">max_sweeps</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">keep_best</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">convergence</span><span class="o">=</span><span class="n">convergence</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A TR rank sequence has one right-link rank per core. Its last entry is the
+cyclic rank, so a five-site TR uses five entries. QR is a local gauge transfer
+in a ring; it does not make the whole cyclic environment orthonormal.</p>
+</section>
+<section id="configuring-convergence-and-local-solves">
+<h3>Configuring convergence and local solves<a class="headerlink" href="#configuring-convergence-and-local-solves" title="Permalink to this headline">#</a></h3>
+<p>The same objects configure both engines:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.ConvergencePolicy" title="tensorkrowch.decompositions.ConvergencePolicy"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConvergencePolicy</span></code></a> sets the sweep budget, absolute and relative
+objective-error thresholds, stagnation criteria, and optional retention of
+the best complete-sweep approximation. A stagnation threshold indicates
+little change, not necessarily a small reconstruction error.</p></li>
+<li><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.LeastSquaresSolver" title="tensorkrowch.decompositions.LeastSquaresSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">LeastSquaresSolver</span></code></a> configures the PyTorch least-squares solve,
+conditioning controls and optional Tikhonov regularization.</p></li>
+<li><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.SamplingPolicy" title="tensorkrowch.decompositions.SamplingPolicy"><code class="xref py py-class docutils literal notranslate"><span class="pre">SamplingPolicy</span></code></a> replaces complete local systems with sampled rows.
+The next section lists its sampling choices.</p></li>
 </ul>
+<p>For example, a regularized refinement can reuse a previous result:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">DenseTensorSource</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+<span class="n">initial</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTSVD</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTALS</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="n">solver</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">LeastSquaresSolver</span><span class="p">(</span><span class="n">l2_reg</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">)</span>
+<span class="n">convergence</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">ConvergencePolicy</span><span class="p">(</span>
+    <span class="n">max_sweeps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">stagnation_rtol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">patience</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">keep_best</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+    <span class="n">initial_cores</span><span class="o">=</span><span class="n">initial</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="n">solver</span><span class="p">,</span> <span class="n">convergence</span><span class="o">=</span><span class="n">convergence</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="sampling-and-partial-observations">
+<h3>Sampling and partial observations<a class="headerlink" href="#sampling-and-partial-observations" title="Permalink to this headline">#</a></h3>
+<p>Pass a <code class="docutils literal notranslate"><span class="pre">SamplingPolicy</span></code> to <code class="docutils literal notranslate"><span class="pre">fit</span></code> when local systems should use a subset
+of rows. The policy selects topology-specific samplers internally:</p>
+<table class="colwidths-given table">
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 38%" />
+<col style="width: 38%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Policy method</p></th>
+<th class="head"><p>TT</p></th>
+<th class="head"><p>TR</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;uniform&quot;</span></code></p></td>
+<td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.UniformRows" title="tensorkrowch.decompositions.UniformRows"><code class="xref py py-class docutils literal notranslate"><span class="pre">UniformRows</span></code></a></p></td>
+<td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.UniformRows" title="tensorkrowch.decompositions.UniformRows"><code class="xref py py-class docutils literal notranslate"><span class="pre">UniformRows</span></code></a></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;leverage&quot;</span></code></p></td>
+<td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TTLeverageRows" title="tensorkrowch.decompositions.TTLeverageRows"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTLeverageRows</span></code></a>, using mixed-canonical cores <a class="reference internal" href="#ttleverage" id="id5"><span>[ttleverage]</span></a>.</p></td>
+<td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TRProductLeverageRows" title="tensorkrowch.decompositions.TRProductLeverageRows"><code class="xref py py-class docutils literal notranslate"><span class="pre">TRProductLeverageRows</span></code></a>, using a product proposal <a class="reference internal" href="#trproduct" id="id6"><span>[trproduct]</span></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;exact_leverage&quot;</span></code></p></td>
+<td><p>Not available.</p></td>
+<td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TRExactLeverageRows" title="tensorkrowch.decompositions.TRExactLeverageRows"><code class="xref py py-class docutils literal notranslate"><span class="pre">TRExactLeverageRows</span></code></a>, using cyclic Gram contractions
+<a class="reference internal" href="#trexact" id="id7"><span>[trexact]</span></a>.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">DenseTensorSource</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTALS</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="n">sampler</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">SamplingPolicy</span><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;leverage&#39;</span><span class="p">)</span>
+<span class="n">convergence</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">ConvergencePolicy</span><span class="p">(</span>
+    <span class="n">max_sweeps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">error_samples</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+    <span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sampler</span><span class="o">=</span><span class="n">sampler</span><span class="p">,</span> <span class="n">convergence</span><span class="o">=</span><span class="n">convergence</span><span class="p">,</span>
+    <span class="n">collect_metrics</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Sampled least-squares rows are corrected using their proposal probabilities.
+<code class="docutils literal notranslate"><span class="pre">reuse_sweeps</span></code> controls reuse of uniform samples; leverage proposals depend
+on the current site and cores. TR leverage methods retain complete active
+physical fibers, so <code class="docutils literal notranslate"><span class="pre">n_samples</span></code> counts exterior configurations rather
+than scalar rows.</p>
+<p>Stopping errors are measured on a separate fixed uniform evaluation set,
+not on each changing training sample. <code class="docutils literal notranslate"><span class="pre">ConvergencePolicy.error_samples</span></code>
+sets its budget; <code class="docutils literal notranslate"><span class="pre">None</span></code> requests exact evaluation. Estimated measurements
+are identified in <code class="docutils literal notranslate"><span class="pre">result.metadata['error_evaluation']</span></code>.</p>
+<p>For missing data, pass a boolean <code class="docutils literal notranslate"><span class="pre">mask</span></code> to the engine constructor: true
+entries participate, including observed zeros. <code class="docutils literal notranslate"><span class="pre">weights</span></code> separately
+multiplies participating residuals before their squared norm is taken.
+An ordinary sparse source still represents known zeros outside its support;
+it is not automatically a completion dataset. <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.ALSProblem" title="tensorkrowch.decompositions.ALSProblem"><code class="xref py py-class docutils literal notranslate"><span class="pre">ALSProblem</span></code></a> describes
+these objective distinctions, and <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.ObservedRows" title="tensorkrowch.decompositions.ObservedRows"><code class="xref py py-class docutils literal notranslate"><span class="pre">ObservedRows</span></code></a> exposes permanent
+sparse observations for lower-level use. Neither is required for ordinary
+engine fits.</p>
+</section>
+</section>
+<section id="tt-to-tr-conversion-and-spectral-recovery">
+<h2>TT to TR conversion and spectral recovery<a class="headerlink" href="#tt-to-tr-conversion-and-spectral-recovery" title="Permalink to this headline">#</a></h2>
+<p>The ring module converts an existing TT to a cyclic representation. It also
+provides local loop-opening strategies, reused by TR-RSS. The optimization
+route combines local TR-ALS with recursive gauge transport; the spectral
+route uses BLOSTR <a class="reference internal" href="#blostr" id="id8"><span>[blostr]</span></a>. The recursive enrichment and automatic block
+handling are implementation extensions, not guarantees from the BLOSTR paper.</p>
+<section id="converting-an-existing-tt">
+<h3>Converting an existing TT<a class="headerlink" href="#converting-an-existing-tt" title="Permalink to this headline">#</a></h3>
+<p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TT2TR" title="tensorkrowch.decompositions.TT2TR"><code class="xref py py-class docutils literal notranslate"><span class="pre">TT2TR</span></code></a> takes a TT rather than a source. When starting from values,
+first obtain that TT using a source and another decomposition:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">axis</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;i,j,k,l-&gt;ijkl&#39;</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">DenseTensorSource</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+<span class="n">initial_tt</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTSVD</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">converter</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TT2TR</span><span class="p">(</span><span class="n">initial_tt</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">converter</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">collect_metrics</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>An integer <code class="docutils literal notranslate"><span class="pre">rank</span></code> specifies the local TR ranks; a sequence gives one
+right-link rank per core, with the cyclic rank last. Omitting it requests
+rank discovery. The initial site grows into a block when necessary to expose
+sufficient physical dimensions. <code class="docutils literal notranslate"><span class="pre">block_boundaries</span></code> controls automatic end
+blocks; disabling it for optimization requires prescribed ranks.</p>
+<p><code class="docutils literal notranslate"><span class="pre">center</span></code> selects the initial site or the center of the discovery block.
+At block SVD splits, <code class="docutils literal notranslate"><span class="pre">rank</span></code> acts as a cap and an optional <code class="docutils literal notranslate"><span class="pre">rtol</span></code> can
+reduce the returned ranks. This tolerance controls discarded squared
+singular-value mass, not ALS convergence.</p>
+</section>
+<section id="choosing-a-loop-opener">
+<h3>Choosing a loop opener<a class="headerlink" href="#choosing-a-loop-opener" title="Permalink to this headline">#</a></h3>
+<p>A loop opener factors a local target into TR cores and two external gauges.
+Choose a strategy to control that factorization:</p>
+<table class="colwidths-given table">
+<colgroup>
+<col style="width: 32%" />
+<col style="width: 68%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Object</p></th>
+<th class="head"><p>Role</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.ALSLoopOpener" title="tensorkrowch.decompositions.ALSLoopOpener"><code class="xref py py-class docutils literal notranslate"><span class="pre">ALSLoopOpener</span></code></a></p></td>
+<td><p>Optimize the local factors. Its <code class="docutils literal notranslate"><span class="pre">fit_options</span></code> accepts TR-ALS controls
+such as a solver and convergence policy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.QRLoopOpener" title="tensorkrowch.decompositions.QRLoopOpener"><code class="xref py py-class docutils literal notranslate"><span class="pre">QRLoopOpener</span></code></a></p></td>
+<td><p>Balance an opening with QR, use another opener, restore the factors
+and optionally refine in the original target coordinates.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.BLOSTRLoopOpener" title="tensorkrowch.decompositions.BLOSTRLoopOpener"><code class="xref py py-class docutils literal notranslate"><span class="pre">BLOSTRLoopOpener</span></code></a></p></td>
+<td><p>Recover all local factors using the spectral BLOSTR algorithm.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.BLOSTRSVDLoopOpener" title="tensorkrowch.decompositions.BLOSTRSVDLoopOpener"><code class="xref py py-class docutils literal notranslate"><span class="pre">BLOSTRSVDLoopOpener</span></code></a></p></td>
+<td><p>Recover the first spectral factor, then split the remainder by SVD.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.CallableLoopOpener" title="tensorkrowch.decompositions.CallableLoopOpener"><code class="xref py py-class docutils literal notranslate"><span class="pre">CallableLoopOpener</span></code></a></p></td>
+<td><p>Supply a custom implementation of the <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.LoopOpener" title="tensorkrowch.decompositions.LoopOpener"><code class="xref py py-class docutils literal notranslate"><span class="pre">LoopOpener</span></code></a> contract.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The strings <code class="docutils literal notranslate"><span class="pre">&quot;als&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;blostr&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;blostr_svd&quot;</span></code> select the
+corresponding built-in strategies with default settings. Use objects when
+their detailed options are needed. <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.LoopOpening" title="tensorkrowch.decompositions.LoopOpening"><code class="xref py py-class docutils literal notranslate"><span class="pre">LoopOpening</span></code></a> documents the
+returned local factors; ordinary conversion code need not construct it.</p>
+<p>For a conversion with customized local optimization, pass a configured
+opener. This example also balances each target and refines its factors:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)]</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">FormatSource</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">formats</span><span class="o">.</span><span class="n">TR</span><span class="p">(</span><span class="n">cores</span><span class="p">))</span>
+<span class="n">initial_tt</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTSVD</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">convergence</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">ConvergencePolicy</span><span class="p">(</span>
+    <span class="n">max_sweeps</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">,</span> <span class="n">keep_best</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">opener</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">QRLoopOpener</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">ALSLoopOpener</span><span class="p">({</span>
+    <span class="s1">&#39;convergence&#39;</span><span class="p">:</span> <span class="n">convergence</span><span class="p">,</span>
+<span class="p">}))</span>
+<span class="n">converter</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TT2TR</span><span class="p">(</span><span class="n">initial_tt</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">converter</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">loop_opener</span><span class="o">=</span><span class="n">opener</span><span class="p">,</span> <span class="n">enrich</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="recursion-and-enrichment">
+<h3>Recursion and enrichment<a class="headerlink" href="#recursion-and-enrichment" title="Permalink to this headline">#</a></h3>
+<p>Optimization openings are connected using a gauge recursion. The supported
+choices are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;adjoint&quot;</span></code> / <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.AdjointGaugeRecursion" title="tensorkrowch.decompositions.AdjointGaugeRecursion"><code class="xref py py-class docutils literal notranslate"><span class="pre">AdjointGaugeRecursion</span></code></a>: move QR centers, or use
+the corresponding isometries of a Vidal representation. This is the default.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;pinv&quot;</span></code> / <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.PinvGaugeRecursion" title="tensorkrowch.decompositions.PinvGaugeRecursion"><code class="xref py py-class docutils literal notranslate"><span class="pre">PinvGaugeRecursion</span></code></a>: use pseudoinverses of local
+TT cores or contracted blocks.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;orth&quot;</span></code> / <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.OrthGaugeRecursion" title="tensorkrowch.decompositions.OrthGaugeRecursion"><code class="xref py py-class docutils literal notranslate"><span class="pre">OrthGaugeRecursion</span></code></a>: use pseudoinverses of the
+learned gauges.</p></li>
+</ul>
+<p>A configured <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.GaugeRecursion" title="tensorkrowch.decompositions.GaugeRecursion"><code class="xref py py-class docutils literal notranslate"><span class="pre">GaugeRecursion</span></code></a> strategy accepts PyTorch pseudoinverse
+keyword arguments. <code class="docutils literal notranslate"><span class="pre">enrich=True</span></code> adds orthogonal residual constraints to
+the transported sample space without increasing the requested TR ranks.
+<code class="docutils literal notranslate"><span class="pre">enrich_rank</span></code> and <code class="docutils literal notranslate"><span class="pre">enrich_rtol</span></code> limit those extra coordinates.</p>
+</section>
+<section id="exact-spectral-recovery">
+<h3>Exact spectral recovery<a class="headerlink" href="#exact-spectral-recovery" title="Permalink to this headline">#</a></h3>
+<p>BLOSTR is intended for exact spectral structure under its dimensional and
+genericity assumptions <a class="reference internal" href="#blostr" id="id9"><span>[blostr]</span></a>. Choosing a BLOSTR opener in <code class="docutils literal notranslate"><span class="pre">TT2TR</span></code>
+selects an exact propagation route: recover the central factors, absorb
+square gauges into neighbors and continue with SVDs. It does not use the
+optimization gauge recursions or enrichment.</p>
+<p>The standalone functions <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.tr_blostr" title="tensorkrowch.decompositions.tr_blostr"><code class="xref py py-func docutils literal notranslate"><span class="pre">tr_blostr()</span></code></a> and <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.tr_blostr_svd" title="tensorkrowch.decompositions.tr_blostr_svd"><code class="xref py py-func docutils literal notranslate"><span class="pre">tr_blostr_svd()</span></code></a> instead
+take a dense tensor and return a TR decomposition directly. Their API
+documents rank discovery, slice selection and Gaussian projection options.
+The Gaussian projection and first-factor/SVD variant are extensions of the
+basic spectral construction. Arbitrary noisy inputs need not satisfy the
+requirements for exact recovery.</p>
+<p>For an exact generic TR input, the first-factor/SVD route can be selected
+explicitly. BLOSTR uses complex spectral factors and automatically promotes
+the working TT cores, so real inputs are accepted and the result is complex.
+The input TT remains unchanged:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)]</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">FormatSource</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">formats</span><span class="o">.</span><span class="n">TR</span><span class="p">(</span><span class="n">cores</span><span class="p">))</span>
+<span class="n">initial_tt</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTSVD</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">opener</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">BLOSTRSVDLoopOpener</span><span class="p">({</span>
+    <span class="s1">&#39;projection&#39;</span><span class="p">:</span> <span class="s1">&#39;gaussian&#39;</span><span class="p">,</span> <span class="s1">&#39;n_attempts&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+<span class="p">})</span>
+<span class="n">converter</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TT2TR</span><span class="p">(</span><span class="n">initial_tt</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">converter</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">loop_opener</span><span class="o">=</span><span class="n">opener</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="recursive-sketching">
+<h2>Recursive sketching<a class="headerlink" href="#recursive-sketching" title="Permalink to this headline">#</a></h2>
+<p>Sketching builds smaller local tensors from evaluations or contractions,
+then connects their factors. It avoids materializing the complete target.
+TT-RSS and TR-RSS share sampled preparation; TT-RS uses explicitly selected
+contraction operators. These methods do not support structural batches.</p>
+<section id="tt-rss-a-tensor-train-from-evaluations">
+<h3>TT-RSS: a tensor train from evaluations<a class="headerlink" href="#tt-rss-a-tensor-train-from-evaluations" title="Permalink to this headline">#</a></h3>
+<p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TTRSS" title="tensorkrowch.decompositions.TTRSS"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTRSS</span></code></a> implements Tensor Train Recursive Sketching from Samples
+<a class="reference internal" href="#ttrss" id="id10"><span>[ttrss]</span></a>. The source must be evaluable at new configurations: supplied
+samples determine the sketches, rather than restricting queries to those
+original points.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">function</span><span class="p">(</span><span class="n">coordinates</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">coordinates</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">CallableSource</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">n_sites</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">domain</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">embedding</span><span class="p">(</span><span class="n">values</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="n">values</span><span class="p">),</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTRSS</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">embedding</span><span class="o">=</span><span class="n">embedding</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="n">domain</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">collect_metrics</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">embedded</span> <span class="o">=</span> <span class="n">embedding</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+<span class="n">values</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">embedded</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Continuous inputs need an embedding and a domain on which its coefficients
+can be fitted. A shared embedding/domain applies to every input; sequences
+allow different choices per input. Finite tensor sources use basis embeddings
+by default, so they need neither argument.</p>
+<p><code class="docutils literal notranslate"><span class="pre">rank</span></code> caps TT bonds; <code class="docutils literal notranslate"><span class="pre">None</span></code> discovers numerical ranks. <code class="docutils literal notranslate"><span class="pre">center</span></code> is a
+site: local SVDs act on both sides there and on the outgoing side elsewhere.
+Singular spectra remain absorbed in the prepared tensors. <code class="docutils literal notranslate"><span class="pre">batch_size</span></code>
+limits source-evaluation batches, not the number of sketch samples.</p>
+</section>
+<section id="tr-rss-a-tensor-ring-from-evaluations">
+<h3>TR-RSS: a tensor ring from evaluations<a class="headerlink" href="#tr-rss-a-tensor-ring-from-evaluations" title="Permalink to this headline">#</a></h3>
+<p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TRRSS" title="tensorkrowch.decompositions.TRRSS"><code class="xref py py-class docutils literal notranslate"><span class="pre">TRRSS</span></code></a> uses the same source, samples, embeddings and transformations,
+but constructs a cyclic representation through local loop openings. It is
+an experimental extension combining TT-RSS <a class="reference internal" href="#ttrss" id="id11"><span>[ttrss]</span></a> with the ring opening
+machinery described above; it is not the TT algorithm with a final unit-rank
+closing bond.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)]</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">FormatSource</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">formats</span><span class="o">.</span><span class="n">TR</span><span class="p">(</span><span class="n">cores</span><span class="p">))</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TRRSS</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">collect_metrics</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The rank sequence has one right-link rank per final core, with the cyclic
+rank last. Sampled TT-cut caps are formed from products of cyclic and
+internal TR ranks. With no prescribed rank, local SVDs and blocks determine
+the numerical dimensions used for discovery.</p>
+<p><code class="docutils literal notranslate"><span class="pre">center</span></code> seeds an automatic initial block. End blocks absorb the incoming
+gauges before being split; <code class="docutils literal notranslate"><span class="pre">block_boundaries=False</span></code> keeps single-site ends
+when ranks are prescribed. The block and rank conventions follow <code class="docutils literal notranslate"><span class="pre">TT2TR</span></code>.
+Recursive steps transport gauges through sketch evaluations, retaining the
+inherited sample coordinates. Local ALS stopping criteria belong to the
+opener’s convergence policy, while <code class="docutils literal notranslate"><span class="pre">fit</span></code> truncation criteria control SVDs.
+Pass a configured <code class="docutils literal notranslate"><span class="pre">ALSLoopOpener</span></code> to customize those solves, or wrap it in
+<code class="docutils literal notranslate"><span class="pre">QRLoopOpener</span></code> for balancing and refinement as in the conversion example.</p>
+</section>
+<section id="choosing-fitters-and-projectors">
+<h3>Choosing fitters and projectors<a class="headerlink" href="#choosing-fitters-and-projectors" title="Permalink to this headline">#</a></h3>
+<p>Both sampled engines accept strategy objects in their constructors:</p>
+<table class="colwidths-given table">
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 65%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Object</p></th>
+<th class="head"><p>When to use it</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.BasisFitter" title="tensorkrowch.decompositions.BasisFitter"><code class="xref py py-class docutils literal notranslate"><span class="pre">BasisFitter</span></code></a></p></td>
+<td><p>Represent a finite physical axis in its discrete basis.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.FixedEmbeddingFitter" title="tensorkrowch.decompositions.FixedEmbeddingFitter"><code class="xref py py-class docutils literal notranslate"><span class="pre">FixedEmbeddingFitter</span></code></a></p></td>
+<td><p>Fit coefficients in a supplied embedding, with optional solver settings.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TrainableEmbeddingFitter" title="tensorkrowch.decompositions.TrainableEmbeddingFitter"><code class="xref py py-class docutils literal notranslate"><span class="pre">TrainableEmbeddingFitter</span></code></a></p></td>
+<td><p>Optimize a parameterized embedding while fitting physical fibers.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.IdentityRangeProjector" title="tensorkrowch.decompositions.IdentityRangeProjector"><code class="xref py py-class docutils literal notranslate"><span class="pre">IdentityRangeProjector</span></code></a></p></td>
+<td><p>Apply the local SVD directly; this is also the default when omitted.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.RandomizedRangeProjector" title="tensorkrowch.decompositions.RandomizedRangeProjector"><code class="xref py py-class docutils literal notranslate"><span class="pre">RandomizedRangeProjector</span></code></a></p></td>
+<td><p>Compress the local SVD input using a configured randomized projection.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Pass a fitter through <code class="docutils literal notranslate"><span class="pre">input_fitter</span></code> and a projector through
+<code class="docutils literal notranslate"><span class="pre">range_projector</span></code>. <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.InputFitter" title="tensorkrowch.decompositions.InputFitter"><code class="xref py py-class docutils literal notranslate"><span class="pre">InputFitter</span></code></a> and <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.RangeProjector" title="tensorkrowch.decompositions.RangeProjector"><code class="xref py py-class docutils literal notranslate"><span class="pre">RangeProjector</span></code></a> document
+the extension contracts. <code class="docutils literal notranslate"><span class="pre">local_solver</span></code> configures the linear solves used
+to align the TT cores; it is separate from a TR loop opener’s ALS solver.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">DenseTensorSource</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">projector</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">RandomizedRangeProjector</span><span class="p">(</span>
+    <span class="n">projection_dim</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">projection_oversampling</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">n_power_iter</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTRSS</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">range_projector</span><span class="o">=</span><span class="n">projector</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="transforming-evaluations">
+<h3>Transforming evaluations<a class="headerlink" href="#transforming-evaluations" title="Permalink to this headline">#</a></h3>
+<p>For TT-RSS and TR-RSS, <code class="docutils literal notranslate"><span class="pre">transform</span></code> is one callback on a shared
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.ConfigurationMap" title="tensorkrowch.decompositions.ConfigurationMap"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConfigurationMap</span></code></a>. It receives query configurations and raw source
+values, and returns transformed values of the same shape. Its <code class="docutils literal notranslate"><span class="pre">evaluate</span></code>
+method queries additional points through the cache without increasing the
+sketch sample set. For example, a reflection average is:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">function</span><span class="p">(</span><span class="n">coordinates</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">coordinates</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">transform</span><span class="p">(</span><span class="n">configuration_map</span><span class="p">):</span>
+    <span class="n">reflected</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">configuration_map</span><span class="o">.</span><span class="n">configurations</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">configuration_map</span><span class="o">.</span><span class="n">values</span> <span class="o">+</span>
+            <span class="n">configuration_map</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">reflected</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span>
+
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">CallableSource</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">n_sites</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">domain</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">embedding</span><span class="p">(</span><span class="n">values</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="n">values</span><span class="p">),</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTRSS</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">,</span> <span class="n">embedding</span><span class="o">=</span><span class="n">embedding</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="n">domain</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="tensor-valued-functions">
+<h3>Tensor-valued functions<a class="headerlink" href="#tensor-valued-functions" title="Permalink to this headline">#</a></h3>
+<p>A callable can return output axes as well as its configuration batch. Declare
+them through the source’s <code class="docutils literal notranslate"><span class="pre">out_shape</span></code> and select the input variables with
+<code class="docutils literal notranslate"><span class="pre">in_sites</span></code>; <code class="docutils literal notranslate"><span class="pre">n_sites</span></code> counts both input and output variables.
+<code class="docutils literal notranslate"><span class="pre">out_position</span></code> places the output sites in the fitted chain. <code class="docutils literal notranslate"><span class="pre">labels</span></code>
+optionally selects output components for building the sample sketches.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">function</span><span class="p">(</span><span class="n">coordinates</span><span class="p">):</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">coordinates</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="n">value</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">square</span><span class="p">()),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">embedding</span><span class="p">(</span><span class="n">values</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="n">values</span><span class="p">,</span>
+                        <span class="n">values</span><span class="o">.</span><span class="n">square</span><span class="p">()),</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">CallableSource</span><span class="p">(</span>
+    <span class="n">function</span><span class="p">,</span> <span class="n">n_sites</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">out_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+    <span class="n">in_sites</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTRSS</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">,</span> <span class="n">embedding</span><span class="o">=</span><span class="n">embedding</span><span class="p">,</span>
+    <span class="n">domain</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">out_position</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">labels</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span><span class="o">.</span><span class="n">remainder</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="tt-rs-explicit-contraction-sketches">
+<h3>TT-RS: explicit contraction sketches<a class="headerlink" href="#tt-rs-explicit-contraction-sketches" title="Permalink to this headline">#</a></h3>
+<p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TTRS" title="tensorkrowch.decompositions.TTRS"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTRS</span></code></a> builds local core-determining equations from a finite source
+and a <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.SketchOperator" title="tensorkrowch.decompositions.SketchOperator"><code class="xref py py-class docutils literal notranslate"><span class="pre">SketchOperator</span></code></a>, following tensor train sketching <a class="reference internal" href="#ttrs" id="id12"><span>[ttrs]</span></a>.
+Its finite-source interface also permits exact contractions rather than
+only empirical estimates from observations. Centered construction and the
+available operators extend that basic formulation.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">dataset</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">SparseTensorSource</span><span class="o">.</span><span class="n">from_data</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">in_dim</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">sketch</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">MarginalSketch</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTRS</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">sketch_operator</span><span class="o">=</span><span class="n">sketch</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">collect_metrics</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Available contraction strategies are:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.SampledSketch" title="tensorkrowch.decompositions.SampledSketch"><code class="xref py py-class docutils literal notranslate"><span class="pre">SampledSketch</span></code></a>: select fibers using supplied or generated indices.</p></li>
+<li><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.MarginalSketch" title="tensorkrowch.decompositions.MarginalSketch"><code class="xref py py-class docutils literal notranslate"><span class="pre">MarginalSketch</span></code></a>: form local marginals, with configurable order and
+optional per-site factors. This is the default strategy.</p></li>
+<li><p><a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TTStackSketch" title="tensorkrowch.decompositions.TTStackSketch"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTStackSketch</span></code></a>: contract a stack of TT sketches; its construction is
+related to randomized TT sketching <a class="reference internal" href="#ttstack" id="id13"><span>[ttstack]</span></a>.</p></li>
+</ul>
+<p>Here <code class="docutils literal notranslate"><span class="pre">transform</span></code> acts separately on each three-axis Phi tensor, returning
+a tensor of the same shape. This allows local smoothing or other user-defined
+operations on the projected tensors. It differs from the shared evaluation
+callback used by RSS. The callback is responsible for preserving whatever
+consistency its application requires.</p>
+<p><code class="docutils literal notranslate"><span class="pre">center</span></code>, SVD truncation and <code class="docutils literal notranslate"><span class="pre">range_projector</span></code> work as in the other
+sketching engines. <code class="docutils literal notranslate"><span class="pre">strict_system</span></code> enables additional checks on the
+core-determining equations. <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.PhiOperator" title="tensorkrowch.decompositions.PhiOperator"><code class="xref py py-class docutils literal notranslate"><span class="pre">PhiOperator</span></code></a> and
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.CoreDeterminingSystem" title="tensorkrowch.decompositions.CoreDeterminingSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">CoreDeterminingSystem</span></code></a> document lower-level access for custom
+sketches. There is no separate TR-RS wrapper: compose the resulting TT with
+<code class="docutils literal notranslate"><span class="pre">TT2TR</span></code> when needed.</p>
+</section>
+</section>
+<section id="matrix-and-quantics-extensions">
+<h2>Matrix and Quantics extensions<a class="headerlink" href="#matrix-and-quantics-extensions" title="Permalink to this headline">#</a></h2>
+<p>These extensions describe the input and result representation; the numerical
+algorithms and their configurable strategies remain the same.</p>
+<section id="matrices">
+<h3>Matrices<a class="headerlink" href="#matrices" title="Permalink to this headline">#</a></h3>
+<p>A matrix source has paired input/output dimensions at every site. Dense,
+sparse and callable sources provide <code class="docutils literal notranslate"><span class="pre">.matrix(...)</span></code> constructors;
+<code class="docutils literal notranslate"><span class="pre">FormatSource</span></code> reads those dimensions from a matrix format.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Two input axes followed by two output axes.</span>
+<span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">DenseTensorSource</span><span class="o">.</span><span class="n">matrix</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">ordering</span><span class="o">=</span><span class="s1">&#39;grouped&#39;</span><span class="p">)</span>
+<span class="n">tt_engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTMSVD</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="n">tr_engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TRMSVD</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="n">ttm</span> <span class="o">=</span> <span class="n">tt_engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">trm</span> <span class="o">=</span> <span class="n">tr_engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">ordering=&quot;grouped&quot;</span></code> means <code class="docutils literal notranslate"><span class="pre">(in_0,</span> <span class="pre">in_1,</span> <span class="pre">...,</span> <span class="pre">out_0,</span> <span class="pre">out_1,</span> <span class="pre">...)</span></code>;
+<code class="docutils literal notranslate"><span class="pre">&quot;interleaved&quot;</span></code> means <code class="docutils literal notranslate"><span class="pre">(in_0,</span> <span class="pre">out_0,</span> <span class="pre">in_1,</span> <span class="pre">out_1,</span> <span class="pre">...)</span></code>. An ordinary
+two-axis matrix is one paired site; reshape it first to specify more sites.
+Sparse matrix sources additionally need <code class="docutils literal notranslate"><span class="pre">in_dim</span></code> and <code class="docutils literal notranslate"><span class="pre">out_dim</span></code>.</p>
+<p>General engines such as <code class="docutils literal notranslate"><span class="pre">TTALS</span></code>, <code class="docutils literal notranslate"><span class="pre">TRALS</span></code>, <code class="docutils literal notranslate"><span class="pre">TTRSS</span></code> and <code class="docutils literal notranslate"><span class="pre">TRRSS</span></code> infer
+matrix results from the source. They return <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TTMDecomposition" title="tensorkrowch.decompositions.TTMDecomposition"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTMDecomposition</span></code></a> or
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TRMDecomposition" title="tensorkrowch.decompositions.TRMDecomposition"><code class="xref py py-class docutils literal notranslate"><span class="pre">TRMDecomposition</span></code></a>, with each physical input/output pair restored.
+<code class="docutils literal notranslate"><span class="pre">TTMSVD</span></code> and <code class="docutils literal notranslate"><span class="pre">TRMSVD</span></code> explicitly require matrix inputs. Matrix <code class="docutils literal notranslate"><span class="pre">apply</span></code>
+and contraction behavior follow the corresponding formats.</p>
+</section>
+<section id="quantics">
+<h3>Quantics<a class="headerlink" href="#quantics" title="Permalink to this headline">#</a></h3>
+<p>Quantics sources discretize coordinate functions into digit sites. Construct
+the source with <code class="docutils literal notranslate"><span class="pre">base</span></code>, <code class="docutils literal notranslate"><span class="pre">level</span></code> and <code class="docutils literal notranslate"><span class="pre">domain</span></code> or explicit
+<code class="docutils literal notranslate"><span class="pre">grid_coordinates</span></code>. A preconfigured
+<a class="reference internal" href="formats.html#tensorkrowch.formats.QuantizedLayout" title="tensorkrowch.formats.QuantizedLayout"><code class="xref py py-class docutils literal notranslate"><span class="pre">QuantizedLayout</span></code></a> and
+<a class="reference internal" href="formats.html#tensorkrowch.formats.CoordinateMap" title="tensorkrowch.formats.CoordinateMap"><code class="xref py py-class docutils literal notranslate"><span class="pre">CoordinateMap</span></code></a> can express more detailed layouts
+and grids. These digit representations follow the Quantics construction
+<a class="reference internal" href="#id15" id="id14"><span>[quantics]</span></a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">function</span><span class="p">(</span><span class="n">coordinates</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">coordinates</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+
+<span class="n">source</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">CallableQuanticsSource</span><span class="p">(</span>
+    <span class="n">function</span><span class="p">,</span> <span class="n">n_coordinates</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+    <span class="n">domain</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">tt_engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TTSVD</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="n">tr_engine</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">TRSVD</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="n">qtt</span> <span class="o">=</span> <span class="n">tt_engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">qtr</span> <span class="o">=</span> <span class="n">tr_engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">coordinates</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">values</span> <span class="o">=</span> <span class="n">qtt</span><span class="o">.</span><span class="n">evaluate_coordinates</span><span class="p">(</span><span class="n">coordinates</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The results are <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.QTTDecomposition" title="tensorkrowch.decompositions.QTTDecomposition"><code class="xref py py-class docutils literal notranslate"><span class="pre">QTTDecomposition</span></code></a> or <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.QTRDecomposition" title="tensorkrowch.decompositions.QTRDecomposition"><code class="xref py py-class docutils literal notranslate"><span class="pre">QTRDecomposition</span></code></a>;
+matrix sources yield <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.QTTMDecomposition" title="tensorkrowch.decompositions.QTTMDecomposition"><code class="xref py py-class docutils literal notranslate"><span class="pre">QTTMDecomposition</span></code></a> or
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.QTRMDecomposition" title="tensorkrowch.decompositions.QTRMDecomposition"><code class="xref py py-class docutils literal notranslate"><span class="pre">QTRMDecomposition</span></code></a>. Results retain their digit layouts and coordinate
+maps. SVD materializes the full digit tensor, while ALS and RSS can query it.</p>
+<p>Sampled sketching accepts domain-coordinate samples for Quantics sources.
+An explicit <code class="docutils literal notranslate"><span class="pre">ConfigurationBatch(...,</span> <span class="pre">kind=&quot;indices&quot;)</span></code> supplies digit
+indices instead. The layout can group digits by variable or interleave them
+by level. Functions <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.qtt_svd" title="tensorkrowch.decompositions.qtt_svd"><code class="xref py py-func docutils literal notranslate"><span class="pre">qtt_svd()</span></code></a>, <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.qtr_svd" title="tensorkrowch.decompositions.qtr_svd"><code class="xref py py-func docutils literal notranslate"><span class="pre">qtr_svd()</span></code></a>, <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.qttm_svd" title="tensorkrowch.decompositions.qttm_svd"><code class="xref py py-func docutils literal notranslate"><span class="pre">qttm_svd()</span></code></a>,
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.qtrm_svd" title="tensorkrowch.decompositions.qtrm_svd"><code class="xref py py-func docutils literal notranslate"><span class="pre">qtrm_svd()</span></code></a>, <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.qtt_rss" title="tensorkrowch.decompositions.qtt_rss"><code class="xref py py-func docutils literal notranslate"><span class="pre">qtt_rss()</span></code></a> and <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.qtr_rss" title="tensorkrowch.decompositions.qtr_rss"><code class="xref py py-func docutils literal notranslate"><span class="pre">qtr_rss()</span></code></a> are convenient adapters,
+not separate numerical engines. Ordinary dense tensors are not automatically
+quantized.</p>
+</section>
+</section>
+<section id="results-progress-and-diagnostics">
+<h2>Results, progress and diagnostics<a class="headerlink" href="#results-progress-and-diagnostics" title="Permalink to this headline">#</a></h2>
+<p>Every decomposition returns a <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TensorDecomposition" title="tensorkrowch.decompositions.TensorDecomposition"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorDecomposition</span></code></a> together with the
+appropriate numerical format interface. Use <code class="docutils literal notranslate"><span class="pre">result.cores</span></code> to access its
+cores, <code class="docutils literal notranslate"><span class="pre">evaluate</span></code> for selected inputs, and <code class="docutils literal notranslate"><span class="pre">contract_dense</span></code> when full
+materialization is affordable. Continuous RSS results are evaluated on
+embedded inputs, as shown above; Quantics results also support coordinate
+evaluation.</p>
+<p><code class="docutils literal notranslate"><span class="pre">verbose</span></code> controls console progress. <code class="docutils literal notranslate"><span class="pre">collect_metrics=True</span></code> retains
+algorithm-specific records in <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.DecompositionMetrics" title="tensorkrowch.decompositions.DecompositionMetrics"><code class="xref py py-class docutils literal notranslate"><span class="pre">DecompositionMetrics</span></code></a>: truncations,
+local solves, sweep errors, evaluations and timings. See each <code class="docutils literal notranslate"><span class="pre">fit</span></code> method
+for its reporting levels. A small local opening or sampled solve residual
+does not by itself certify a small global reconstruction error.</p>
+<p><code class="docutils literal notranslate"><span class="pre">result.as_info()</span></code> combines representation information and diagnostics.
+<code class="docutils literal notranslate"><span class="pre">result.metadata</span></code> records the fit setup. These describe the original fit;
+editing or rounding the result does not recompute historical errors.
+<code class="docutils literal notranslate"><span class="pre">result.error(...)</span></code> can measure the current approximation on supplied data.
+<code class="docutils literal notranslate"><span class="pre">result.to_format()</span></code> returns the numerical representation without fit
+diagnostics. Copying, detaching and moving results preserve their history;
+new algebraic operations return ordinary formats.</p>
+<p>The legacy <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.vec_to_mps" title="tensorkrowch.decompositions.vec_to_mps"><code class="xref py py-func docutils literal notranslate"><span class="pre">vec_to_mps()</span></code></a> and <a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.mat_to_mpo" title="tensorkrowch.decompositions.mat_to_mpo"><code class="xref py py-func docutils literal notranslate"><span class="pre">mat_to_mpo()</span></code></a> remain available for
+compatibility and emit deprecation warnings. New code should use the engine
+or functional decomposition interfaces and construct models explicitly.</p>
+</section>
+<section id="api-reference">
+<h2>API reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">#</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="decompositions_api.html">Decomposition API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="decompositions_api.html#input-sources">Input sources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions_api.html#svd-engines-and-functions">SVD engines and functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions_api.html#als-engines-and-policies">ALS engines and policies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions_api.html#als-objectives-samplers-and-environments">ALS objectives, samplers and environments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions_api.html#ring-conversion-and-spectral-functions">Ring conversion and spectral functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions_api.html#loop-opening-strategies-and-gauge-recursions">Loop-opening strategies and gauge recursions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions_api.html#sketching-engines-and-functions">Sketching engines and functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions_api.html#sketching-fitters-projectors-and-operators">Sketching fitters, projectors and operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions_api.html#sketching-evaluation-and-extension-objects">Sketching evaluation and extension objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions_api.html#results-and-diagnostics">Results and diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions_api.html#compatibility-helpers">Compatibility helpers</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">#</a></h2>
+<dl class="citation">
+<dt class="label" id="ttsvd"><span class="brackets"><a class="fn-backref" href="#id1">ttsvd</a></span></dt>
+<dd><p>I. V. Oseledets. <a class="reference external" href="https://doi.org/10.1137/090752286">Tensor-Train Decomposition</a> (2011).</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><em>list[torch.Tensor]</em> – List of tensor cores of the MPS.</p></li>
-<li><p><em>dictionary</em> – If <code class="docutils literal notranslate"><span class="pre">return_info</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
-</ul>
-</p>
+<dt class="label" id="trdecomp"><span class="brackets">trdecomp</span><span class="fn-backref">(<a href="#id2">1</a>,<a href="#id4">2</a>)</span></dt>
+<dd><p>Q. Zhao et al. <a class="reference external" href="https://arxiv.org/abs/1606.05535">Tensor Ring Decomposition</a> (2016).</p>
+</dd>
+<dt class="label" id="ttals"><span class="brackets"><a class="fn-backref" href="#id3">ttals</a></span></dt>
+<dd><p>S. Holtz, T. Rohwedder and R. Schneider. <a class="reference external" href="https://doi.org/10.1137/100818893">The Alternating Linear
+Scheme for Tensor Optimization in the Tensor Train Format</a> (2012).</p>
+</dd>
+<dt class="label" id="ttleverage"><span class="brackets"><a class="fn-backref" href="#id5">ttleverage</a></span></dt>
+<dd><p>V. Bharadwaj et al. <a class="reference external" href="https://arxiv.org/abs/2406.02749">Efficient Leverage Score Sampling for
+Tensor Train Decomposition</a> (2024).</p>
+</dd>
+<dt class="label" id="trproduct"><span class="brackets"><a class="fn-backref" href="#id6">trproduct</a></span></dt>
+<dd><p>O. A. Malik and S. Becker. <a class="reference external" href="https://arxiv.org/abs/2010.08581">A Sampling-Based Method for Tensor
+Ring Decomposition</a> (2021).</p>
+</dd>
+<dt class="label" id="trexact"><span class="brackets"><a class="fn-backref" href="#id7">trexact</a></span></dt>
+<dd><p>O. A. Malik, V. Bharadwaj and R. Murray. <a class="reference external" href="https://arxiv.org/abs/2210.03828">Sampling-Based
+Decomposition Algorithms for Arbitrary Tensor Networks</a> (2022).</p>
+</dd>
+<dt class="label" id="blostr"><span class="brackets">blostr</span><span class="fn-backref">(<a href="#id8">1</a>,<a href="#id9">2</a>)</span></dt>
+<dd><p>H. Chen, S. Chen and A. R. Zhang. <a class="reference external" href="https://arxiv.org/abs/2512.01016">A Provably Efficient Method
+for Tensor Ring Decomposition and Its Applications</a> (2025).</p>
+</dd>
+<dt class="label" id="ttrss"><span class="brackets">ttrss</span><span class="fn-backref">(<a href="#id10">1</a>,<a href="#id11">2</a>)</span></dt>
+<dd><p>J. R. Pareja Monturiol, A. Pozas-Kerstjens and D. Perez-Garcia.
+<a class="reference external" href="https://arxiv.org/abs/2501.06300">Tensorization of neural networks for improved privacy and interpretability</a> (2025).</p>
+</dd>
+<dt class="label" id="ttrs"><span class="brackets"><a class="fn-backref" href="#id12">ttrs</a></span></dt>
+<dd><p>Y. Hur et al. <a class="reference external" href="https://arxiv.org/abs/2202.11788">Generative modeling via tensor train sketching</a> (2023).</p>
+</dd>
+<dt class="label" id="ttstack"><span class="brackets"><a class="fn-backref" href="#id13">ttstack</a></span></dt>
+<dd><p>P. Cazeaux, M.-S. Dupuy and R. Figueroa Justiniano.
+<a class="reference external" href="https://arxiv.org/abs/2603.11009">Linear-Scaling Tensor Train Sketching</a>
+(2026).</p>
+</dd>
+<dt class="label" id="id15"><span class="brackets"><a class="fn-backref" href="#id14">quantics</a></span></dt>
+<dd><p>B. N. Khoromskij. <a class="reference external" href="https://doi.org/10.1007/s00365-011-9131-1">O(d log N)-Quantics Approximation of
+N-d Tensors in High-Dimensional Numerical Modeling</a> (2011).</p>
 </dd>
 </dl>
-</dd></dl>
-
 </section>
 </section>
 
@@ -645,6 +1581,13 @@ validation error should be returned.</p></li>
             <p class="prev-next-subtitle">previous</p>
             <p class="prev-next-title">Embeddings</p>
         </div>
+    </a>
+    <a class='right-next' id="next-link" href="decompositions_api.html" title="next page">
+    <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Decomposition API reference</p>
+    </div>
+    <i class="fas fa-angle-right"></i>
     </a>
 </div>
             </footer>

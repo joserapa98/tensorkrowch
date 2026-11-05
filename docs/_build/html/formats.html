@@ -1,0 +1,1089 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Formats &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" href="_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/clipboard.min.js"></script>
+    <script src="_static/copybutton.js"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Format API reference" href="formats_api.html" />
+    <link rel="prev" title="Decomposition API reference" href="decompositions_api.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="current nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="api.html">
+   API Reference
+  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2 current active has-children">
+    <a class="current reference internal" href="#">
+     Formats
+    </a>
+    <input checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+    <label for="toctree-checkbox-5">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="formats_api.html">
+       Format API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+<div class="menu-dropdown menu-dropdown-download-buttons">
+  <button class="headerbtn menu-dropdown__trigger"
+      aria-label="Download this page">
+      <i class="fas fa-download"></i>
+  </button>
+  <div class="menu-dropdown__content">
+    <ul>
+      <li>
+        <a href="_sources/formats.rst.txt"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="left"
+title="Download source file"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="headerbtn__text-container">.rst</span>
+</a>
+
+      </li>
+      
+      <li>
+        
+<button onclick="printPdf(this)"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="left"
+title="Print to PDF"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="headerbtn__text-container">.pdf</span>
+</button>
+
+      </li>
+      
+    </ul>
+  </div>
+</div>
+<label for="__page-toc"
+  class="headerbtn headerbtn-page-toc"
+  
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-list"></i>
+  </span>
+
+</label>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+    <div class="tocsection onthispage pt-5 pb-3">
+        <i class="fas fa-list"></i> Contents
+    </div>
+    <nav id="bd-toc-nav" aria-label="Page">
+        <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#choosing-a-format">
+   Choosing a format
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#tensor-trains-and-tensor-rings">
+   Tensor trains and tensor rings
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tensor-trains">
+     Tensor trains
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tensor-rings">
+     Tensor rings
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#evaluation-and-numerical-operations">
+   Evaluation and numerical operations
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#evaluating-selected-entries">
+     Evaluating selected entries
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#arithmetic-and-errors">
+     Arithmetic and errors
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#cores-bonds-and-gauges">
+   Cores, bonds and gauges
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#canonical-forms">
+     Canonical forms
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#compression-and-blocking">
+   Compression and blocking
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#matrix-formats">
+   Matrix formats
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#quantics-formats">
+   Quantics formats
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#layouts-and-coordinate-maps">
+     Layouts and coordinate maps
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#models-and-decomposition-results">
+   Models and decomposition results
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#api-reference">
+   API reference
+  </a>
+ </li>
+</ul>
+
+    </nav>
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1>Formats</h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                        <div>
+                            <h2> Contents </h2>
+                        </div>
+                        <nav aria-label="Page">
+                            <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#choosing-a-format">
+   Choosing a format
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#tensor-trains-and-tensor-rings">
+   Tensor trains and tensor rings
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tensor-trains">
+     Tensor trains
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tensor-rings">
+     Tensor rings
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#evaluation-and-numerical-operations">
+   Evaluation and numerical operations
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#evaluating-selected-entries">
+     Evaluating selected entries
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#arithmetic-and-errors">
+     Arithmetic and errors
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#cores-bonds-and-gauges">
+   Cores, bonds and gauges
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#canonical-forms">
+     Canonical forms
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#compression-and-blocking">
+   Compression and blocking
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#matrix-formats">
+   Matrix formats
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#quantics-formats">
+   Quantics formats
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#layouts-and-coordinate-maps">
+     Layouts and coordinate maps
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#models-and-decomposition-results">
+   Models and decomposition results
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#api-reference">
+   API reference
+  </a>
+ </li>
+</ul>
+
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <section id="formats">
+<h1>Formats<a class="headerlink" href="#formats" title="Permalink to this headline">#</a></h1>
+<p>Formats represent tensors and operators as chains of PyTorch cores. Construct
+one from its cores, then evaluate entries, contract it, or use its numerical
+operations. They do not create TensorKrowch graph nodes; graph-based models
+remain available through <code class="xref py py-mod docutils literal notranslate"><span class="pre">models</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tensorkrowch</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tk</span>
+
+<span class="n">f</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">formats</span>
+<span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)]</span>
+<span class="n">tt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">TT</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+<span class="n">values</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+<span class="n">tensor</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>If the cores are not yet known, use a <a class="reference internal" href="decompositions.html"><span class="doc">decomposition</span></a>
+to compute them from tensor values or a function. Decomposition results
+inherit the corresponding numerical format.</p>
+<section id="choosing-a-format">
+<h2>Choosing a format<a class="headerlink" href="#choosing-a-format" title="Permalink to this headline">#</a></h2>
+<table class="colwidths-given table">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Representation</p></th>
+<th class="head"><p>Open chain</p></th>
+<th class="head"><p>Cyclic chain</p></th>
+<th class="head"><p>Physical dimensions</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Vector or tensor</p></td>
+<td><p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.TT" title="tensorkrowch.formats.TT"><code class="xref py py-class docutils literal notranslate"><span class="pre">TT</span></code></a></p></td>
+<td><p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.TR" title="tensorkrowch.formats.TR"><code class="xref py py-class docutils literal notranslate"><span class="pre">TR</span></code></a></p></td>
+<td><p>One dimension per site.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Matrix or operator</p></td>
+<td><p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.TTM" title="tensorkrowch.formats.TTM"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTM</span></code></a></p></td>
+<td><p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.TRM" title="tensorkrowch.formats.TRM"><code class="xref py py-class docutils literal notranslate"><span class="pre">TRM</span></code></a></p></td>
+<td><p>One input/output pair per site.</p></td>
+</tr>
+<tr class="row-even"><td><p>Quantics vector</p></td>
+<td><p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.QTT" title="tensorkrowch.formats.QTT"><code class="xref py py-class docutils literal notranslate"><span class="pre">QTT</span></code></a></p></td>
+<td><p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.QTR" title="tensorkrowch.formats.QTR"><code class="xref py py-class docutils literal notranslate"><span class="pre">QTR</span></code></a></p></td>
+<td><p>Coordinate indices split into digits.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Quantics matrix</p></td>
+<td><p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.QTTM" title="tensorkrowch.formats.QTTM"><code class="xref py py-class docutils literal notranslate"><span class="pre">QTTM</span></code></a></p></td>
+<td><p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.QTRM" title="tensorkrowch.formats.QTRM"><code class="xref py py-class docutils literal notranslate"><span class="pre">QTRM</span></code></a></p></td>
+<td><p>Separate input and output digit layouts.</p></td>
+</tr>
+</tbody>
+</table>
+<p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.TensorFormat" title="tensorkrowch.formats.TensorFormat"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorFormat</span></code></a> defines the common numerical interface.
+<a class="reference internal" href="formats_api.html#tensorkrowch.formats.TensorFormat1D" title="tensorkrowch.formats.TensorFormat1D"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorFormat1D</span></code></a> adds chain operations shared by these formats. The
+<a class="reference internal" href="formats_api.html"><span class="doc">Format API reference</span></a> contains all classes and their detailed method contracts.</p>
+</section>
+<section id="tensor-trains-and-tensor-rings">
+<h2>Tensor trains and tensor rings<a class="headerlink" href="#tensor-trains-and-tensor-rings" title="Permalink to this headline">#</a></h2>
+<section id="tensor-trains">
+<h3>Tensor trains<a class="headerlink" href="#tensor-trains" title="Permalink to this headline">#</a></h3>
+<p>A TT has open boundaries. An interior core has shape
+<code class="docutils literal notranslate"><span class="pre">(left_rank,</span> <span class="pre">input_dimension,</span> <span class="pre">right_rank)</span></code>. The first core omits its unit
+left bond, and the last omits its unit right bond. A one-site TT is a vector.
+The neighboring bond dimensions must agree.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">TT</span><span class="p">([</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+<span class="p">])</span>
+<span class="n">dimensions</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">in_dim</span>
+<span class="n">ranks</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">rank</span>
+<span class="n">tensor</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This represents a tensor of shape <code class="docutils literal notranslate"><span class="pre">(3,</span> <span class="pre">4,</span> <span class="pre">5)</span></code> using internal ranks
+<code class="docutils literal notranslate"><span class="pre">[2,</span> <span class="pre">2]</span></code>. <code class="docutils literal notranslate"><span class="pre">cores</span></code> contains its stored tensors; <code class="docutils literal notranslate"><span class="pre">in_dim</span></code> describes the
+physical dimensions and <code class="docutils literal notranslate"><span class="pre">n_sites</span></code> counts the sites.</p>
+</section>
+<section id="tensor-rings">
+<h3>Tensor rings<a class="headerlink" href="#tensor-rings" title="Permalink to this headline">#</a></h3>
+<p>A TR retains both virtual axes on every core, including the first and last.
+The last core’s right bond connects to the first core’s left bond. Every
+core therefore has shape <code class="docutils literal notranslate"><span class="pre">(left_rank,</span> <span class="pre">input_dimension,</span> <span class="pre">right_rank)</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tr</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">TR</span><span class="p">([</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+<span class="p">])</span>
+<span class="n">tensor</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span>
+<span class="n">open_chain</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">to_tt</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The dense tensor again has shape <code class="docutils literal notranslate"><span class="pre">(3,</span> <span class="pre">4,</span> <span class="pre">5)</span></code>. TR ranks include the cyclic
+bond. <code class="docutils literal notranslate"><span class="pre">to_tt</span></code> carries that closing index through the open chain, preserving
+values but potentially increasing TT ranks. Conversely, <code class="docutils literal notranslate"><span class="pre">TT.to_tr</span></code> adds a
+unit-rank closing bond; finding a compact nontrivial ring is the role of
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.TT2TR" title="tensorkrowch.decompositions.TT2TR"><code class="xref py py-class docutils literal notranslate"><span class="pre">TT2TR</span></code></a>.</p>
+</section>
+</section>
+<section id="evaluation-and-numerical-operations">
+<h2>Evaluation and numerical operations<a class="headerlink" href="#evaluation-and-numerical-operations" title="Permalink to this headline">#</a></h2>
+<section id="evaluating-selected-entries">
+<h3>Evaluating selected entries<a class="headerlink" href="#evaluating-selected-entries" title="Permalink to this headline">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">evaluate</span></code> accepts integer configurations or physical feature vectors.
+Integer inputs select entries; feature vectors contract with each site’s
+physical axis. A tensor groups inputs on the site axis; a sequence can
+provide differently sized feature vectors at different sites.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">TT</span><span class="p">([</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+<span class="p">])</span>
+<span class="n">indices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+<span class="n">features</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">one_hot</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">num_classes</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+<span class="n">indexed_values</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+<span class="n">embedded_values</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">features</span><span class="p">)</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span><span class="n">indexed_values</span><span class="p">,</span> <span class="n">embedded_values</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Use <code class="docutils literal notranslate"><span class="pre">in_sites</span></code> to evaluate only some variables or change their input order.
+Configuration columns follow the order of that selection. Remaining axes
+are returned in their original chain order, after the data and structural
+batch axes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">TT</span><span class="p">([</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+<span class="p">])</span>
+<span class="c1"># Columns select site 2 and then site 0; site 1 stays open.</span>
+<span class="n">inputs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]])</span>
+<span class="n">fibers</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">in_sites</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Here <code class="docutils literal notranslate"><span class="pre">fibers</span></code> has shape <code class="docutils literal notranslate"><span class="pre">(2,</span> <span class="pre">4)</span></code>. A constructor’s <code class="docutils literal notranslate"><span class="pre">in_sites</span></code> sets the
+default selection; an evaluation call can override it. TR uses the same input
+conventions. <code class="docutils literal notranslate"><span class="pre">contract_dense</span></code> instead materializes every physical axis.</p>
+<p>Formats can store leading structural batches through the constructor’s
+<code class="docutils literal notranslate"><span class="pre">n_batches</span></code> argument. These are separate from the data batches supplied
+when evaluating a format; see the API shapes for their ordering.</p>
+</section>
+<section id="arithmetic-and-errors">
+<h3>Arithmetic and errors<a class="headerlink" href="#arithmetic-and-errors" title="Permalink to this headline">#</a></h3>
+<p>Arithmetic works directly on cores without constructing the full tensor.
+For compatible formats, use <code class="docutils literal notranslate"><span class="pre">+</span></code> for addition, <code class="docutils literal notranslate"><span class="pre">hadamard</span></code> for entrywise
+products, and <code class="docutils literal notranslate"><span class="pre">norm</span></code> for the Frobenius norm. <code class="docutils literal notranslate"><span class="pre">&#64;</span></code> performs vector/operator
+products according to row/column orientation. <code class="docutils literal notranslate"><span class="pre">T</span></code> transposes without
+conjugation; <code class="docutils literal notranslate"><span class="pre">H</span></code> takes the adjoint.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">TT</span><span class="p">([</span><span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+           <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)])</span>
+<span class="n">summed</span> <span class="o">=</span> <span class="n">tt</span> <span class="o">+</span> <span class="n">tt</span>
+<span class="n">entrywise</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">hadamard</span><span class="p">(</span><span class="n">tt</span><span class="p">)</span>
+<span class="n">squared_norm</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">H</span> <span class="o">@</span> <span class="n">tt</span>
+<span class="n">distance</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span><span class="n">summed</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>These operations can increase ranks. Compression is an explicit subsequent
+step. <a class="reference internal" href="formats_api.html#tensorkrowch.formats.TT.error" title="tensorkrowch.formats.TT.error"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TT.error()</span></code></a> and its ring counterpart compare a format with a target
+function on supplied configurations and return a <a class="reference internal" href="formats_api.html#tensorkrowch.formats.SampleError" title="tensorkrowch.formats.SampleError"><code class="xref py py-class docutils literal notranslate"><span class="pre">SampleError</span></code></a>.
+<code class="docutils literal notranslate"><span class="pre">clone</span></code>, <code class="docutils literal notranslate"><span class="pre">detach</span></code> and <code class="docutils literal notranslate"><span class="pre">to</span></code> provide copying, autograd and device/dtype
+operations; their API documents when storage is shared.</p>
+</section>
+</section>
+<section id="cores-bonds-and-gauges">
+<h2>Cores, bonds and gauges<a class="headerlink" href="#cores-bonds-and-gauges" title="Permalink to this headline">#</a></h2>
+<p>Optional <code class="docutils literal notranslate"><span class="pre">bonds</span></code> hold diagonal factors between neighboring cores. Pass the
+factor sequence to the constructor; the format creates its own
+<a class="reference internal" href="formats_api.html#tensorkrowch.formats.BondFactors1D" title="tensorkrowch.formats.BondFactors1D"><code class="xref py py-class docutils literal notranslate"><span class="pre">BondFactors1D</span></code></a> container. <code class="docutils literal notranslate"><span class="pre">format.cores</span></code> and <code class="docutils literal notranslate"><span class="pre">format.bonds</span></code>
+together represent the tensor, so stored factors must be included in
+contractions.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)]</span>
+<span class="n">factors</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+           <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)]</span>
+<span class="n">tt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">TT</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">bonds</span><span class="o">=</span><span class="n">factors</span><span class="p">)</span>
+<span class="n">absorbed</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">materialize_bonds</span><span class="p">(</span><span class="n">orth_center</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">(),</span> <span class="n">absorbed</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">())</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.TensorFormat1D.materialize_bonds" title="tensorkrowch.formats.TensorFormat1D.materialize_bonds"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TensorFormat1D.materialize_bonds()</span></code></a> absorbs these factors into cores.
+It acts in place; clone first to retain the original representation. TR and
+matrix formats use the same factor container with their corresponding bond
+layout.</p>
+<section id="canonical-forms">
+<h3>Canonical forms<a class="headerlink" href="#canonical-forms" title="Permalink to this headline">#</a></h3>
+<p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.TensorFormat1D.canonicalize" title="tensorkrowch.formats.TensorFormat1D.canonicalize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TT.canonicalize</span></code></a> performs QR/RQ sweeps
+without truncation and moves the orthogonality center to the requested site.
+On an open chain, the cores to its left and right become isometric in the
+corresponding directions.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">TT</span><span class="p">([</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+<span class="p">])</span>
+<span class="n">canonical</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">canonicalize</span><span class="p">(</span><span class="n">orth_center</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">vidal</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">canonicalize_vidal</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;explicit&#39;</span><span class="p">)</span>
+<span class="n">spectra</span> <span class="o">=</span> <span class="n">vidal</span><span class="o">.</span><span class="n">bonds</span><span class="o">.</span><span class="n">spectra</span>
+</pre></div>
+</div>
+<p>For TT and TTM, <a class="reference internal" href="formats_api.html#tensorkrowch.formats.TT.canonicalize_vidal" title="tensorkrowch.formats.TT.canonicalize_vidal"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TT.canonicalize_vidal()</span></code></a> stores a <a class="reference internal" href="formats_api.html#tensorkrowch.formats.VidalGauge" title="tensorkrowch.formats.VidalGauge"><code class="xref py py-class docutils literal notranslate"><span class="pre">VidalGauge</span></code></a>.
+Its <code class="docutils literal notranslate"><span class="pre">spectra</span></code> retain the Schmidt values and its <code class="docutils literal notranslate"><span class="pre">powers</span></code> describe how
+those values are distributed between neighboring cores. Modes <code class="docutils literal notranslate"><span class="pre">&quot;explicit&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;implicit&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;inverse&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;left&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;right&quot;</span></code> select common
+distributions. The method preserves the tensor and does not truncate ranks.
+The API explains <code class="docutils literal notranslate"><span class="pre">inverse_positions</span></code> and the cutoff for inverse factors.</p>
+<p>For a ring, <code class="docutils literal notranslate"><span class="pre">canonicalize</span></code> sets a local gauge relative to the stored cut;
+it is not a global Schmidt canonical form. To balance cyclic core gauges,
+use <a class="reference internal" href="formats_api.html#tensorkrowch.formats.TR.canonicalize_minimal" title="tensorkrowch.formats.TR.canonicalize_minimal"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TR.canonicalize_minimal()</span></code></a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tr</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">TR</span><span class="p">([</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+<span class="p">])</span>
+<span class="n">balanced</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">canonicalize_minimal</span><span class="p">(</span>
+    <span class="n">max_iter</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">return_info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This optimization preserves the tensor and returns optional
+<a class="reference internal" href="formats_api.html#tensorkrowch.formats.MinimalCanonicalInfo" title="tensorkrowch.formats.MinimalCanonicalInfo"><code class="xref py py-class docutils literal notranslate"><span class="pre">MinimalCanonicalInfo</span></code></a> diagnostics. It need not reach its balance
+tolerance within a fixed iteration budget. Open-chain
+<a class="reference internal" href="formats_api.html#tensorkrowch.formats.TT.canonicalize_minimal" title="tensorkrowch.formats.TT.canonicalize_minimal"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TT.canonicalize_minimal()</span></code></a> uses implicit Vidal form without iterative
+optimization.</p>
+<p>For custom gauge analysis, <a class="reference internal" href="formats_api.html#tensorkrowch.formats.TensorRingOrbit" title="tensorkrowch.formats.TensorRingOrbit"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorRingOrbit</span></code></a> exposes the ring’s gauge
+objective and bond Gram matrices; <a class="reference internal" href="formats_api.html#tensorkrowch.formats.GaugeOrbit" title="tensorkrowch.formats.GaugeOrbit"><code class="xref py py-class docutils literal notranslate"><span class="pre">GaugeOrbit</span></code></a> provides the general
+core-and-bond interface. Ordinary canonicalization does not require creating
+these objects yourself.</p>
+</section>
+</section>
+<section id="compression-and-blocking">
+<h2>Compression and blocking<a class="headerlink" href="#compression-and-blocking" title="Permalink to this headline">#</a></h2>
+<p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.TensorFormat1D.rounding" title="tensorkrowch.formats.TensorFormat1D.rounding"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TT.rounding</span></code></a> and
+<a class="reference internal" href="formats_api.html#tensorkrowch.formats.TensorFormat1D.rounding" title="tensorkrowch.formats.TensorFormat1D.rounding"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TR.rounding</span></code></a> compress bond dimensions in
+place. Use <code class="docutils literal notranslate"><span class="pre">rank</span></code> for a shared rank cap, or singular-value truncation
+criteria such as <code class="docutils literal notranslate"><span class="pre">rtol</span></code>. <code class="docutils literal notranslate"><span class="pre">rtol</span></code> limits relative discarded squared mass
+locally; <code class="docutils literal notranslate"><span class="pre">rel_error</span></code> instead requests a global relative Frobenius error
+budget.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">TT</span><span class="p">([</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+<span class="p">])</span>
+<span class="n">rounded</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">rounding</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">return_info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">measured_error</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span><span class="n">rounded</span><span class="p">)</span> <span class="o">/</span> <span class="n">tt</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+<span class="n">error_bound</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">error_bound</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.RoundingInfo" title="tensorkrowch.formats.RoundingInfo"><code class="xref py py-class docutils literal notranslate"><span class="pre">RoundingInfo</span></code></a> records the retained ranks and truncation information.
+Its error bound is distinct from the measured reconstruction error. Stricter
+rank caps or other simultaneous criteria may prevent the requested error
+budget from being met. Ring rounding includes the cyclic bond but does not
+guarantee minimal TR ranks.</p>
+<p>To solve problems on larger local blocks, <a class="reference internal" href="formats_api.html#tensorkrowch.formats.TensorFormat1D.block" title="tensorkrowch.formats.TensorFormat1D.block"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TensorFormat1D.block()</span></code></a>
+contracts consecutive groups into effective sites. It returns a
+<a class="reference internal" href="formats_api.html#tensorkrowch.formats.BlockLayout" title="tensorkrowch.formats.BlockLayout"><code class="xref py py-class docutils literal notranslate"><span class="pre">BlockLayout</span></code></a> describing how to restore the original dimensions:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">TT</span><span class="p">([</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+<span class="p">])</span>
+<span class="n">blocked</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+<span class="n">layout</span> <span class="o">=</span> <span class="n">blocked</span><span class="o">.</span><span class="n">block</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">restored</span> <span class="o">=</span> <span class="n">blocked</span><span class="o">.</span><span class="n">unblock</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span><span class="n">restored</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">(),</span> <span class="n">tt</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>Both operations modify the format. <a class="reference internal" href="formats_api.html#tensorkrowch.formats.split_block" title="tensorkrowch.formats.split_block"><code class="xref py py-func docutils literal notranslate"><span class="pre">split_block()</span></code></a> provides the local
+splitting operation directly and returns a <a class="reference internal" href="formats_api.html#tensorkrowch.formats.SplitBlock" title="tensorkrowch.formats.SplitBlock"><code class="xref py py-class docutils literal notranslate"><span class="pre">SplitBlock</span></code></a>. For Quantics,
+convert to an ordinary format before grouping arbitrary digit sites, so the
+coordinate layout is not implicitly changed.</p>
+</section>
+<section id="matrix-formats">
+<h2>Matrix formats<a class="headerlink" href="#matrix-formats" title="Permalink to this headline">#</a></h2>
+<p>TTM and TRM attach an input and output physical axis to every site. Their
+cores use the order <code class="docutils literal notranslate"><span class="pre">(left_rank,</span> <span class="pre">input_dimension,</span> <span class="pre">right_rank,</span>
+<span class="pre">output_dimension)</span></code>, omitting the first and last unit bonds for TTM. For
+example, a product identity operator on dimensions <code class="docutils literal notranslate"><span class="pre">(2,</span> <span class="pre">3)</span></code> is:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">matrix</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">TTM</span><span class="p">([</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+<span class="p">])</span>
+<span class="n">vector</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">TT</span><span class="p">([</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+               <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)])</span>
+<span class="n">applied</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">vector</span><span class="p">)</span>
+<span class="n">product</span> <span class="o">=</span> <span class="n">matrix</span> <span class="o">@</span> <span class="n">vector</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span>
+    <span class="n">applied</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">(),</span> <span class="n">vector</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">())</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span>
+    <span class="n">product</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">(),</span> <span class="n">vector</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>For a TRM, keep both bond axes on every core and match the closing bond.
+<code class="docutils literal notranslate"><span class="pre">in_dim</span></code> and <code class="docutils literal notranslate"><span class="pre">out_dim</span></code> describe the input/output dimensions. Matrix
+<code class="docutils literal notranslate"><span class="pre">contract_dense</span></code> returns interleaved physical axes
+<code class="docutils literal notranslate"><span class="pre">(in_0,</span> <span class="pre">out_0,</span> <span class="pre">in_1,</span> <span class="pre">out_1,</span> <span class="pre">...)</span></code>.</p>
+<p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.TTM.evaluate" title="tensorkrowch.formats.TTM.evaluate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TTM.evaluate()</span></code></a> and <a class="reference internal" href="formats_api.html#tensorkrowch.formats.TRM.evaluate" title="tensorkrowch.formats.TRM.evaluate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TRM.evaluate()</span></code></a> accept separate <code class="docutils literal notranslate"><span class="pre">in_data</span></code> and
+<code class="docutils literal notranslate"><span class="pre">out_data</span></code>. Their columns follow <code class="docutils literal notranslate"><span class="pre">in_sites</span></code> and <code class="docutils literal notranslate"><span class="pre">out_sites</span></code>; unselected
+axes are returned in chain order, with input-side axes before output-side
+axes. Both selections default to all sites. <code class="docutils literal notranslate"><span class="pre">apply</span></code> contracts every input
+physical dimension and returns an output format, rather than selected matrix
+entries. Transpose and adjoint retain the concrete matrix format.</p>
+</section>
+<section id="quantics-formats">
+<h2>Quantics formats<a class="headerlink" href="#quantics-formats" title="Permalink to this headline">#</a></h2>
+<p>Quantics splits each original coordinate index into several digit sites.
+QTT and QTR use the TT/TR core layouts, with digit dimensions as their
+physical dimensions. Construct them from cores and a grid specification:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)]</span>
+<span class="n">qtt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">QTT</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">n_coordinates</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+            <span class="n">domain</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+<span class="n">coordinates</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mf">0.</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.25</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.75</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">values</span> <span class="o">=</span> <span class="n">qtt</span><span class="o">.</span><span class="n">evaluate_coordinates</span><span class="p">(</span><span class="n">coordinates</span><span class="p">)</span>
+<span class="n">grid_tensor</span> <span class="o">=</span> <span class="n">qtt</span><span class="o">.</span><span class="n">contract_dense_grid_axes</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The three binary sites represent eight grid points for one coordinate.
+<code class="docutils literal notranslate"><span class="pre">contract_dense</span></code> retains one axis per digit site, while
+<code class="docutils literal notranslate"><span class="pre">contract_dense_grid_axes</span></code> combines them into one axis per coordinate.
+<code class="docutils literal notranslate"><span class="pre">evaluate_coordinates</span></code> quantizes using the coordinate map; it does not
+interpolate between grid values.</p>
+<p>A QTR uses three-axis cores including the cyclic bond. QTTM and QTRM use
+matrix cores and separate input/output coordinate descriptions through their
+<code class="docutils literal notranslate"><span class="pre">in_*</span></code> and <code class="docutils literal notranslate"><span class="pre">out_*</span></code> arguments. The two sides can have different numbers
+of coordinates and digit sites, selected by <code class="docutils literal notranslate"><span class="pre">in_sites</span></code> and <code class="docutils literal notranslate"><span class="pre">out_sites</span></code>.</p>
+<section id="layouts-and-coordinate-maps">
+<h3>Layouts and coordinate maps<a class="headerlink" href="#layouts-and-coordinate-maps" title="Permalink to this headline">#</a></h3>
+<p>The convenience arguments create these objects automatically:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">base</span></code>, <code class="docutils literal notranslate"><span class="pre">level</span></code> and <code class="docutils literal notranslate"><span class="pre">domain</span></code> create a <a class="reference internal" href="formats_api.html#tensorkrowch.formats.QuantizedLayout" title="tensorkrowch.formats.QuantizedLayout"><code class="xref py py-class docutils literal notranslate"><span class="pre">QuantizedLayout</span></code></a> and
+an <a class="reference internal" href="formats_api.html#tensorkrowch.formats.AffineCoordinateMap" title="tensorkrowch.formats.AffineCoordinateMap"><code class="xref py py-class docutils literal notranslate"><span class="pre">AffineCoordinateMap</span></code></a>. Defaults use interleaved digit sites,
+coarse-to-fine digit order and a left-offset grid.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">grid_coordinates</span></code> replaces <code class="docutils literal notranslate"><span class="pre">domain</span></code> with an <a class="reference internal" href="formats_api.html#tensorkrowch.formats.ExplicitGridMap" title="tensorkrowch.formats.ExplicitGridMap"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExplicitGridMap</span></code></a>.
+Each coordinate grid must contain <code class="docutils literal notranslate"><span class="pre">base</span> <span class="pre">**</span> <span class="pre">level</span></code> points.</p></li>
+<li><p>Explicit <code class="docutils literal notranslate"><span class="pre">layout</span></code> and <code class="docutils literal notranslate"><span class="pre">coordinate_map</span></code> objects allow other schedules
+and coordinate transformations.</p></li>
+</ul>
+<p>The available coordinate objects are:</p>
+<table class="colwidths-given table">
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 65%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Object</p></th>
+<th class="head"><p>Role</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.QuantizedLayout" title="tensorkrowch.formats.QuantizedLayout"><code class="xref py py-class docutils literal notranslate"><span class="pre">QuantizedLayout</span></code></a></p></td>
+<td><p>Convert integer grid indices to digits and choose their site order.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.AffineCoordinateMap" title="tensorkrowch.formats.AffineCoordinateMap"><code class="xref py py-class docutils literal notranslate"><span class="pre">AffineCoordinateMap</span></code></a></p></td>
+<td><p>Map coordinates to an affine grid over a domain.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.ExplicitGridMap" title="tensorkrowch.formats.ExplicitGridMap"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExplicitGridMap</span></code></a></p></td>
+<td><p>Map coordinates to explicitly supplied grid points.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.FunctionalCoordinateMap" title="tensorkrowch.formats.FunctionalCoordinateMap"><code class="xref py py-class docutils literal notranslate"><span class="pre">FunctionalCoordinateMap</span></code></a></p></td>
+<td><p>Apply user-defined forward and optional inverse coordinate functions.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.CoordinateMap" title="tensorkrowch.formats.CoordinateMap"><code class="xref py py-class docutils literal notranslate"><span class="pre">CoordinateMap</span></code></a></p></td>
+<td><p>Common interface for coordinate/grid-index conversion.</p></td>
+</tr>
+</tbody>
+</table>
+<p>For example, two coordinates can use different digit counts:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">layout</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">QuantizedLayout</span><span class="p">(</span>
+    <span class="n">n_coordinates</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">ordering</span><span class="o">=</span><span class="s1">&#39;grouped&#39;</span><span class="p">)</span>
+<span class="n">coordinate_map</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">AffineCoordinateMap</span><span class="p">(</span>
+    <span class="n">domain</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">grid_size</span><span class="o">=</span><span class="n">layout</span><span class="o">.</span><span class="n">grid_size</span><span class="p">)</span>
+<span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)]</span>
+<span class="n">qtt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">QTT</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">n_coordinates</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">,</span>
+            <span class="n">coordinate_map</span><span class="o">=</span><span class="n">coordinate_map</span><span class="p">)</span>
+<span class="n">coordinates</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<span class="n">indices</span> <span class="o">=</span> <span class="n">coordinate_map</span><span class="o">.</span><span class="n">to_indices</span><span class="p">(</span><span class="n">coordinates</span><span class="p">)</span>
+<span class="n">digits</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">encode_indices</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+<span class="n">values</span> <span class="o">=</span> <span class="n">qtt</span><span class="o">.</span><span class="n">evaluate_coordinates</span><span class="p">(</span><span class="n">coordinates</span><span class="p">)</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">qtt</span><span class="o">.</span><span class="n">evaluate_indices</span><span class="p">(</span><span class="n">indices</span><span class="p">))</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">qtt</span><span class="o">.</span><span class="n">evaluate_digits</span><span class="p">(</span><span class="n">digits</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>The evaluation path is coordinate map, integer grid indices, layout encoding,
+then digit-core contraction. <code class="docutils literal notranslate"><span class="pre">evaluate_indices</span></code> starts at grid indices;
+<code class="docutils literal notranslate"><span class="pre">evaluate_digits</span></code> starts at digits. The map’s <code class="docutils literal notranslate"><span class="pre">grid_size</span></code> must agree with
+the layout. <code class="docutils literal notranslate"><span class="pre">QuantizedLayout.decode_digits</span></code> and
+<code class="docutils literal notranslate"><span class="pre">CoordinateMap.from_indices</span></code> provide the reverse conversions.</p>
+<p>For matrix variants, pass <code class="docutils literal notranslate"><span class="pre">in_layout</span></code>, <code class="docutils literal notranslate"><span class="pre">out_layout</span></code>,
+<code class="docutils literal notranslate"><span class="pre">in_coordinate_map</span></code> and <code class="docutils literal notranslate"><span class="pre">out_coordinate_map</span></code> independently. Their API
+explains the coordinate and digit shapes on each side.</p>
+</section>
+</section>
+<section id="models-and-decomposition-results">
+<h2>Models and decomposition results<a class="headerlink" href="#models-and-decomposition-results" title="Permalink to this headline">#</a></h2>
+<p>Use <a class="reference internal" href="formats_api.html#tensorkrowch.formats.TT.to_mps" title="tensorkrowch.formats.TT.to_mps"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TT.to_mps()</span></code></a> / <a class="reference internal" href="formats_api.html#tensorkrowch.formats.TR.to_mps" title="tensorkrowch.formats.TR.to_mps"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TR.to_mps()</span></code></a> to create graph-based MPS models,
+and <a class="reference internal" href="formats_api.html#tensorkrowch.formats.TTM.to_mpo" title="tensorkrowch.formats.TTM.to_mpo"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TTM.to_mpo()</span></code></a> / <a class="reference internal" href="formats_api.html#tensorkrowch.formats.TRM.to_mpo" title="tensorkrowch.formats.TRM.to_mpo"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TRM.to_mpo()</span></code></a> for MPO models. Open and cyclic
+formats retain their corresponding boundary conditions. <code class="docutils literal notranslate"><span class="pre">parameterized</span></code>
+controls whether the new model uses trainable nodes.</p>
+<p><a class="reference internal" href="formats_api.html#tensorkrowch.formats.TT.from_mps" title="tensorkrowch.formats.TT.from_mps"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TT.from_mps()</span></code></a> and <a class="reference internal" href="formats_api.html#tensorkrowch.formats.TTM.from_mpo" title="tensorkrowch.formats.TTM.from_mpo"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TTM.from_mpo()</span></code></a>, and their cyclic counterparts,
+convert compatible models back to formats. Conversions handle stored bond
+factors; callers do not need to absorb them manually first.</p>
+<p><a class="reference internal" href="decompositions.html"><span class="doc">Decompositions</span></a> return numerical formats enriched with
+fit metrics and metadata. Use <code class="docutils literal notranslate"><span class="pre">result.to_format()</span></code> to keep the numerical
+representation alone. Source adapters provide the opposite direction:
+<a class="reference internal" href="decompositions_api.html#tensorkrowch.decompositions.FormatSource" title="tensorkrowch.decompositions.FormatSource"><code class="xref py py-class docutils literal notranslate"><span class="pre">FormatSource</span></code></a> lets algorithms evaluate an
+existing format without turning it into a graph model.</p>
+</section>
+<section id="api-reference">
+<h2>API reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">#</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="formats_api.html">Format API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="formats_api.html#format-interfaces">Format interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="formats_api.html#vector-and-matrix-formats">Vector and matrix formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="formats_api.html#layouts-and-coordinate-maps">Layouts and coordinate maps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="formats_api.html#quantics-formats">Quantics formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="formats_api.html#bond-factors">Bond factors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="formats_api.html#gauge-orbits">Gauge orbits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="formats_api.html#blocks">Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="formats_api.html#diagnostics">Diagnostics</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+    <a class='left-prev' id="prev-link" href="decompositions_api.html" title="previous page">
+        <i class="fas fa-angle-left"></i>
+        <div class="prev-next-info">
+            <p class="prev-next-subtitle">previous</p>
+            <p class="prev-next-title">Decomposition API reference</p>
+        </div>
+    </a>
+    <a class='right-next' id="next-link" href="formats_api.html" title="next page">
+    <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Format API reference</p>
+    </div>
+    <i class="fas fa-angle-right"></i>
+    </a>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

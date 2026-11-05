@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.embeddings &#8212; TensorKrowch 1.1.5 documentation</title>
+    <title>tensorkrowch.embeddings &#8212; TensorKrowch 1.1.6 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -216,9 +216,31 @@
      Embeddings
     </a>
    </li>
-   <li class="toctree-l2">
+   <li class="toctree-l2 has-children">
     <a class="reference internal" href="../../decompositions.html">
      Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../utils.html">
+     Utilities
     </a>
    </li>
   </ul>
@@ -329,14 +351,14 @@ title="Source repository"
 <span class="sd">Embedding methods</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">pi</span><span class="p">,</span> <span class="n">sqrt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">pi</span><span class="p">,</span> <span class="n">sqrt</span>
 
-<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 
-<span class="kn">from</span> <span class="nn">tensorkrowch.utils</span> <span class="kn">import</span> <span class="n">binomial_coeffs</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">binomial_coeffs</span>
 
 
-<div class="viewcode-block" id="unit"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.unit">[docs]</a><span class="k">def</span> <span class="nf">unit</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="unit"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.unit">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">unit</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Embedds the data tensor using the local feature map defined in the original</span>
 <span class="sd">    `paper &lt;https://arxiv.org/abs/1605.05775&gt;`_ by E. Miles Stoudenmire and David</span>
@@ -417,7 +439,7 @@ title="Source repository"
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">lst_tensors</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="add_ones"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.add_ones">[docs]</a><span class="k">def</span> <span class="nf">add_ones</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="add_ones"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.add_ones">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">add_ones</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Embedds the data tensor adding 1&#39;s as the first component of each vector.</span>
 <span class="sd">    That is, given a vector</span>
@@ -489,7 +511,7 @@ title="Source repository"
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">data</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="poly"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.poly">[docs]</a><span class="k">def</span> <span class="nf">poly</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">degree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="poly"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.poly">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">poly</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">degree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Embedds the data tensor stacking powers of it. That is, given the vector</span>
 <span class="sd">    </span>
@@ -571,7 +593,7 @@ title="Source repository"
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">lst_powers</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="discretize"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.discretize">[docs]</a><span class="k">def</span> <span class="nf">discretize</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+<div class="viewcode-block" id="discretize"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.discretize">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">discretize</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
                <span class="n">level</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                <span class="n">base</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
                <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
@@ -680,7 +702,7 @@ title="Source repository"
     <span class="k">return</span> <span class="n">ids</span></div>
 
 
-<div class="viewcode-block" id="basis"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.basis">[docs]</a><span class="k">def</span> <span class="nf">basis</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="basis"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.basis">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">basis</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Embedds the data tensor transforming each value, assumed to be an integer</span>
 <span class="sd">    between 0 and ``dim - 1``, into the corresponding vector of the</span>
@@ -779,7 +801,7 @@ title="Source repository"
     <span class="k">return</span> <span class="n">ids</span></div>
 
 
-<div class="viewcode-block" id="fourier"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.fourier">[docs]</a><span class="k">def</span> <span class="nf">fourier</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="fourier"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.fourier">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">fourier</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Embedds the data tensor using the Fourier basis functions of :math:`L^2[0,1]`.</span>
 <span class="sd">    That is, given the vector</span>
@@ -836,12 +858,12 @@ title="Source repository"
 <span class="sd">            </span>
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; a = torch.ones(5)</span>
-<span class="sd">    &gt;&gt;&gt; a</span>
+<span class="sd">    &gt;&gt;&gt; a = torch.rand(5)</span>
+<span class="sd">    &gt;&gt;&gt; a  # doctest: +SKIP</span>
 <span class="sd">    tensor([0.1916, 0.9719, 0.7613, 0.6427, 0.6945])</span>
 <span class="sd">    </span>
 <span class="sd">    &gt;&gt;&gt; emb_a = tk.embeddings.fourier(a, dim=6)</span>
-<span class="sd">    &gt;&gt;&gt; emb_a</span>
+<span class="sd">    &gt;&gt;&gt; emb_a  # doctest: +SKIP</span>
 <span class="sd">    tensor([[ 1.0000,  0.5074,  1.3200, -1.0501,  0.9473, -1.2610],</span>
 <span class="sd">            [ 1.0000,  1.3922, -0.2486,  1.3268, -0.4895,  1.2201],</span>
 <span class="sd">            [ 1.0000,  0.1000, -1.4107, -1.4001, -0.1994, -0.2979],</span>

@@ -1,0 +1,1186 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.results &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/clipboard.min.js"></script>
+    <script src="../../../_static/copybutton.js"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.results</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Shared decomposition diagnostics:</span>
+<span class="sd">        * TensorDecomposition</span>
+
+<span class="sd">    Format subclasses with decomposition diagnostics:</span>
+<span class="sd">        * TTDecomposition, TRDecomposition, TTMDecomposition, TRMDecomposition</span>
+<span class="sd">        * QTTDecomposition, QTRDecomposition, QTTMDecomposition, QTRMDecomposition</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span>
+                    <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Union</span><span class="p">)</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">TensorFormat</span><span class="p">,</span> <span class="n">TensorFormat1D</span><span class="p">,</span>
+                                  <span class="n">TT</span><span class="p">,</span> <span class="n">TR</span><span class="p">,</span> <span class="n">TTM</span><span class="p">,</span> <span class="n">TRM</span><span class="p">,</span>
+                                  <span class="n">QTT</span><span class="p">,</span> <span class="n">QTR</span><span class="p">,</span> <span class="n">QTTM</span><span class="p">,</span> <span class="n">QTRM</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats.formats1d</span><span class="w"> </span><span class="kn">import</span> <span class="n">_restore_cores</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">DecompositionMetrics</span><span class="p">,</span>
+                                                 <span class="n">ErrorRecord</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseSource</span>
+
+
+<div class="viewcode-block" id="TensorDecomposition"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.TensorDecomposition">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">TensorDecomposition</span><span class="p">:</span>  <span class="c1"># MARK: TensorDecomposition</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Historical fit diagnostics shared by decomposition results.</span>
+
+<span class="sd">    Combine this base with a numerical format, as in :class:`TTDecomposition`</span>
+<span class="sd">    or :class:`QTTDecomposition`. The format owns the cores and numerical</span>
+<span class="sd">    operations; ``metrics`` and ``metadata`` describe how the result was</span>
+<span class="sd">    obtained. Editing cores does not rewrite these historical records.</span>
+<span class="sd">    Use :meth:`to_format` to work with the numerical format alone.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Cores following the public layout of the concrete format.</span>
+<span class="sd">    metrics : DecompositionMetrics, optional</span>
+<span class="sd">        Historical fit records; defaults to a new empty collection.</span>
+<span class="sd">    metadata : dict, optional</span>
+<span class="sd">        Algorithm configuration; defaults to a new empty dictionary.</span>
+<span class="sd">    n_batches : int, optional</span>
+<span class="sd">        Number of leading structural batch axes. Defaults to ``0``.</span>
+<span class="sd">    **kwargs</span>
+<span class="sd">        Additional constructor arguments of the concrete format.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Construct a concrete result combining this base with its numerical format:</span>
+
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.TTDecomposition(</span>
+<span class="sd">    ...     [torch.tensor([1., 2.])], metadata={&#39;algorithm&#39;: &#39;manual&#39;})</span>
+<span class="sd">    &gt;&gt;&gt; result.contract_dense()</span>
+<span class="sd">    tensor([1., 2.])</span>
+<span class="sd">    &gt;&gt;&gt; result.as_info()[&#39;metadata&#39;]</span>
+<span class="sd">    {&#39;algorithm&#39;: &#39;manual&#39;}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">metrics</span><span class="p">:</span> <span class="n">DecompositionMetrics</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">DecompositionMetrics</span><span class="p">)</span>
+    <span class="n">metadata</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+
+    <span class="n">_format_type</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="n">TensorFormat</span><span class="p">]]</span>
+    <span class="n">_format_parameters</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;n_batches&#39;</span><span class="p">,</span> <span class="s1">&#39;in_sites&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                 <span class="n">metrics</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DecompositionMetrics</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">metadata</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metrics</span> <span class="o">=</span> <span class="n">DecompositionMetrics</span><span class="p">()</span> <span class="k">if</span> <span class="n">metrics</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">metrics</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">metadata</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">metadata</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metrics</span><span class="p">,</span> <span class="n">DecompositionMetrics</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`metrics` should be DecompositionMetrics type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`metadata` should be dict type&#39;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">n_batches</span><span class="o">=</span><span class="n">n_batches</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="TensorDecomposition.as_info"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.TensorDecomposition.as_info">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">as_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns current dimensions and historical decomposition diagnostics.</span>
+
+<span class="sd">        ``rank``, ``in_dim`` and ``out_dim`` describe the current cores. Metrics</span>
+<span class="sd">        describe the original fit, even after editing or rounding the result.</span>
+<span class="sd">        Tensor-valued diagnostics are detached and moved to CPU by</span>
+<span class="sd">        :meth:`~tensorkrowch.decompositions.DecompositionMetrics.as_info`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Structure, a shallow copy of ``metadata`` and fit diagnostics.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; result = tk.decompositions.TTDecomposition(</span>
+<span class="sd">        ...     [torch.ones(2, 1), torch.ones(1, 3)],</span>
+<span class="sd">        ...     metadata={&#39;algorithm&#39;: &#39;manual&#39;})</span>
+<span class="sd">        &gt;&gt;&gt; info = result.as_info()</span>
+<span class="sd">        &gt;&gt;&gt; info[&#39;in_dim&#39;], info[&#39;rank&#39;]</span>
+<span class="sd">        ([2, 3], [1])</span>
+<span class="sd">        &gt;&gt;&gt; info[&#39;metadata&#39;]</span>
+<span class="sd">        {&#39;algorithm&#39;: &#39;manual&#39;}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;topology&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">topology</span><span class="p">,</span>
+            <span class="s1">&#39;rank&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span>
+            <span class="s1">&#39;in_dim&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">),</span>
+            <span class="s1">&#39;out_dim&#39;</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_dim</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dim</span><span class="p">),</span>
+            <span class="s1">&#39;n_batches&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_batches</span><span class="p">,</span>
+            <span class="s1">&#39;metrics&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">as_info</span><span class="p">(),</span>
+            <span class="s1">&#39;metadata&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">),</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="TensorDecomposition.error"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.TensorDecomposition.error">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ErrorRecord</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Measures sample error for a vector decomposition result.</span>
+
+<span class="sd">        Evaluation follows :meth:`~tensorkrowch.formats.TT.error`, using the</span>
+<span class="sd">        current cores. The returned record is detached and moved to CPU;</span>
+<span class="sd">        historical records in ``metrics`` are not modified.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        function : callable</span>
+<span class="sd">            Target function receiving ``samples`` and returning one value per</span>
+<span class="sd">            data configuration, as a ``torch.Tensor``.</span>
+<span class="sd">        samples : torch.Tensor or sequence of torch.Tensor</span>
+<span class="sd">            Inputs to ``function``, with ``n_batches`` leading data batch axes.</span>
+<span class="sd">            A tensor groups sites on the next axis; a sequence contains one</span>
+<span class="sd">            tensor per site. Quantics results require scalar coordinate or</span>
+<span class="sd">            index inputs, without feature axes.</span>
+<span class="sd">        data : torch.Tensor or sequence of torch.Tensor, optional</span>
+<span class="sd">            Inputs used to evaluate the format. Defaults to ``samples``.</span>
+<span class="sd">            Supply embedded inputs for generic vectors, or encoded digits</span>
+<span class="sd">            when Quantics target samples are domain coordinates or grid indices.</span>
+<span class="sd">        n_batches : int, optional</span>
+<span class="sd">            Number of leading data batch axes, independent of the structural</span>
+<span class="sd">            batches stored in the cores. Defaults to ``1``.</span>
+<span class="sd">        **kwargs</span>
+<span class="sd">            Additional keyword arguments passed to ``function``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ErrorRecord</span>
+<span class="sd">            Absolute error, relative error, sample count and target norm,</span>
+<span class="sd">            detached and stored on CPU. Errors include all samples and</span>
+<span class="sd">            structural batches. The relative error divides the absolute error</span>
+<span class="sd">            by the target norm. It is zero when both norms vanish and infinity</span>
+<span class="sd">            when only the target norm vanishes.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; result = tk.decompositions.TTDecomposition(</span>
+<span class="sd">        ...     [torch.tensor([1., 2.])])</span>
+<span class="sd">        &gt;&gt;&gt; samples = torch.tensor([[0], [1]])</span>
+<span class="sd">        &gt;&gt;&gt; def function(indices):</span>
+<span class="sd">        ...     return indices[:, 0].float() + 1</span>
+<span class="sd">        &gt;&gt;&gt; record = result.error(function, samples)</span>
+<span class="sd">        &gt;&gt;&gt; record.absolute.item(), record.relative.item()</span>
+<span class="sd">        (0.0, 0.0)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ErrorRecord</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="n">record</span><span class="o">.</span><span class="n">kind</span><span class="p">,</span> <span class="n">absolute</span><span class="o">=</span><span class="n">record</span><span class="o">.</span><span class="n">absolute</span><span class="p">,</span>
+                           <span class="n">relative</span><span class="o">=</span><span class="n">record</span><span class="o">.</span><span class="n">relative</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">record</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
+                           <span class="n">denominator</span><span class="o">=</span><span class="n">record</span><span class="o">.</span><span class="n">denominator</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TensorDecomposition.to_format"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.TensorDecomposition.to_format">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_format</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorFormat</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the numerical format without decomposition diagnostics.</span>
+
+<span class="sd">        Cores, bond factors, Vidal information, vector orientation and the</span>
+<span class="sd">        orthogonality center are preserved. Quantics results also retain their</span>
+<span class="sd">        layouts and coordinate maps. ``metrics`` and ``metadata`` are omitted.</span>
+
+<span class="sd">        Core and bond containers are independent, but tensors are reused</span>
+<span class="sd">        without cloning or detaching them. Replacing cores or bonds affects</span>
+<span class="sd">        only the new format; editing shared tensor values affects both objects.</span>
+<span class="sd">        Use :meth:`~tensorkrowch.formats.TensorFormat1D.clone` on the returned</span>
+<span class="sd">        format when independent tensor storage is needed.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        TensorFormat1D</span>
+<span class="sd">            Corresponding ``TT``, ``TR``, ``TTM``, ``TRM`` or Quantics format.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; result = tk.decompositions.tt_svd(</span>
+<span class="sd">        ...     torch.eye(2), rank=2)</span>
+<span class="sd">        &gt;&gt;&gt; format = result.to_format()</span>
+<span class="sd">        &gt;&gt;&gt; type(format)</span>
+<span class="sd">        &lt;class &#39;tensorkrowch.formats.formats1d.TT&#39;&gt;</span>
+<span class="sd">        &gt;&gt;&gt; format.contract_dense()</span>
+<span class="sd">        tensor([[1., 0.],</span>
+<span class="sd">                [0., 1.]])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_parameters</span><span class="p">}</span>
+        <span class="nb">format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bonds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">format</span><span class="o">.</span><span class="n">_bonds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bonds</span><span class="o">.</span><span class="n">_map_tensors</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">tensor</span><span class="p">:</span> <span class="n">tensor</span><span class="p">,</span> <span class="nb">format</span><span class="o">.</span><span class="n">_on_bonds_changed</span><span class="p">)</span>
+
+        <span class="c1"># Preserve structural state that is not a constructor argument.</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;_orth_center&#39;</span><span class="p">,</span> <span class="s1">&#39;_is_row&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="nb">format</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">format</span></div></div>
+
+
+<div class="viewcode-block" id="TTDecomposition"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.TTDecomposition">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">TTDecomposition</span><span class="p">(</span><span class="n">TensorDecomposition</span><span class="p">,</span> <span class="n">TT</span><span class="p">):</span>  <span class="c1"># MARK: TTDecomposition</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :class:`~tensorkrowch.formats.TT` with decomposition diagnostics.</span>
+
+<span class="sd">    The numerical API is inherited from ``TT``. ``metrics`` and ``metadata``</span>
+<span class="sd">    describe the fit that produced the cores and remain historical when the</span>
+<span class="sd">    result is modified. Use :meth:`~TensorDecomposition.to_format` to obtain</span>
+<span class="sd">    the corresponding ``TT`` without decomposition diagnostics.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Core tensors following the public</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TT` layout, with open boundaries.</span>
+<span class="sd">        The container is copied; tensors retain storage and autograd.</span>
+<span class="sd">    metrics : DecompositionMetrics, optional</span>
+<span class="sd">        Historical fit records; defaults to a new empty collection.</span>
+<span class="sd">    metadata : dict, optional</span>
+<span class="sd">        Algorithm configuration; defaults to a new empty dictionary.</span>
+<span class="sd">    n_batches : int, optional</span>
+<span class="sd">        Number of leading structural batch axes in each core, independent of</span>
+<span class="sd">        data batches during evaluation. Defaults to ``0``.</span>
+<span class="sd">    bonds : sequence of torch.Tensor or None, optional</span>
+<span class="sd">        Diagonal factors between cores. Defaults to ``None``. Core and factor</span>
+<span class="sd">        containers are copied; tensors are reused without cloning or detaching.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.tensor([[1.], [2.]]), torch.tensor([[3., 4.]])]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.TTDecomposition(</span>
+<span class="sd">    ...     cores, metadata={&#39;algorithm&#39;: &#39;manual&#39;})</span>
+<span class="sd">    &gt;&gt;&gt; result.contract_dense()</span>
+<span class="sd">    tensor([[3., 4.],</span>
+<span class="sd">            [6., 8.]])</span>
+<span class="sd">    &gt;&gt;&gt; result.as_info()[&#39;rank&#39;]</span>
+<span class="sd">    [1]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_format_type</span> <span class="o">=</span> <span class="n">TT</span></div>
+
+
+<div class="viewcode-block" id="TRDecomposition"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.TRDecomposition">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">TRDecomposition</span><span class="p">(</span><span class="n">TensorDecomposition</span><span class="p">,</span> <span class="n">TR</span><span class="p">):</span>  <span class="c1"># MARK: TRDecomposition</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :class:`~tensorkrowch.formats.TR` with decomposition diagnostics.</span>
+
+<span class="sd">    The numerical API is inherited from ``TR``. ``metrics`` and ``metadata``</span>
+<span class="sd">    describe the fit that produced the cores and remain historical when the</span>
+<span class="sd">    result is modified. Use :meth:`~TensorDecomposition.to_format` to obtain</span>
+<span class="sd">    the corresponding ``TR`` without decomposition diagnostics.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Core tensors following the public</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TR` layout, with a cyclic closure.</span>
+<span class="sd">        The container is copied; tensors retain storage and autograd.</span>
+<span class="sd">    metrics : DecompositionMetrics, optional</span>
+<span class="sd">        Historical fit records; defaults to a new empty collection.</span>
+<span class="sd">    metadata : dict, optional</span>
+<span class="sd">        Algorithm configuration; defaults to a new empty dictionary.</span>
+<span class="sd">    n_batches : int, optional</span>
+<span class="sd">        Number of leading structural batch axes in each core, independent of</span>
+<span class="sd">        data batches during evaluation. Defaults to ``0``.</span>
+<span class="sd">    bonds : sequence of torch.Tensor or None, optional</span>
+<span class="sd">        Diagonal factors between cores. Defaults to ``None``. Core and factor</span>
+<span class="sd">        containers are copied; tensors are reused without cloning or detaching.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.tensor([1., 2.]).reshape(1, 2, 1),</span>
+<span class="sd">    ...          torch.tensor([3., 4.]).reshape(1, 2, 1)]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.TRDecomposition(</span>
+<span class="sd">    ...     cores, metadata={&#39;algorithm&#39;: &#39;manual&#39;})</span>
+<span class="sd">    &gt;&gt;&gt; result.contract_dense()</span>
+<span class="sd">    tensor([[3., 4.],</span>
+<span class="sd">            [6., 8.]])</span>
+<span class="sd">    &gt;&gt;&gt; result.as_info()[&#39;rank&#39;]</span>
+<span class="sd">    [1, 1]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_format_type</span> <span class="o">=</span> <span class="n">TR</span></div>
+
+
+<div class="viewcode-block" id="TTMDecomposition"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.TTMDecomposition">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">TTMDecomposition</span><span class="p">(</span><span class="n">TensorDecomposition</span><span class="p">,</span> <span class="n">TTM</span><span class="p">):</span>  <span class="c1"># MARK: TTMDecomposition</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :class:`~tensorkrowch.formats.TTM` with decomposition diagnostics.</span>
+
+<span class="sd">    The numerical API is inherited from ``TTM``. ``metrics`` and ``metadata``</span>
+<span class="sd">    describe the fit that produced the cores and remain historical when the</span>
+<span class="sd">    result is modified. Use :meth:`~TensorDecomposition.to_format` to obtain</span>
+<span class="sd">    the corresponding ``TTM`` without decomposition diagnostics.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Core tensors following the public</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TTM` layout, with open boundaries.</span>
+<span class="sd">        The container is copied; tensors retain storage and autograd.</span>
+<span class="sd">    metrics : DecompositionMetrics, optional</span>
+<span class="sd">        Historical fit records; defaults to a new empty collection.</span>
+<span class="sd">    metadata : dict, optional</span>
+<span class="sd">        Algorithm configuration; defaults to a new empty dictionary.</span>
+<span class="sd">    n_batches : int, optional</span>
+<span class="sd">        Number of leading structural batch axes in each core, independent of</span>
+<span class="sd">        data batches during evaluation. Defaults to ``0``.</span>
+<span class="sd">    bonds : sequence of torch.Tensor or None, optional</span>
+<span class="sd">        Diagonal factors between cores. Defaults to ``None``. Core and factor</span>
+<span class="sd">        containers are copied; tensors are reused without cloning or detaching.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.diag(torch.tensor([2., 3.]))]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.TTMDecomposition(</span>
+<span class="sd">    ...     cores, metadata={&#39;algorithm&#39;: &#39;manual&#39;})</span>
+<span class="sd">    &gt;&gt;&gt; result.contract_dense()</span>
+<span class="sd">    tensor([[2., 0.],</span>
+<span class="sd">            [0., 3.]])</span>
+<span class="sd">    &gt;&gt;&gt; indices = torch.tensor([[0], [1]])</span>
+<span class="sd">    &gt;&gt;&gt; result.evaluate(indices, indices).tolist()</span>
+<span class="sd">    [2.0, 3.0]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_format_type</span> <span class="o">=</span> <span class="n">TTM</span>
+    <span class="n">_format_parameters</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;n_batches&#39;</span><span class="p">,</span> <span class="s1">&#39;in_sites&#39;</span><span class="p">,</span> <span class="s1">&#39;out_sites&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_new_from_standard_cores</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                 <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                                 <span class="n">in_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+                                 <span class="n">out_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+                                 <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                                 <span class="n">cyclic</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                                 <span class="n">other</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;TensorFormat1D&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                 <span class="n">product</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorFormat1D&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Preserves the result contract when applying an operator to data.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">product</span> <span class="ow">and</span> <span class="n">other</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cores</span> <span class="o">=</span> <span class="n">_restore_cores</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">,</span> <span class="n">out_dim</span><span class="p">,</span> <span class="n">n_batches</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">TTDecomposition</span><span class="p">(</span>
+                <span class="n">cores</span><span class="p">,</span> <span class="n">n_batches</span><span class="o">=</span><span class="n">n_batches</span><span class="p">,</span>
+                <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;operation&#39;</span><span class="p">:</span> <span class="s1">&#39;ttm_apply&#39;</span><span class="p">})</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_new_from_standard_cores</span><span class="p">(</span>
+            <span class="n">cores</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">,</span> <span class="n">out_dim</span><span class="p">,</span> <span class="n">n_batches</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">,</span>
+            <span class="n">other</span><span class="o">=</span><span class="n">other</span><span class="p">,</span> <span class="n">product</span><span class="o">=</span><span class="n">product</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TRMDecomposition"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.TRMDecomposition">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">TRMDecomposition</span><span class="p">(</span><span class="n">TensorDecomposition</span><span class="p">,</span> <span class="n">TRM</span><span class="p">):</span>  <span class="c1"># MARK: TRMDecomposition</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :class:`~tensorkrowch.formats.TRM` with decomposition diagnostics.</span>
+
+<span class="sd">    The numerical API is inherited from ``TRM``. ``metrics`` and ``metadata``</span>
+<span class="sd">    describe the fit that produced the cores and remain historical when the</span>
+<span class="sd">    result is modified. Use :meth:`~TensorDecomposition.to_format` to obtain</span>
+<span class="sd">    the corresponding ``TRM`` without decomposition diagnostics.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Core tensors following the public</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TRM` layout, with a cyclic closure.</span>
+<span class="sd">        The container is copied; tensors retain storage and autograd.</span>
+<span class="sd">    metrics : DecompositionMetrics, optional</span>
+<span class="sd">        Historical fit records; defaults to a new empty collection.</span>
+<span class="sd">    metadata : dict, optional</span>
+<span class="sd">        Algorithm configuration; defaults to a new empty dictionary.</span>
+<span class="sd">    n_batches : int, optional</span>
+<span class="sd">        Number of leading structural batch axes in each core, independent of</span>
+<span class="sd">        data batches during evaluation. Defaults to ``0``.</span>
+<span class="sd">    bonds : sequence of torch.Tensor or None, optional</span>
+<span class="sd">        Diagonal factors between cores. Defaults to ``None``. Core and factor</span>
+<span class="sd">        containers are copied; tensors are reused without cloning or detaching.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.diag(torch.tensor([2., 3.])).reshape(1, 2, 1, 2)]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.TRMDecomposition(</span>
+<span class="sd">    ...     cores, metadata={&#39;algorithm&#39;: &#39;manual&#39;})</span>
+<span class="sd">    &gt;&gt;&gt; result.contract_dense()</span>
+<span class="sd">    tensor([[2., 0.],</span>
+<span class="sd">            [0., 3.]])</span>
+<span class="sd">    &gt;&gt;&gt; indices = torch.tensor([[0], [1]])</span>
+<span class="sd">    &gt;&gt;&gt; result.evaluate(indices, indices).tolist()</span>
+<span class="sd">    [2.0, 3.0]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_format_type</span> <span class="o">=</span> <span class="n">TRM</span>
+    <span class="n">_format_parameters</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;n_batches&#39;</span><span class="p">,</span> <span class="s1">&#39;in_sites&#39;</span><span class="p">,</span> <span class="s1">&#39;out_sites&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_new_from_standard_cores</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                 <span class="n">cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                                 <span class="n">in_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+                                 <span class="n">out_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+                                 <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                                 <span class="n">cyclic</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                                 <span class="n">other</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;TensorFormat1D&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                 <span class="n">product</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorFormat1D&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Preserves the result contract when applying an operator to data.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">product</span> <span class="ow">and</span> <span class="n">other</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cores</span> <span class="o">=</span> <span class="n">_restore_cores</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">,</span> <span class="n">out_dim</span><span class="p">,</span> <span class="n">n_batches</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">TRDecomposition</span><span class="p">(</span>
+                <span class="n">cores</span><span class="p">,</span> <span class="n">n_batches</span><span class="o">=</span><span class="n">n_batches</span><span class="p">,</span>
+                <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;operation&#39;</span><span class="p">:</span> <span class="s1">&#39;trm_apply&#39;</span><span class="p">})</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_new_from_standard_cores</span><span class="p">(</span>
+            <span class="n">cores</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">,</span> <span class="n">out_dim</span><span class="p">,</span> <span class="n">n_batches</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">,</span>
+            <span class="n">other</span><span class="o">=</span><span class="n">other</span><span class="p">,</span> <span class="n">product</span><span class="o">=</span><span class="n">product</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="QTTDecomposition"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.QTTDecomposition">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">QTTDecomposition</span><span class="p">(</span><span class="n">TensorDecomposition</span><span class="p">,</span> <span class="n">QTT</span><span class="p">):</span>  <span class="c1"># MARK: QTTDecomposition</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :class:`~tensorkrowch.formats.QTT` with decomposition diagnostics.</span>
+
+<span class="sd">    The numerical API is inherited from ``QTT``. ``metrics`` and ``metadata``</span>
+<span class="sd">    describe the fit that produced the cores and remain historical when the</span>
+<span class="sd">    result is modified. Use :meth:`~TensorDecomposition.to_format` to obtain</span>
+<span class="sd">    the corresponding ``QTT`` without decomposition diagnostics.</span>
+
+<span class="sd">    Coordinate evaluation follows the stored</span>
+<span class="sd">    :class:`~tensorkrowch.formats.QuantizedLayout` and</span>
+<span class="sd">    :class:`~tensorkrowch.formats.CoordinateMap`. Shorthand construction uses</span>
+<span class="sd">    ``interleaved`` ordering, ``coarse_to_fine`` digits and an affine map with</span>
+<span class="sd">    ``grid_offset=&quot;left&quot;`` when ``domain`` is supplied.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Core tensors following the public</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TT` layout, with open boundaries.</span>
+<span class="sd">        The container is copied; tensors retain storage and autograd.</span>
+<span class="sd">    n_coordinates : int</span>
+<span class="sd">        Number of original coordinates. Required as a keyword argument.</span>
+<span class="sd">    base : int or sequence of int, optional</span>
+<span class="sd">        Digit bases for shorthand construction. Required together with ``level``</span>
+<span class="sd">        and either ``domain`` or ``grid_coordinates``.</span>
+<span class="sd">    level : int or sequence of int, optional</span>
+<span class="sd">        Number of digits per coordinate for shorthand construction.</span>
+<span class="sd">    domain : torch.Tensor or sequence, optional</span>
+<span class="sd">        Coordinate intervals used to construct an</span>
+<span class="sd">        :class:`~tensorkrowch.formats.AffineCoordinateMap` with</span>
+<span class="sd">        ``grid_offset=&quot;left&quot;``. Cannot be combined with ``grid_coordinates``</span>
+<span class="sd">        or prebuilt objects.</span>
+<span class="sd">    grid_coordinates : torch.Tensor or sequence, optional</span>
+<span class="sd">        Domain grid points used to construct an</span>
+<span class="sd">        :class:`~tensorkrowch.formats.ExplicitGridMap`. A vector describes one</span>
+<span class="sd">        coordinate; a matrix or sequence of vectors describes multiple</span>
+<span class="sd">        coordinates. Each grid size must equal ``base ** level``.</span>
+<span class="sd">    layout : QuantizedLayout, optional</span>
+<span class="sd">        Prebuilt digit layout, supplied together with ``coordinate_map``.</span>
+<span class="sd">        Cannot be combined with shorthand construction arguments.</span>
+<span class="sd">    coordinate_map : CoordinateMap, optional</span>
+<span class="sd">        Prebuilt map with grid sizes matching ``layout.grid_size``.</span>
+<span class="sd">    metrics : DecompositionMetrics, optional</span>
+<span class="sd">        Historical fit records; defaults to a new empty collection.</span>
+<span class="sd">    metadata : dict, optional</span>
+<span class="sd">        Algorithm configuration; defaults to a new empty dictionary.</span>
+<span class="sd">    n_batches : int, optional</span>
+<span class="sd">        Number of leading structural batch axes in each core, independent of</span>
+<span class="sd">        data batches during evaluation. Defaults to ``0``.</span>
+<span class="sd">    bonds : sequence of torch.Tensor or None, optional</span>
+<span class="sd">        Diagonal factors between cores. Defaults to ``None``. Core and factor</span>
+<span class="sd">        containers are copied; tensors are reused without cloning or detaching.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.eye(2), torch.eye(2)]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.QTTDecomposition(</span>
+<span class="sd">    ...     cores, n_coordinates=1, base=2, level=2, domain=(0., 1.),</span>
+<span class="sd">    ...     metadata={&#39;algorithm&#39;: &#39;manual&#39;})</span>
+<span class="sd">    &gt;&gt;&gt; coordinates = torch.tensor([[0.], [0.25], [0.75]])</span>
+<span class="sd">    &gt;&gt;&gt; result.evaluate_coordinates(coordinates).tolist()</span>
+<span class="sd">    [1.0, 0.0, 1.0]</span>
+<span class="sd">    &gt;&gt;&gt; result.to_format().contract_dense_grid_axes().tolist()</span>
+<span class="sd">    [1.0, 0.0, 0.0, 1.0]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_format_type</span> <span class="o">=</span> <span class="n">QTT</span>
+    <span class="n">_format_parameters</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;n_batches&#39;</span><span class="p">,</span> <span class="s1">&#39;in_sites&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;n_coordinates&#39;</span><span class="p">,</span> <span class="s1">&#39;layout&#39;</span><span class="p">,</span> <span class="s1">&#39;coordinate_map&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="QTRDecomposition"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.QTRDecomposition">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">QTRDecomposition</span><span class="p">(</span><span class="n">TensorDecomposition</span><span class="p">,</span> <span class="n">QTR</span><span class="p">):</span>  <span class="c1"># MARK: QTRDecomposition</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :class:`~tensorkrowch.formats.QTR` with decomposition diagnostics.</span>
+
+<span class="sd">    The numerical API is inherited from ``QTR``. ``metrics`` and ``metadata``</span>
+<span class="sd">    describe the fit that produced the cores and remain historical when the</span>
+<span class="sd">    result is modified. Use :meth:`~TensorDecomposition.to_format` to obtain</span>
+<span class="sd">    the corresponding ``QTR`` without decomposition diagnostics.</span>
+
+<span class="sd">    Coordinate evaluation follows the stored</span>
+<span class="sd">    :class:`~tensorkrowch.formats.QuantizedLayout` and</span>
+<span class="sd">    :class:`~tensorkrowch.formats.CoordinateMap`. Shorthand construction uses</span>
+<span class="sd">    ``interleaved`` ordering, ``coarse_to_fine`` digits and an affine map with</span>
+<span class="sd">    ``grid_offset=&quot;left&quot;`` when ``domain`` is supplied.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Core tensors following the public</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TR` layout, with a cyclic closure.</span>
+<span class="sd">        The container is copied; tensors retain storage and autograd.</span>
+<span class="sd">    n_coordinates : int</span>
+<span class="sd">        Number of original coordinates. Required as a keyword argument.</span>
+<span class="sd">    base : int or sequence of int, optional</span>
+<span class="sd">        Digit bases for shorthand construction. Required together with ``level``</span>
+<span class="sd">        and either ``domain`` or ``grid_coordinates``.</span>
+<span class="sd">    level : int or sequence of int, optional</span>
+<span class="sd">        Number of digits per coordinate for shorthand construction.</span>
+<span class="sd">    domain : torch.Tensor or sequence, optional</span>
+<span class="sd">        Coordinate intervals used to construct an</span>
+<span class="sd">        :class:`~tensorkrowch.formats.AffineCoordinateMap` with</span>
+<span class="sd">        ``grid_offset=&quot;left&quot;``. Cannot be combined with ``grid_coordinates``</span>
+<span class="sd">        or prebuilt objects.</span>
+<span class="sd">    grid_coordinates : torch.Tensor or sequence, optional</span>
+<span class="sd">        Domain grid points used to construct an</span>
+<span class="sd">        :class:`~tensorkrowch.formats.ExplicitGridMap`. A vector describes one</span>
+<span class="sd">        coordinate; a matrix or sequence of vectors describes multiple</span>
+<span class="sd">        coordinates. Each grid size must equal ``base ** level``.</span>
+<span class="sd">    layout : QuantizedLayout, optional</span>
+<span class="sd">        Prebuilt digit layout, supplied together with ``coordinate_map``.</span>
+<span class="sd">        Cannot be combined with shorthand construction arguments.</span>
+<span class="sd">    coordinate_map : CoordinateMap, optional</span>
+<span class="sd">        Prebuilt map with grid sizes matching ``layout.grid_size``.</span>
+<span class="sd">    metrics : DecompositionMetrics, optional</span>
+<span class="sd">        Historical fit records; defaults to a new empty collection.</span>
+<span class="sd">    metadata : dict, optional</span>
+<span class="sd">        Algorithm configuration; defaults to a new empty dictionary.</span>
+<span class="sd">    n_batches : int, optional</span>
+<span class="sd">        Number of leading structural batch axes in each core, independent of</span>
+<span class="sd">        data batches during evaluation. Defaults to ``0``.</span>
+<span class="sd">    bonds : sequence of torch.Tensor or None, optional</span>
+<span class="sd">        Diagonal factors between cores. Defaults to ``None``. Core and factor</span>
+<span class="sd">        containers are copied; tensors are reused without cloning or detaching.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.tensor([1., 2.]).reshape(1, 2, 1),</span>
+<span class="sd">    ...          torch.tensor([3., 4.]).reshape(1, 2, 1)]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.QTRDecomposition(</span>
+<span class="sd">    ...     cores, n_coordinates=1, base=2, level=2, domain=(0., 1.),</span>
+<span class="sd">    ...     metadata={&#39;algorithm&#39;: &#39;manual&#39;})</span>
+<span class="sd">    &gt;&gt;&gt; coordinates = torch.tensor([[0.], [0.25], [0.75]])</span>
+<span class="sd">    &gt;&gt;&gt; result.evaluate_coordinates(coordinates).tolist()</span>
+<span class="sd">    [3.0, 4.0, 8.0]</span>
+<span class="sd">    &gt;&gt;&gt; result.to_format().contract_dense_grid_axes().tolist()</span>
+<span class="sd">    [3.0, 4.0, 6.0, 8.0]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_format_type</span> <span class="o">=</span> <span class="n">QTR</span>
+    <span class="n">_format_parameters</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;n_batches&#39;</span><span class="p">,</span> <span class="s1">&#39;in_sites&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;n_coordinates&#39;</span><span class="p">,</span> <span class="s1">&#39;layout&#39;</span><span class="p">,</span> <span class="s1">&#39;coordinate_map&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="QTTMDecomposition"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.QTTMDecomposition">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">QTTMDecomposition</span><span class="p">(</span><span class="n">TensorDecomposition</span><span class="p">,</span> <span class="n">QTTM</span><span class="p">):</span>  <span class="c1"># MARK: QTTMDecomposition</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :class:`~tensorkrowch.formats.QTTM` with decomposition diagnostics.</span>
+
+<span class="sd">    The numerical API is inherited from ``QTTM``. ``metrics`` and ``metadata``</span>
+<span class="sd">    describe the fit that produced the cores and remain historical when the</span>
+<span class="sd">    result is modified. Use :meth:`~TensorDecomposition.to_format` to obtain</span>
+<span class="sd">    the corresponding ``QTTM`` without decomposition diagnostics.</span>
+
+<span class="sd">    Input and output coordinate spaces independently accept shorthand</span>
+<span class="sd">    construction or a prebuilt :class:`~tensorkrowch.formats.QuantizedLayout`</span>
+<span class="sd">    and :class:`~tensorkrowch.formats.CoordinateMap`. Their layouts must have</span>
+<span class="sd">    equally many sites. Shorthand layouts use ``interleaved`` ordering and</span>
+<span class="sd">    ``coarse_to_fine`` digits; affine maps use ``grid_offset=&quot;left&quot;``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Core tensors following the public</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TTM` layout, with open boundaries.</span>
+<span class="sd">        The container is copied; tensors retain storage and autograd.</span>
+<span class="sd">    in_n_coordinates, out_n_coordinates : int</span>
+<span class="sd">        Number of original input and output coordinates. Both are required</span>
+<span class="sd">        as keyword arguments.</span>
+<span class="sd">    in_base, out_base : int or sequence of int, optional</span>
+<span class="sd">        Digit bases for shorthand construction of each coordinate space.</span>
+<span class="sd">        Each base requires its corresponding level and domain or grid points.</span>
+<span class="sd">    in_level, out_level : int or sequence of int, optional</span>
+<span class="sd">        Number of digits per coordinate in each space.</span>
+<span class="sd">    in_domain, out_domain : torch.Tensor or sequence, optional</span>
+<span class="sd">        Coordinate intervals used to construct affine maps with</span>
+<span class="sd">        ``grid_offset=&quot;left&quot;``. Cannot be combined with grid points or</span>
+<span class="sd">        prebuilt objects for the same space.</span>
+<span class="sd">    in_grid_coordinates, out_grid_coordinates : torch.Tensor or sequence, optional</span>
+<span class="sd">        Domain grid points used to construct explicit maps. A vector describes</span>
+<span class="sd">        one coordinate; a matrix or sequence of vectors describes multiple</span>
+<span class="sd">        coordinates. Each grid size must equal the corresponding</span>
+<span class="sd">        ``base ** level``.</span>
+<span class="sd">    in_layout, out_layout : QuantizedLayout, optional</span>
+<span class="sd">        Prebuilt digit layouts, each supplied with its corresponding map.</span>
+<span class="sd">        Both layouts must have the same number of sites.</span>
+<span class="sd">    in_coordinate_map, out_coordinate_map : CoordinateMap, optional</span>
+<span class="sd">        Prebuilt maps with grid sizes matching their respective layouts.</span>
+<span class="sd">        Cannot be combined with shorthand arguments for the same space.</span>
+<span class="sd">    metrics : DecompositionMetrics, optional</span>
+<span class="sd">        Historical fit records; defaults to a new empty collection.</span>
+<span class="sd">    metadata : dict, optional</span>
+<span class="sd">        Algorithm configuration; defaults to a new empty dictionary.</span>
+<span class="sd">    n_batches : int, optional</span>
+<span class="sd">        Number of leading structural batch axes in each core, independent of</span>
+<span class="sd">        data batches during evaluation. Defaults to ``0``.</span>
+<span class="sd">    bonds : sequence of torch.Tensor or None, optional</span>
+<span class="sd">        Diagonal factors between cores. Defaults to ``None``. Core and factor</span>
+<span class="sd">        containers are copied; tensors are reused without cloning or detaching.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.eye(2).unsqueeze(1), torch.eye(2).unsqueeze(0)]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.QTTMDecomposition(</span>
+<span class="sd">    ...     cores, in_n_coordinates=1, out_n_coordinates=1,</span>
+<span class="sd">    ...     in_base=2, in_level=2, in_domain=(0., 1.),</span>
+<span class="sd">    ...     out_base=2, out_level=2, out_domain=(-1., 1.),</span>
+<span class="sd">    ...     metadata={&#39;algorithm&#39;: &#39;manual&#39;})</span>
+<span class="sd">    &gt;&gt;&gt; in_coordinates = torch.tensor([[0.], [0.5]])</span>
+<span class="sd">    &gt;&gt;&gt; out_coordinates = torch.tensor([[-1.], [0.5]])</span>
+<span class="sd">    &gt;&gt;&gt; result.evaluate_coordinates(in_coordinates, out_coordinates).tolist()</span>
+<span class="sd">    [1.0, 0.0]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_format_type</span> <span class="o">=</span> <span class="n">QTTM</span>
+    <span class="n">_format_parameters</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;n_batches&#39;</span><span class="p">,</span> <span class="s1">&#39;in_sites&#39;</span><span class="p">,</span> <span class="s1">&#39;out_sites&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;in_n_coordinates&#39;</span><span class="p">,</span> <span class="s1">&#39;out_n_coordinates&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;in_layout&#39;</span><span class="p">,</span> <span class="s1">&#39;out_layout&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;in_coordinate_map&#39;</span><span class="p">,</span> <span class="s1">&#39;out_coordinate_map&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="QTRMDecomposition"><a class="viewcode-back" href="../../../decompositions_api.html#tensorkrowch.decompositions.QTRMDecomposition">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">QTRMDecomposition</span><span class="p">(</span><span class="n">TensorDecomposition</span><span class="p">,</span> <span class="n">QTRM</span><span class="p">):</span>  <span class="c1"># MARK: QTRMDecomposition</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :class:`~tensorkrowch.formats.QTRM` with decomposition diagnostics.</span>
+
+<span class="sd">    The numerical API is inherited from ``QTRM``. ``metrics`` and ``metadata``</span>
+<span class="sd">    describe the fit that produced the cores and remain historical when the</span>
+<span class="sd">    result is modified. Use :meth:`~TensorDecomposition.to_format` to obtain</span>
+<span class="sd">    the corresponding ``QTRM`` without decomposition diagnostics.</span>
+
+<span class="sd">    Input and output coordinate spaces independently accept shorthand</span>
+<span class="sd">    construction or a prebuilt :class:`~tensorkrowch.formats.QuantizedLayout`</span>
+<span class="sd">    and :class:`~tensorkrowch.formats.CoordinateMap`. Their layouts must have</span>
+<span class="sd">    equally many sites. Shorthand layouts use ``interleaved`` ordering and</span>
+<span class="sd">    ``coarse_to_fine`` digits; affine maps use ``grid_offset=&quot;left&quot;``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cores : sequence of torch.Tensor</span>
+<span class="sd">        Core tensors following the public</span>
+<span class="sd">        :class:`~tensorkrowch.formats.TRM` layout, with a cyclic closure.</span>
+<span class="sd">        The container is copied; tensors retain storage and autograd.</span>
+<span class="sd">    in_n_coordinates, out_n_coordinates : int</span>
+<span class="sd">        Number of original input and output coordinates. Both are required</span>
+<span class="sd">        as keyword arguments.</span>
+<span class="sd">    in_base, out_base : int or sequence of int, optional</span>
+<span class="sd">        Digit bases for shorthand construction of each coordinate space.</span>
+<span class="sd">        Each base requires its corresponding level and domain or grid points.</span>
+<span class="sd">    in_level, out_level : int or sequence of int, optional</span>
+<span class="sd">        Number of digits per coordinate in each space.</span>
+<span class="sd">    in_domain, out_domain : torch.Tensor or sequence, optional</span>
+<span class="sd">        Coordinate intervals used to construct affine maps with</span>
+<span class="sd">        ``grid_offset=&quot;left&quot;``. Cannot be combined with grid points or</span>
+<span class="sd">        prebuilt objects for the same space.</span>
+<span class="sd">    in_grid_coordinates, out_grid_coordinates : torch.Tensor or sequence, optional</span>
+<span class="sd">        Domain grid points used to construct explicit maps. A vector describes</span>
+<span class="sd">        one coordinate; a matrix or sequence of vectors describes multiple</span>
+<span class="sd">        coordinates. Each grid size must equal the corresponding</span>
+<span class="sd">        ``base ** level``.</span>
+<span class="sd">    in_layout, out_layout : QuantizedLayout, optional</span>
+<span class="sd">        Prebuilt digit layouts, each supplied with its corresponding map.</span>
+<span class="sd">        Both layouts must have the same number of sites.</span>
+<span class="sd">    in_coordinate_map, out_coordinate_map : CoordinateMap, optional</span>
+<span class="sd">        Prebuilt maps with grid sizes matching their respective layouts.</span>
+<span class="sd">        Cannot be combined with shorthand arguments for the same space.</span>
+<span class="sd">    metrics : DecompositionMetrics, optional</span>
+<span class="sd">        Historical fit records; defaults to a new empty collection.</span>
+<span class="sd">    metadata : dict, optional</span>
+<span class="sd">        Algorithm configuration; defaults to a new empty dictionary.</span>
+<span class="sd">    n_batches : int, optional</span>
+<span class="sd">        Number of leading structural batch axes in each core, independent of</span>
+<span class="sd">        data batches during evaluation. Defaults to ``0``.</span>
+<span class="sd">    bonds : sequence of torch.Tensor or None, optional</span>
+<span class="sd">        Diagonal factors between cores. Defaults to ``None``. Core and factor</span>
+<span class="sd">        containers are copied; tensors are reused without cloning or detaching.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; cores = [torch.eye(2).reshape(1, 2, 1, 2) for _ in range(2)]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.decompositions.QTRMDecomposition(</span>
+<span class="sd">    ...     cores, in_n_coordinates=1, out_n_coordinates=1,</span>
+<span class="sd">    ...     in_base=2, in_level=2, in_domain=(0., 1.),</span>
+<span class="sd">    ...     out_base=2, out_level=2, out_domain=(-1., 1.),</span>
+<span class="sd">    ...     metadata={&#39;algorithm&#39;: &#39;manual&#39;})</span>
+<span class="sd">    &gt;&gt;&gt; in_coordinates = torch.tensor([[0.], [0.5]])</span>
+<span class="sd">    &gt;&gt;&gt; out_coordinates = torch.tensor([[-1.], [0.5]])</span>
+<span class="sd">    &gt;&gt;&gt; result.evaluate_coordinates(in_coordinates, out_coordinates).tolist()</span>
+<span class="sd">    [1.0, 0.0]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_format_type</span> <span class="o">=</span> <span class="n">QTRM</span>
+    <span class="n">_format_parameters</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;n_batches&#39;</span><span class="p">,</span> <span class="s1">&#39;in_sites&#39;</span><span class="p">,</span> <span class="s1">&#39;out_sites&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;in_n_coordinates&#39;</span><span class="p">,</span> <span class="s1">&#39;out_n_coordinates&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;in_layout&#39;</span><span class="p">,</span> <span class="s1">&#39;out_layout&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;in_coordinate_map&#39;</span><span class="p">,</span> <span class="s1">&#39;out_coordinate_map&#39;</span><span class="p">)</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_result_from_source</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="n">TensorDecomposition</span><span class="p">,</span>
+                        <span class="n">source</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;BaseSource&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorDecomposition</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Restores paired axes and source coordinate/evaluation semantics.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="n">cyclic</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">_cyclic</span>
+    <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">metrics</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">metrics</span><span class="p">,</span>
+                  <span class="n">metadata</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">metadata</span><span class="p">),</span>
+                  <span class="n">n_batches</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">n_batches</span><span class="p">)</span>
+    <span class="n">cores</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">cores</span>
+
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s1">&#39;is_matrix&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">out_dim</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">n_sites</span> <span class="o">==</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">source</span><span class="o">.</span><span class="n">n_sites</span><span class="p">:</span>
+            <span class="c1"># RSS creates adjacent input/output sites before assembling a matrix.</span>
+            <span class="k">if</span> <span class="n">inputs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">inputs</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[::</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">standard</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">_effective_cores</span><span class="p">()</span>
+            <span class="n">paired</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;aib,boc-&gt;aioc&#39;</span><span class="p">,</span>
+                                   <span class="n">standard</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">site</span><span class="p">],</span>
+                                   <span class="n">standard</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">site</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+                      <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)]</span>
+            <span class="n">cores</span> <span class="o">=</span> <span class="n">_restore_cores</span><span class="p">(</span><span class="n">paired</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span>
+                                   <span class="n">result</span><span class="o">.</span><span class="n">n_batches</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">result</span><span class="o">.</span><span class="n">out_dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cores</span> <span class="o">=</span> <span class="n">_restore_cores</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">_effective_cores</span><span class="p">(),</span>
+                                   <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span>
+                                   <span class="n">result</span><span class="o">.</span><span class="n">n_batches</span><span class="p">,</span> <span class="n">cyclic</span><span class="p">)</span>
+
+        <span class="bp">cls</span> <span class="o">=</span> <span class="n">TRMDecomposition</span> <span class="k">if</span> <span class="n">cyclic</span> <span class="k">else</span> <span class="n">TTMDecomposition</span>
+        <span class="n">algorithm</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;algorithm&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">algorithm</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;tt_svd&#39;</span><span class="p">,</span> <span class="s1">&#39;tr_svd&#39;</span><span class="p">):</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">][</span><span class="s1">&#39;algorithm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">algorithm</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_svd&#39;</span><span class="p">,</span> <span class="s1">&#39;m_svd&#39;</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">][</span><span class="s1">&#39;ordering&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span>
+            <span class="n">source</span><span class="p">,</span> <span class="s1">&#39;_ordering&#39;</span><span class="p">,</span> <span class="s1">&#39;interleaved&#39;</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="bp">cls</span> <span class="o">=</span> <span class="n">TRDecomposition</span> <span class="k">if</span> <span class="n">cyclic</span> <span class="k">else</span> <span class="n">TTDecomposition</span>
+        <span class="n">sites</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">in_sites</span> <span class="k">if</span> <span class="s1">&#39;rss&#39;</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;algorithm&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> \
+            <span class="k">else</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s1">&#39;in_sites&#39;</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)))</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;in_sites&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sites</span>
+
+    <span class="n">layout</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s1">&#39;layout&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">layout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s1">&#39;is_matrix&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="bp">cls</span> <span class="o">=</span> <span class="n">QTRMDecomposition</span> <span class="k">if</span> <span class="n">cyclic</span> <span class="k">else</span> <span class="n">QTTMDecomposition</span>
+            <span class="n">layouts</span> <span class="o">=</span> <span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">in_layout</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">out_layout</span><span class="p">)</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">in_n_coordinates</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">in_n_coordinates</span><span class="p">,</span>
+                          <span class="n">out_n_coordinates</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">out_n_coordinates</span><span class="p">,</span>
+                          <span class="n">in_layout</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">in_layout</span><span class="p">,</span>
+                          <span class="n">out_layout</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">out_layout</span><span class="p">,</span>
+                          <span class="n">in_coordinate_map</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">in_coordinate_map</span><span class="p">,</span>
+                          <span class="n">out_coordinate_map</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">out_coordinate_map</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">cls</span> <span class="o">=</span> <span class="n">QTRDecomposition</span> <span class="k">if</span> <span class="n">cyclic</span> <span class="k">else</span> <span class="n">QTTDecomposition</span>
+            <span class="n">layouts</span> <span class="o">=</span> <span class="p">(</span><span class="n">layout</span><span class="p">,)</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">n_coordinates</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">n_coordinates</span><span class="p">,</span>
+                          <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">,</span>
+                          <span class="n">coordinate_map</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">coordinate_map</span><span class="p">)</span>
+
+        <span class="n">algorithm</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;algorithm&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">algorithm</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_rss&#39;</span><span class="p">):</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">][</span><span class="s1">&#39;algorithm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;q&#39;</span> <span class="o">+</span> <span class="n">algorithm</span>
+        <span class="n">quantization</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s1">&#39;n_coordinates&#39;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">n_coordinates</span><span class="p">,</span>
+             <span class="s1">&#39;base&#39;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="s1">&#39;level&#39;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">level</span><span class="p">,</span>
+             <span class="s1">&#39;ordering&#39;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">ordering</span><span class="p">,</span> <span class="s1">&#39;digit_order&#39;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">digit_order</span><span class="p">,</span>
+             <span class="s1">&#39;sites&#39;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">sites</span><span class="p">(),</span>
+             <span class="s1">&#39;grid_size&#39;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">grid_size</span><span class="p">}</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">layouts</span><span class="p">]</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;quantization&#39;</span><span class="p">,</span> <span class="n">quantization</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                                      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layouts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">quantization</span><span class="p">)</span>
+
+    <span class="n">wrapped</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">cores</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">wrapped</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="k">if</span> <span class="n">layout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">wrapped</span>
+
+
+<span class="n">_DecompositionOutput</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span>
+    <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+    <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="n">TensorDecomposition</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

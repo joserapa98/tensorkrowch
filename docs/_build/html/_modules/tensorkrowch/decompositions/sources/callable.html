@@ -1,0 +1,949 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.sources.callable &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/clipboard.min.js"></script>
+    <script src="../../../../_static/copybutton.js"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.sources.callable</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Public classes:</span>
+<span class="sd">        * CallableSource</span>
+<span class="sd">        * CallableTensorSource</span>
+
+<span class="sd">    Internal classes:</span>
+<span class="sd">        * _DataEvaluator</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">_normalize_dims</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources.base</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">BaseSource</span><span class="p">,</span>
+                                                      <span class="n">ConfigurationBatch</span><span class="p">,</span>
+                                                      <span class="n">_data_weights</span><span class="p">,</span>
+                                                      <span class="n">_discrete_indices</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources.sparse</span><span class="w"> </span><span class="kn">import</span> <span class="n">_SparseLookup</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_DataEvaluator</span><span class="p">:</span>  <span class="c1"># MARK: _DataEvaluator</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Evaluates exact sample masses or a weighted user kernel.&quot;&quot;&quot;</span>
+
+    <span class="n">dataset</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">weights</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">kernel</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span>
+    <span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coordinates</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns one mass or kernel value per queried configuration.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">coordinates</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="p">(</span><span class="n">coordinates</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">==</span>
+                      <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="p">)[</span><span class="kc">None</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">(</span><span class="n">coordinates</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span>
+                    <span class="n">coordinates</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`kernel` should return `(batch, samples)` values&#39;</span><span class="p">)</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">values</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">values</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+                                                  <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="CallableSource"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.CallableSource">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">CallableSource</span><span class="p">(</span><span class="n">BaseSource</span><span class="p">):</span>  <span class="c1"># MARK: CallableSource</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Continuous function evaluated by a user callable.</span>
+
+<span class="sd">    Packed configurations are passed to ``function`` with shape</span>
+<span class="sd">    ``(batch, len(in_sites), *feature_shape)``; scalar inputs have no trailing</span>
+<span class="sd">    feature axes. Heterogeneous inputs are passed as a tuple of</span>
+<span class="sd">    ``len(in_sites)`` tensors. Both forms follow ``in_sites`` order. The</span>
+<span class="sd">    callable preserves the leading batch and returns ``(batch, *out_shape)``.</span>
+
+<span class="sd">    Construct the source with ``function`` and its total variable count.</span>
+<span class="sd">    ``in_sites`` selects the inputs; all remaining variables are output axes.</span>
+<span class="sd">    Output shape and dtype can be declared or discovered on first evaluation.</span>
+<span class="sd">    This source accepts continuous features and has no finite grid to</span>
+<span class="sd">    materialize. Use :class:`CallableTensorSource` for discrete indices, or</span>
+<span class="sd">    :class:`CallableQuanticsSource` to discretize a coordinate function.</span>
+
+<span class="sd">    The alternative constructor :meth:`matrix` pairs each continuous input</span>
+<span class="sd">    with an output axis for a function returning all output entries per input.</span>
+<span class="sd">    :meth:`from_data` instead builds a scalar vector source from observed</span>
+<span class="sd">    coordinates, using exact matches or a user-supplied kernel.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    function : callable</span>
+<span class="sd">        Receives the inputs selected by ``in_sites``, in that order, and</span>
+<span class="sd">        returns shape ``(batch, *out_shape)``.</span>
+<span class="sd">    n_sites : int</span>
+<span class="sd">        Total number of input and output variables. An input variable receives</span>
+<span class="sd">        a scalar or embedded vector; each remaining variable is an output axis.</span>
+<span class="sd">    out_shape : sequence of int or None, optional</span>
+<span class="sd">        Declared response shape. The default ``None`` discovers it on the</span>
+<span class="sd">        first non-empty evaluation; its rank must equal</span>
+<span class="sd">        ``n_sites - len(in_sites)``. ``()`` requires scalar responses.</span>
+<span class="sd">    dtype : torch.dtype or None, optional</span>
+<span class="sd">        Declared output dtype. ``None`` infers it from the first evaluation.</span>
+<span class="sd">    device : str or torch.device, optional</span>
+<span class="sd">        Device to which configurations are moved before evaluation. Returned</span>
+<span class="sd">        values must use the same device. Defaults to ``&#39;cpu&#39;``.</span>
+<span class="sd">    batch_size : int or None, optional</span>
+<span class="sd">        Maximum number of configurations passed to one callable invocation.</span>
+<span class="sd">    in_sites : sequence of int, optional</span>
+<span class="sd">        Ordered input variables. Defaults to all variables; output axes follow</span>
+<span class="sd">        the complement in increasing variable order.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; source = tk.decompositions.CallableSource(</span>
+<span class="sd">    ...     lambda coordinates: coordinates.sum(-1), n_sites=2)</span>
+<span class="sd">    &gt;&gt;&gt; source.evaluate(tk.decompositions.ConfigurationBatch(</span>
+<span class="sd">    ...     torch.tensor([[0.25, 0.5], [1., 2.]]), kind=&#39;features&#39;))</span>
+<span class="sd">    tensor([0.7500, 3.0000])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">input_kind</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;features&#39;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+                 <span class="n">n_sites</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">out_shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">dtype</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">device</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span><span class="p">,</span>
+                 <span class="n">batch_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="o">*</span><span class="p">,</span>
+                 <span class="n">in_sites</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">n_sites</span><span class="p">,</span> <span class="n">in_sites</span><span class="o">=</span><span class="n">in_sites</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">function</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`function` should be callable&#39;</span><span class="p">)</span>
+        <span class="n">normalized_out_shape</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">out_shape</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> \
+            <span class="n">_normalize_dims</span><span class="p">(</span><span class="n">out_shape</span><span class="p">,</span> <span class="s1">&#39;out_shape&#39;</span><span class="p">,</span> <span class="n">allow_empty</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">normalized_out_shape</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">normalized_out_shape</span><span class="p">)</span> <span class="o">!=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_sites</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`out_shape` should have one axis per output variable&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`dtype` should be torch.dtype type or None&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">batch_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">batch_size</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`batch_size` should be a positive integer&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">function</span> <span class="o">=</span> <span class="n">function</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out_shape</span> <span class="o">=</span> <span class="n">normalized_out_shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span> <span class="o">=</span> <span class="n">dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="n">batch_size</span>
+
+<div class="viewcode-block" id="CallableSource.matrix"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.CallableSource.matrix">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">matrix</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
+               <span class="n">function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+               <span class="n">n_sites</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+               <span class="n">out_shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;CallableSource&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructs a continuous matrix source with one output axis per input.</span>
+
+<span class="sd">        :meth:`evaluate` receives inputs for every site in site order and</span>
+<span class="sd">        returns all output axes, with ``out_shape == out_dim``. Each input is</span>
+<span class="sd">        continuous, so ``in_dim`` remains ``None``. Output dimensions can be</span>
+<span class="sd">        declared or inferred on first evaluation; their count must equal</span>
+<span class="sd">        ``n_sites``. Output indices are not passed separately.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        function : callable</span>
+<span class="sd">            Receives shape ``(batch, n_sites, *feature_shape)`` or a tuple of</span>
+<span class="sd">            ``n_sites`` tensors, and returns shape ``(batch, *out_shape)``.</span>
+<span class="sd">        n_sites : int</span>
+<span class="sd">            Number of paired continuous inputs and output axes.</span>
+<span class="sd">        out_shape : sequence of int or None, optional</span>
+<span class="sd">            Output dimension for each site. ``None`` infers the dimensions</span>
+<span class="sd">            from the first non-empty evaluation.</span>
+<span class="sd">        **kwargs</span>
+<span class="sd">            ``dtype``, ``device`` and ``batch_size`` options of</span>
+<span class="sd">            :class:`CallableSource`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        CallableSource</span>
+<span class="sd">            Matrix source with ``out_shape == out_dim``.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; source = tk.decompositions.CallableSource.matrix(</span>
+<span class="sd">        ...     lambda x: torch.stack((x[:, 0], 1 - x[:, 0]), dim=-1),</span>
+<span class="sd">        ...     n_sites=1)</span>
+<span class="sd">        &gt;&gt;&gt; source.evaluate(tk.decompositions.ConfigurationBatch(</span>
+<span class="sd">        ...     torch.tensor([[0.25], [0.75]]), kind=&#39;features&#39;))</span>
+<span class="sd">        tensor([[0.2500, 0.7500],</span>
+<span class="sd">                [0.7500, 0.2500]])</span>
+<span class="sd">        &gt;&gt;&gt; source.out_dim</span>
+<span class="sd">        (2,)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">n_sites</span><span class="p">,</span> <span class="n">in_sites</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">_matrix_dims</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">out_shape</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">source</span><span class="o">.</span><span class="n">_set_output_shape</span><span class="p">(</span><span class="n">_normalize_dims</span><span class="p">(</span><span class="n">out_shape</span><span class="p">,</span> <span class="s1">&#39;out_shape&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">source</span></div>
+
+<div class="viewcode-block" id="CallableSource.from_data"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.CallableSource.from_data">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_data</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
+                  <span class="n">dataset</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                  <span class="n">weights</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="o">*</span><span class="p">,</span>
+                  <span class="n">kernel</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="o">**</span><span class="n">kernel_kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;CallableSource&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructs a scalar vector source from exact samples or a kernel.</span>
+
+<span class="sd">        Unlike the usual constructor, this method builds the evaluation</span>
+<span class="sd">        function from ``dataset``. Sample weights sum to one after</span>
+<span class="sd">        normalization; omitted ``weights`` give equal mass to every sample.</span>
+<span class="sd">        With ``kernel=None``, evaluation returns the total weight of samples</span>
+<span class="sd">        exactly matching each query, and zero elsewhere. With a kernel, it</span>
+<span class="sd">        returns the weighted sum of its query-to-sample values. For example,</span>
+<span class="sd">        pass :func:`~tensorkrowch.decompositions.kernels.gaussian_kernel`</span>
+<span class="sd">        with ``bandwidth`` to obtain a Gaussian</span>
+<span class="sd">        density estimate; no kernel is selected automatically.</span>
+
+<span class="sd">        All dataset columns are continuous inputs in their given order, with</span>
+<span class="sd">        ``n_sites == dataset.shape[1]`` and ``in_dim=None``. The returned</span>
+<span class="sd">        source has scalar responses, with ``out_shape=()``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : torch.Tensor</span>
+<span class="sd">            Continuous coordinates with shape ``(n_samples, n_sites)``.</span>
+<span class="sd">        weights : torch.Tensor, optional</span>
+<span class="sd">            Non-negative weights normalized to total mass one.</span>
+<span class="sd">        kernel : callable, optional</span>
+<span class="sd">            Receives ``(coordinates, dataset, **kernel_kwargs)`` and returns</span>
+<span class="sd">            ``(batch, n_samples)`` values. ``None`` uses exact coordinate matches.</span>
+<span class="sd">        **kernel_kwargs</span>
+<span class="sd">            Parameters owned by the selected kernel, such as ``bandwidth``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        CallableSource</span>
+<span class="sd">            Scalar vector source evaluating exact masses or kernel estimates.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; source = tk.decompositions.CallableSource.from_data(</span>
+<span class="sd">        ...     torch.tensor([[0.1], [0.4], [0.1]]))</span>
+<span class="sd">        &gt;&gt;&gt; source.evaluate(tk.decompositions.ConfigurationBatch(</span>
+<span class="sd">        ...     torch.tensor([[0.1], [0.3]]), kind=&#39;features&#39;))</span>
+<span class="sd">        tensor([0.6667, 0.0000])</span>
+
+<span class="sd">        A Gaussian kernel smooths the samples into a continuous density:</span>
+
+<span class="sd">        &gt;&gt;&gt; source = tk.decompositions.CallableSource.from_data(</span>
+<span class="sd">        ...     torch.tensor([[0.], [0.]]),</span>
+<span class="sd">        ...     kernel=tk.decompositions.gaussian_kernel, bandwidth=1.)</span>
+<span class="sd">        &gt;&gt;&gt; source.evaluate(tk.decompositions.ConfigurationBatch(</span>
+<span class="sd">        ...     torch.tensor([[0.], [1.]]), kind=&#39;features&#39;))</span>
+<span class="sd">        tensor([0.3989, 0.2420])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">dtype</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">and</span> \
+            <span class="n">dataset</span><span class="o">.</span><span class="n">is_floating_point</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">_data_weights</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">kernel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">kernel</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`kernel` should be callable&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">kernel</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">kernel_kwargs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Kernel parameters require a `kernel`&#39;</span><span class="p">)</span>
+
+        <span class="n">evaluator</span> <span class="o">=</span> <span class="n">_DataEvaluator</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">kernel_kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">out_shape</span><span class="o">=</span><span class="p">(),</span>
+                   <span class="n">dtype</span><span class="o">=</span><span class="n">weights</span><span class="o">.</span><span class="n">dtype</span> <span class="k">if</span> <span class="n">kernel</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">device</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Dimensions of all vector variables or paired matrix input axes.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">out_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Declared or inferred function output shape.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">out_shape</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_matrix</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> \
+            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_shape</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Declared or inferred function output dtype.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">device</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Device on which evaluations are performed.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_device</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_set_output_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolves response dimensions for the declared output variables.&quot;&quot;&quot;</span>
+        <span class="n">n_outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_matrix</span> <span class="k">else</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_sites</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_sites</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">out_shape</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_outputs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`function` should return one axis per output variable&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out_shape</span> <span class="o">=</span> <span class="n">out_shape</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_matrix</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matrix_dims</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">out_shape</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Checks batch shape and stable result runtime metadata.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`function` should return a torch.Tensor&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`function` should return values on the source device&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">batch_size</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`function` should preserve the configuration batch dimension&#39;</span><span class="p">)</span>
+
+        <span class="n">out_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="n">expected</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_shape</span>
+        <span class="k">if</span> <span class="n">expected</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_output_shape</span><span class="p">(</span><span class="n">out_shape</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">out_shape</span> <span class="o">!=</span> <span class="n">expected</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`function` output shape does not match `out_shape`&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="k">elif</span> <span class="n">result</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`function` output dtype changed between calls&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_evaluate_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                        <span class="n">configurations</span><span class="p">:</span> <span class="n">ConfigurationBatch</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evaluates and validates one callable batch.&quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">function</span><span class="p">(</span><span class="n">configurations</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_result</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CallableSource.evaluate"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.CallableSource.evaluate">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configurations</span><span class="p">:</span> <span class="n">ConfigurationBatch</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluates configurations using the source&#39;s input convention.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        configurations : ConfigurationBatch</span>
+<span class="sd">            Inputs in ``in_sites`` order: continuous features with shape</span>
+<span class="sd">            ``(batch, len(in_sites), *feature_shape)`` for ``CallableSource``,</span>
+<span class="sd">            or integer indices with shape ``(batch, len(in_sites))`` for</span>
+<span class="sd">            ``CallableTensorSource`` and its Quantics subclass. Heterogeneous</span>
+<span class="sd">            continuous inputs may instead use ``len(in_sites)`` tensors.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Values with shape ``(batch, *out_shape)``, preserving input order</span>
+<span class="sd">            and autograd. ``batch_size`` bounds each callable invocation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">configurations</span><span class="p">,</span> <span class="n">ConfigurationBatch</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`configurations` should be ConfigurationBatch type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">configurations</span><span class="o">.</span><span class="n">n_inputs</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_sites</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Configurations should contain one value per input site&#39;</span><span class="p">)</span>
+        <span class="n">configurations</span> <span class="o">=</span> <span class="n">configurations</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">configurations</span><span class="o">.</span><span class="n">kind</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_kind</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Configurations should have kind `</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">input_kind</span><span class="si">}</span><span class="s1">`&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_kind</span> <span class="o">==</span> <span class="s1">&#39;indices&#39;</span><span class="p">:</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="n">_discrete_indices</span><span class="p">(</span>
+                <span class="n">configurations</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites_dims</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
+            <span class="n">configurations</span> <span class="o">=</span> <span class="n">ConfigurationBatch</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_shape</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;An empty first evaluation requires output shape and dtype&#39;</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span>
+                <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">out_shape</span><span class="p">),</span>
+                <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">,</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_record_evaluation</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">batches</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="ow">or</span> <span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span>
+        <span class="k">if</span> <span class="n">batch_size</span> <span class="o">&gt;=</span> <span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_evaluate_batch</span><span class="p">(</span><span class="n">configurations</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_record_evaluation</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">):</span>
+            <span class="n">stop</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span><span class="p">)</span>
+            <span class="n">ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">configurations</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_evaluate_batch</span><span class="p">(</span><span class="n">configurations</span><span class="o">.</span><span class="n">index_select</span><span class="p">(</span><span class="n">ids</span><span class="p">)))</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">chunks</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_record_evaluation</span><span class="p">(</span>
+            <span class="n">points</span><span class="o">=</span><span class="n">configurations</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">batches</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">chunks</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">result</span></div></div>
+
+
+<div class="viewcode-block" id="CallableTensorSource"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.CallableTensorSource">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">CallableTensorSource</span><span class="p">(</span><span class="n">CallableSource</span><span class="p">):</span>  <span class="c1"># MARK: CallableTensorSource</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Finite tensor whose values are evaluated by a callable.</span>
+
+<span class="sd">    ``in_dim`` gives the dimension of every tensor axis, so</span>
+<span class="sd">    ``n_sites == len(in_dim)``. By default, all axes are inputs and the</span>
+<span class="sd">    callable returns one scalar per configuration.</span>
+
+<span class="sd">    Use ``in_sites`` to select only some axes as inputs. The callable receives</span>
+<span class="sd">    integer indices with shape ``(batch, len(in_sites))``, in that order,</span>
+<span class="sd">    and returns the remaining axes in their original tensor order. Its output</span>
+<span class="sd">    has shape ``(batch, *out_shape)``, where ``out_shape`` is determined by</span>
+<span class="sd">    the dimensions of the unselected axes.</span>
+
+<span class="sd">    Values are computed on demand. :meth:`contract_dense` evaluates all input</span>
+<span class="sd">    configurations to construct the full tensor. Dtype, device and callable</span>
+<span class="sd">    batching follow :class:`CallableSource`; dtype can be inferred on the</span>
+<span class="sd">    first evaluation.</span>
+
+<span class="sd">    Use :meth:`matrix` to pair each input axis with an output axis.</span>
+<span class="sd">    :meth:`from_data` instead constructs the callable from discrete samples,</span>
+<span class="sd">    using exact matches or a user-supplied kernel.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    function : callable</span>
+<span class="sd">        Receives integer indices with shape ``(batch, len(in_sites))``, in</span>
+<span class="sd">        ``in_sites`` order, and returns shape ``(batch, *out_shape)``.</span>
+<span class="sd">    in_dim : sequence of int</span>
+<span class="sd">        Dimensions of all represented vector axes.</span>
+<span class="sd">    in_sites : sequence of int, optional</span>
+<span class="sd">        Ordered input variables. Defaults to every axis. The callable returns</span>
+<span class="sd">        the complementary axes in their represented order.</span>
+<span class="sd">    **kwargs</span>
+<span class="sd">        Output shape, dtype, device and batching options of ``CallableSource``.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; source = tk.decompositions.CallableTensorSource(</span>
+<span class="sd">    ...     lambda indices: indices.sum(-1).float(), in_dim=(2, 3))</span>
+<span class="sd">    &gt;&gt;&gt; source.contract_dense()</span>
+<span class="sd">    tensor([[0., 1., 2.],</span>
+<span class="sd">            [1., 2., 3.]])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">input_kind</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;indices&#39;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+                 <span class="n">in_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dimensions</span> <span class="o">=</span> <span class="n">_normalize_dims</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="s1">&#39;in_dim&#39;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">dimensions</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span> <span class="o">=</span> <span class="n">dimensions</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_shape</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_out_shape</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_shape</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`out_shape` should match the unselected `in_dim` axes&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CallableTensorSource.matrix"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.CallableTensorSource.matrix">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">matrix</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
+               <span class="n">function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+               <span class="n">in_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+               <span class="n">out_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+               <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;CallableTensorSource&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructs a matrix source from a callable on discrete input indices.</span>
+
+<span class="sd">        ``in_dim`` and ``out_dim`` must have equal lengths, with one pair per</span>
+<span class="sd">        site. :meth:`evaluate` receives indices with shape ``(batch, n_sites)``</span>
+<span class="sd">        in site order and returns all output axes, with ``out_shape == out_dim``.</span>
+<span class="sd">        :meth:`contract_dense` returns interleaved input/output axes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        function : callable</span>
+<span class="sd">            Receives input indices and returns shape ``(batch, *out_dim)``.</span>
+<span class="sd">        in_dim, out_dim : sequence of int</span>
+<span class="sd">            Input and output dimensions, respectively, for each matrix site.</span>
+<span class="sd">        **kwargs</span>
+<span class="sd">            ``dtype``, ``device`` and ``batch_size`` options of</span>
+<span class="sd">            :class:`CallableSource`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        CallableTensorSource</span>
+<span class="sd">            Matrix source with ``out_shape == out_dim``.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; source = tk.decompositions.CallableTensorSource.matrix(</span>
+<span class="sd">        ...     lambda indices: torch.nn.functional.one_hot(</span>
+<span class="sd">        ...         indices[:, 0], num_classes=2).float(),</span>
+<span class="sd">        ...     in_dim=(2,), out_dim=(2,))</span>
+<span class="sd">        &gt;&gt;&gt; source.contract_dense()</span>
+<span class="sd">        tensor([[1., 0.],</span>
+<span class="sd">                [0., 1.]])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">_normalize_dims</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="s1">&#39;in_dim&#39;</span><span class="p">)</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="n">_normalize_dims</span><span class="p">(</span><span class="n">out_dim</span><span class="p">,</span> <span class="s1">&#39;out_dim&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">outputs</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`in_dim` and `out_dim` should have equal lengths&#39;</span><span class="p">)</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="p">(</span><span class="o">*</span><span class="n">inputs</span><span class="p">,</span> <span class="o">*</span><span class="n">outputs</span><span class="p">),</span>
+                     <span class="n">in_sites</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">))),</span> <span class="n">out_shape</span><span class="o">=</span><span class="n">outputs</span><span class="p">,</span>
+                     <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">_matrix_dims</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">_in_dim</span> <span class="o">=</span> <span class="n">inputs</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">_set_sites</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">source</span></div>
+
+<div class="viewcode-block" id="CallableTensorSource.from_data"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.CallableTensorSource.from_data">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_data</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
+                  <span class="n">dataset</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                  <span class="n">in_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="n">weights</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="o">*</span><span class="p">,</span>
+                  <span class="n">kernel</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="o">**</span><span class="n">kernel_kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;CallableTensorSource&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructs a scalar tensor source from discrete samples or a kernel.</span>
+
+<span class="sd">        With ``kernel=None``, evaluation returns the total normalized weight</span>
+<span class="sd">        of samples matching each query, and zero elsewhere.</span>
+<span class="sd">        With a kernel, evaluation returns the weighted sum of its</span>
+<span class="sd">        query-to-sample values. Both cases use all dataset columns as inputs</span>
+<span class="sd">        in their given order and return scalar responses, with ``out_shape=()``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : torch.Tensor</span>
+<span class="sd">            Integer indices with shape ``(n_samples, n_sites)``.</span>
+<span class="sd">        in_dim : sequence of int, optional</span>
+<span class="sd">            Dimension of each discrete input axis, in dataset column order.</span>
+<span class="sd">            Inferred from observed indices when omitted without a kernel;</span>
+<span class="sd">            required when a kernel is supplied.</span>
+<span class="sd">        weights : torch.Tensor, optional</span>
+<span class="sd">            Non-negative weights normalized to total mass one.</span>
+<span class="sd">        kernel : callable, optional</span>
+<span class="sd">            Receives ``(indices, dataset, **kernel_kwargs)`` and returns</span>
+<span class="sd">            ``(batch, n_samples)`` values. ``None`` uses exact index matches.</span>
+<span class="sd">        **kernel_kwargs</span>
+<span class="sd">            Parameters owned by the selected kernel, such as ``bandwidth``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        CallableTensorSource</span>
+<span class="sd">            Scalar tensor source evaluating kernel estimates or exact masses.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; source = tk.decompositions.CallableTensorSource.from_data(</span>
+<span class="sd">        ...     torch.tensor([[0], [2], [0]]), in_dim=(3,))</span>
+<span class="sd">        &gt;&gt;&gt; source.contract_dense()</span>
+<span class="sd">        tensor([0.6667, 0.0000, 0.3333])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">_data_weights</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">weights</span><span class="p">)</span>
+        <span class="n">configurations</span> <span class="o">=</span> <span class="n">ConfigurationBatch</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">kernel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">kernel</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`kernel` should be callable&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">kernel</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">kernel_kwargs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Kernel parameters require a `kernel`&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">in_dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">kernel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Discrete data callables require `in_dim`&#39;</span><span class="p">)</span>
+            <span class="n">in_dim</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">dataset</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+
+        <span class="n">in_dim</span> <span class="o">=</span> <span class="n">_normalize_dims</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="s1">&#39;in_dim&#39;</span><span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">_discrete_indices</span><span class="p">(</span><span class="n">configurations</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">evaluator</span> <span class="o">=</span> <span class="n">_SparseLookup</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">)</span> <span class="k">if</span> <span class="n">kernel</span> <span class="ow">is</span> <span class="kc">None</span> \
+            <span class="k">else</span> <span class="n">_DataEvaluator</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">kernel_kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">,</span> <span class="n">out_shape</span><span class="o">=</span><span class="p">(),</span>
+                   <span class="n">dtype</span><span class="o">=</span><span class="n">weights</span><span class="o">.</span><span class="n">dtype</span> <span class="k">if</span> <span class="n">kernel</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">device</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div></div>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;CallableSource&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;CallableTensorSource&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

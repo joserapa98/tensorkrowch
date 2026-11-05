@@ -1,0 +1,864 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.sketching.projections &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/clipboard.min.js"></script>
+    <script src="../../../../_static/copybutton.js"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.sketching.projections</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Classes:</span>
+<span class="sd">        * ProjectedRange</span>
+<span class="sd">        * RangeProjector</span>
+<span class="sd">        * IdentityRangeProjector</span>
+<span class="sd">        * RandomizedRangeProjector</span>
+
+<span class="sd">    Functions:</span>
+<span class="sd">        * _normalize_matrix_axis</span>
+<span class="sd">        * _projection_error</span>
+<span class="sd">        * _validate_optional_rank</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">nullcontext</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">prod</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Protocol</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">runtime_checkable</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">safe_divide</span><span class="p">,</span> <span class="n">stable_norm</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._runtime</span><span class="w"> </span><span class="kn">import</span> <span class="n">_RuntimePolicy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions._utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">_normalize_dims</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">RangeProjectionRecord</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_matrix_axis</span><span class="p">(</span><span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                           <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Flattens every non-projected ``axis`` into ``matrix`` rows.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`matrix` should be torch.Tensor type&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">matrix</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`matrix` should have at least two dimensions&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">is_floating_point</span><span class="p">()</span> <span class="ow">or</span> <span class="n">matrix</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`matrix` should be floating or complex&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`matrix` should contain finite values&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`axis` should be int type&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">axis</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">axis</span> <span class="o">+=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">ndim</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">axis</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">axis</span> <span class="o">&gt;=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">ndim</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`axis` is out of bounds for `matrix`&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">axis</span> <span class="o">==</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">axis</span>
+    <span class="n">moved</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">moved</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]),</span> <span class="n">axis</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_projection_error</span><span class="p">(</span><span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                      <span class="n">basis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                      <span class="n">small_matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+                      <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes absolute and zero-safe relative range-projection errors.&quot;&quot;&quot;</span>
+    <span class="n">approximation</span> <span class="o">=</span> <span class="n">small_matrix</span> <span class="k">if</span> <span class="n">basis</span> <span class="ow">is</span> <span class="kc">None</span> \
+        <span class="k">else</span> <span class="n">basis</span> <span class="o">@</span> <span class="n">small_matrix</span>
+    <span class="n">absolute</span> <span class="o">=</span> <span class="n">stable_norm</span><span class="p">(</span><span class="n">matrix</span> <span class="o">-</span> <span class="n">approximation</span><span class="p">)</span>
+    <span class="n">denominator</span> <span class="o">=</span> <span class="n">stable_norm</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span>
+    <span class="n">relative</span> <span class="o">=</span> <span class="n">safe_divide</span><span class="p">(</span>
+        <span class="n">absolute</span><span class="p">,</span> <span class="n">denominator</span><span class="p">,</span>
+        <span class="n">zero_value</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">absolute</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">inf</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">absolute</span><span class="p">,</span> <span class="n">relative</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate_optional_rank</span><span class="p">(</span><span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validates an optional ``rank`` upper bound.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`rank` should be int type or None&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">rank</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`rank` should be positive&#39;</span><span class="p">)</span>
+
+
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ProjectedRange</span><span class="p">:</span>  <span class="c1"># MARK: ProjectedRange</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Projected matrix, its lifting map and optional approximation diagnostics.</span>
+
+<span class="sd">    ``small_matrix`` represents the original tensor with ``axis`` moved to</span>
+<span class="sd">    the last position and all remaining axes flattened into rows. ``basis``</span>
+<span class="sd">    maps projected rows to those original rows; ``None`` denotes the identity.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">small_matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">basis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span>
+    <span class="n">original_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+    <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">record</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">RangeProjectionRecord</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">small_matrix</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">small_matrix</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`small_matrix` should be a matrix&#39;</span><span class="p">)</span>
+        <span class="n">original_shape</span> <span class="o">=</span> <span class="n">_normalize_dims</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">original_shape</span><span class="p">,</span> <span class="s1">&#39;original_shape&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">original_shape</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`original_shape` should contain at least two positive sizes&#39;</span><span class="p">)</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`axis` should be int type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">axis</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">axis</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">original_shape</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">axis</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">axis</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">original_shape</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`axis` is out of bounds for `original_shape`&#39;</span><span class="p">)</span>
+        <span class="n">n_rows</span> <span class="o">=</span> <span class="n">prod</span><span class="p">(</span><span class="n">original_shape</span><span class="p">[:</span><span class="n">axis</span><span class="p">]</span> <span class="o">+</span> <span class="n">original_shape</span><span class="p">[(</span><span class="n">axis</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):])</span>
+        <span class="n">n_columns</span> <span class="o">=</span> <span class="n">original_shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">small_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">n_columns</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`small_matrix` columns should match the projected axis&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">basis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">small_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">n_rows</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;Identity `small_matrix` rows should match the input&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">basis</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> \
+                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">basis</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`basis` should be a matrix or None&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">basis</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">n_rows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">small_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`basis` should map small rows to flattened input rows&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">basis</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">small_matrix</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="ow">or</span> \
+                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">basis</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">small_matrix</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`basis` and `small_matrix` should share device and dtype&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">record</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> \
+                <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">record</span><span class="p">,</span> <span class="n">RangeProjectionRecord</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`record` should be RangeProjectionRecord type or None&#39;</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;original_shape&#39;</span><span class="p">,</span> <span class="n">original_shape</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;axis&#39;</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">range_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Dimension of the represented left range.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">small_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">lift_left</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vectors</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Lifts left singular vectors to the original flattened row space.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        vectors : torch.Tensor</span>
+<span class="sd">            Matrix with shape ``(range_dim, rank)``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Matrix with shape ``(original_rows, rank)``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vectors</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">vectors</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`vectors` should be a matrix&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">vectors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_dim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`vectors` rows should match `range_dim`&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">vectors</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">small_matrix</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="ow">or</span> \
+                <span class="p">(</span><span class="n">vectors</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">small_matrix</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`vectors` and `small_matrix` should share device and dtype&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">vectors</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">basis</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">basis</span> <span class="o">@</span> <span class="n">vectors</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">restore_left</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vectors</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Lifts vectors and restores the input layout with a new axis size.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        vectors : torch.Tensor</span>
+<span class="sd">            Matrix with shape ``(range_dim, rank)``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Tensor with ``original_shape``, replacing the size of ``axis``</span>
+<span class="sd">            by ``rank``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">lifted</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lift_left</span><span class="p">(</span><span class="n">vectors</span><span class="p">)</span>
+        <span class="n">other_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">original_shape</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">]</span> <span class="o">+</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">original_shape</span><span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):]</span>
+        <span class="n">restored</span> <span class="o">=</span> <span class="n">lifted</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="n">other_shape</span><span class="p">,</span> <span class="n">vectors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">restored</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">reconstruct</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reconstructs the projected approximation in the original layout.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">basis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">original_shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="ow">and</span> \
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="o">==</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">small_matrix</span>
+        <span class="n">matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">small_matrix</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">basis</span> <span class="ow">is</span> <span class="kc">None</span> \
+            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">basis</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">small_matrix</span>
+        <span class="n">other_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">original_shape</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">]</span> <span class="o">+</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">original_shape</span><span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):]</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="n">other_shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">original_shape</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">tensor</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="RangeProjector"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.RangeProjector">[docs]</a><span class="nd">@runtime_checkable</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">RangeProjector</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>  <span class="c1"># MARK: RangeProjector</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Strategy producing a small matrix and a left-vector lifting map.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="RangeProjector.project"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.RangeProjector.project">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                <span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">return_info</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectedRange</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Projects a tensor range before an SVD.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        matrix : torch.Tensor</span>
+<span class="sd">            Floating-point or complex tensor with at least two axes.</span>
+<span class="sd">        rank : int, optional</span>
+<span class="sd">            Rank cap used as the default projection dimension. This method</span>
+<span class="sd">            does not truncate singular values.</span>
+<span class="sd">        generator : torch.Generator, optional</span>
+<span class="sd">            Random generator for the Gaussian projection.</span>
+<span class="sd">        axis : int</span>
+<span class="sd">            Axis kept as matrix columns; the remaining axes become rows.</span>
+<span class="sd">            Default is ``-1``.</span>
+<span class="sd">        return_info : bool</span>
+<span class="sd">            Whether to measure approximation errors and elapsed time.</span>
+<span class="sd">            Default is ``False``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ProjectedRange</span>
+<span class="sd">            Matrix for the SVD, lifting map and optional diagnostics.</span>
+<span class="sd">        &quot;&quot;&quot;</span></div></div>
+
+
+<div class="viewcode-block" id="IdentityRangeProjector"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.IdentityRangeProjector">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">IdentityRangeProjector</span><span class="p">:</span>  <span class="c1"># MARK: IdentityRangeProjector</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Uses the exact matrix without a random projection.</span>
+
+<span class="sd">    This strategy gives the same numerical input to the SVD as</span>
+<span class="sd">    ``range_projector=None``. It is useful when supplying an explicit</span>
+<span class="sd">    :class:`RangeProjector` object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="IdentityRangeProjector.project"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.IdentityRangeProjector.project">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                <span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">return_info</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectedRange</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the exact matrix without a random projection.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        matrix : torch.Tensor</span>
+<span class="sd">            Floating-point or complex tensor with at least two axes.</span>
+<span class="sd">        rank : int, optional</span>
+<span class="sd">            Rank cap used as the default projection dimension. This method</span>
+<span class="sd">            does not truncate singular values.</span>
+<span class="sd">        generator : torch.Generator, optional</span>
+<span class="sd">            Random generator for the Gaussian projection.</span>
+<span class="sd">        axis : int</span>
+<span class="sd">            Axis kept as matrix columns; the remaining axes become rows.</span>
+<span class="sd">            Default is ``-1``.</span>
+<span class="sd">        return_info : bool</span>
+<span class="sd">            Whether to measure approximation errors and elapsed time.</span>
+<span class="sd">            Default is ``False``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ProjectedRange</span>
+<span class="sd">            Matrix for the SVD, lifting map and optional diagnostics.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_validate_optional_rank</span><span class="p">(</span><span class="n">rank</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">generator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                <span class="n">generator</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`generator` should be torch.Generator type or None&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">return_info</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`return_info` should be bool type&#39;</span><span class="p">)</span>
+        <span class="n">matrix_view</span><span class="p">,</span> <span class="n">normalized_axis</span> <span class="o">=</span> <span class="n">_normalize_matrix_axis</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+        <span class="n">timer_context</span> <span class="o">=</span> <span class="n">_RuntimePolicy</span><span class="o">.</span><span class="n">from_tensor</span><span class="p">(</span>
+            <span class="n">matrix_view</span><span class="p">,</span> <span class="n">out_device</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">timer</span><span class="p">()</span> \
+            <span class="k">if</span> <span class="n">return_info</span> <span class="k">else</span> <span class="n">nullcontext</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">timer_context</span> <span class="k">as</span> <span class="n">timer</span><span class="p">:</span>
+            <span class="n">small_matrix</span> <span class="o">=</span> <span class="n">matrix_view</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">return_info</span><span class="p">:</span>
+            <span class="n">absolute</span><span class="p">,</span> <span class="n">relative</span> <span class="o">=</span> <span class="n">_projection_error</span><span class="p">(</span>
+                <span class="n">matrix_view</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">matrix_view</span><span class="p">)</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="n">RangeProjectionRecord</span><span class="p">(</span>
+                <span class="n">method</span><span class="o">=</span><span class="s1">&#39;identity&#39;</span><span class="p">,</span>
+                <span class="n">input_shape</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">matrix_view</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+                <span class="n">axis</span><span class="o">=</span><span class="n">normalized_axis</span><span class="p">,</span>
+                <span class="n">requested_dim</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+                <span class="n">projection_dim</span><span class="o">=</span><span class="n">matrix_view</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">range_dim</span><span class="o">=</span><span class="n">matrix_view</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">error_absolute</span><span class="o">=</span><span class="n">absolute</span><span class="p">,</span>
+                <span class="n">error_relative</span><span class="o">=</span><span class="n">relative</span><span class="p">,</span>
+                <span class="n">elapsed</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ProjectedRange</span><span class="p">(</span>
+            <span class="n">small_matrix</span><span class="o">=</span><span class="n">small_matrix</span><span class="p">,</span>
+            <span class="n">basis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">original_shape</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+            <span class="n">axis</span><span class="o">=</span><span class="n">normalized_axis</span><span class="p">,</span>
+            <span class="n">record</span><span class="o">=</span><span class="n">record</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="RandomizedRangeProjector"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.RandomizedRangeProjector">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">RandomizedRangeProjector</span><span class="p">:</span>  <span class="c1"># MARK: RandomizedRangeProjector</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Approximates a matrix range using Gaussian projection and reduced QR.</span>
+
+<span class="sd">    For a flattened matrix :math:`M`, the method forms an orthonormal basis</span>
+<span class="sd">    :math:`Q` from a Gaussian projection and returns :math:`Q^H M`. Singular</span>
+<span class="sd">    vectors of the smaller matrix are lifted by multiplication with</span>
+<span class="sd">    :math:`Q`. Increasing the projection dimension or applying power</span>
+<span class="sd">    iterations can improve the approximation at additional cost.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    projection_dim : int, optional</span>
+<span class="sd">        Number of Gaussian vectors before oversampling. Defaults to the rank</span>
+<span class="sd">        cap supplied to :meth:`project`, or all columns if no cap is supplied.</span>
+<span class="sd">    projection_oversampling : int</span>
+<span class="sd">        Extra Gaussian vectors beyond ``projection_dim``. Default is ``0``.</span>
+<span class="sd">        The total is capped at the number of matrix columns.</span>
+<span class="sd">    n_power_iter : int</span>
+<span class="sd">        Stabilized power iterations, each alternating multiplication by the</span>
+<span class="sd">        matrix adjoint and the matrix with reduced QR. Default is ``0``.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; projector = tk.decompositions.RandomizedRangeProjector(</span>
+<span class="sd">    ...     projection_dim=2, projection_oversampling=1)</span>
+<span class="sd">    &gt;&gt;&gt; projection = projector.project(torch.eye(3))</span>
+<span class="sd">    &gt;&gt;&gt; torch.allclose(projection.reconstruct(), torch.eye(3), atol=1e-5)</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">projection_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">projection_oversampling</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                 <span class="n">n_power_iter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">projection_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">projection_dim</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> \
+                    <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">projection_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s1">&#39;`projection_dim` should be int type or None&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">projection_dim</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`projection_dim` should be positive&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span>
+                <span class="p">(</span><span class="s1">&#39;projection_oversampling&#39;</span><span class="p">,</span> <span class="n">projection_oversampling</span><span class="p">),</span>
+                <span class="p">(</span><span class="s1">&#39;n_power_iter&#39;</span><span class="p">,</span> <span class="n">n_power_iter</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be int type&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be non-negative&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">projection_dim</span> <span class="o">=</span> <span class="n">projection_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">projection_oversampling</span> <span class="o">=</span> <span class="n">projection_oversampling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_power_iter</span> <span class="o">=</span> <span class="n">n_power_iter</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_dimensions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">n_columns</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolves requested and oversampled Gaussian dimensions.&quot;&quot;&quot;</span>
+        <span class="n">requested</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">projection_dim</span> \
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">projection_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">rank</span>
+        <span class="n">base_dim</span> <span class="o">=</span> <span class="n">n_columns</span> <span class="k">if</span> <span class="n">requested</span> <span class="ow">is</span> <span class="kc">None</span> \
+            <span class="k">else</span> <span class="nb">min</span><span class="p">(</span><span class="n">requested</span><span class="p">,</span> <span class="n">n_columns</span><span class="p">)</span>
+        <span class="n">projection_dim</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span>
+            <span class="n">n_columns</span><span class="p">,</span> <span class="n">base_dim</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">projection_oversampling</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">requested</span><span class="p">,</span> <span class="n">projection_dim</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_omega</span><span class="p">(</span><span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+               <span class="n">projection_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+               <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Draws a real/complex Gaussian map on the ``generator``&#39;s device.&quot;&quot;&quot;</span>
+        <span class="n">random_device</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">device</span>
+        <span class="k">if</span> <span class="n">generator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">random_device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span>
+                <span class="nb">getattr</span><span class="p">(</span><span class="n">generator</span><span class="p">,</span> <span class="s1">&#39;device&#39;</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cpu&#39;</span><span class="p">)))</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span>
+            <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">projection_dim</span><span class="p">,</span>
+            <span class="n">device</span><span class="o">=</span><span class="n">random_device</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">matrix</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+            <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">omega</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_range_find</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                    <span class="n">projection_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                    <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span>
+                    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Runs stabilized subspace iteration and forms ``Q^H A``.&quot;&quot;&quot;</span>
+        <span class="n">omega</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_omega</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">projection_dim</span><span class="p">,</span> <span class="n">generator</span><span class="p">)</span>
+        <span class="n">basis</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">matrix</span> <span class="o">@</span> <span class="n">omega</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;reduced&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">Q</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_power_iter</span><span class="p">):</span>
+            <span class="n">co_basis</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span>
+                <span class="n">matrix</span><span class="o">.</span><span class="n">mH</span> <span class="o">@</span> <span class="n">basis</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;reduced&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">Q</span>
+            <span class="n">basis</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span>
+                <span class="n">matrix</span> <span class="o">@</span> <span class="n">co_basis</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;reduced&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">Q</span>
+        <span class="n">small_matrix</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">mH</span> <span class="o">@</span> <span class="n">matrix</span>
+        <span class="k">return</span> <span class="n">basis</span><span class="p">,</span> <span class="n">small_matrix</span>
+
+<div class="viewcode-block" id="RandomizedRangeProjector.project"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.RandomizedRangeProjector.project">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                <span class="n">matrix</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">generator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">return_info</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectedRange</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Builds a Gaussian range basis and the projected matrix.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        matrix : torch.Tensor</span>
+<span class="sd">            Floating-point or complex tensor with at least two axes.</span>
+<span class="sd">        rank : int, optional</span>
+<span class="sd">            Rank cap used as the default projection dimension. This method</span>
+<span class="sd">            does not truncate singular values.</span>
+<span class="sd">        generator : torch.Generator, optional</span>
+<span class="sd">            Random generator for the Gaussian projection.</span>
+<span class="sd">        axis : int</span>
+<span class="sd">            Axis kept as matrix columns; the remaining axes become rows.</span>
+<span class="sd">            Default is ``-1``.</span>
+<span class="sd">        return_info : bool</span>
+<span class="sd">            Whether to measure approximation errors and elapsed time.</span>
+<span class="sd">            Default is ``False``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ProjectedRange</span>
+<span class="sd">            Matrix for the SVD, lifting map and optional diagnostics.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_validate_optional_rank</span><span class="p">(</span><span class="n">rank</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">generator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                <span class="n">generator</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`generator` should be torch.Generator type or None&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">return_info</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`return_info` should be bool type&#39;</span><span class="p">)</span>
+        <span class="n">matrix_view</span><span class="p">,</span> <span class="n">normalized_axis</span> <span class="o">=</span> <span class="n">_normalize_matrix_axis</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+        <span class="n">requested_dim</span><span class="p">,</span> <span class="n">projection_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dimensions</span><span class="p">(</span>
+            <span class="n">matrix_view</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">rank</span><span class="p">)</span>
+        <span class="n">timer_context</span> <span class="o">=</span> <span class="n">_RuntimePolicy</span><span class="o">.</span><span class="n">from_tensor</span><span class="p">(</span>
+            <span class="n">matrix_view</span><span class="p">,</span> <span class="n">out_device</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">timer</span><span class="p">()</span> \
+            <span class="k">if</span> <span class="n">return_info</span> <span class="k">else</span> <span class="n">nullcontext</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">timer_context</span> <span class="k">as</span> <span class="n">timer</span><span class="p">:</span>
+            <span class="n">basis</span><span class="p">,</span> <span class="n">small_matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_range_find</span><span class="p">(</span>
+                <span class="n">matrix_view</span><span class="p">,</span> <span class="n">projection_dim</span><span class="p">,</span> <span class="n">generator</span><span class="p">)</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">return_info</span><span class="p">:</span>
+            <span class="n">absolute</span><span class="p">,</span> <span class="n">relative</span> <span class="o">=</span> <span class="n">_projection_error</span><span class="p">(</span>
+                <span class="n">matrix_view</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">small_matrix</span><span class="p">)</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="n">RangeProjectionRecord</span><span class="p">(</span>
+                <span class="n">method</span><span class="o">=</span><span class="s1">&#39;randomized&#39;</span><span class="p">,</span>
+                <span class="n">input_shape</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">matrix_view</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+                <span class="n">axis</span><span class="o">=</span><span class="n">normalized_axis</span><span class="p">,</span>
+                <span class="n">requested_dim</span><span class="o">=</span><span class="n">requested_dim</span><span class="p">,</span>
+                <span class="n">projection_dim</span><span class="o">=</span><span class="n">projection_dim</span><span class="p">,</span>
+                <span class="n">range_dim</span><span class="o">=</span><span class="n">small_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">oversampling</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">projection_oversampling</span><span class="p">,</span>
+                <span class="n">n_power_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_power_iter</span><span class="p">,</span>
+                <span class="n">error_absolute</span><span class="o">=</span><span class="n">absolute</span><span class="p">,</span>
+                <span class="n">error_relative</span><span class="o">=</span><span class="n">relative</span><span class="p">,</span>
+                <span class="n">elapsed</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ProjectedRange</span><span class="p">(</span>
+            <span class="n">small_matrix</span><span class="o">=</span><span class="n">small_matrix</span><span class="p">,</span>
+            <span class="n">basis</span><span class="o">=</span><span class="n">basis</span><span class="p">,</span>
+            <span class="n">original_shape</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+            <span class="n">axis</span><span class="o">=</span><span class="n">normalized_axis</span><span class="p">,</span>
+            <span class="n">record</span><span class="o">=</span><span class="n">record</span><span class="p">)</span></div></div>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;RangeProjector&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;IdentityRangeProjector&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;RandomizedRangeProjector&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

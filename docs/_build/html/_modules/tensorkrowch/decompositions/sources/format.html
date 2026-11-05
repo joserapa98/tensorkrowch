@@ -1,0 +1,932 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.sources.format &#8212; TensorKrowch 1.1.6 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/clipboard.min.js"></script>
+    <script src="../../../../_static/copybutton.js"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../../../../decompositions.html">
+     Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../../utils.html">
+     Utilities
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.sources.format</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    Public classes:</span>
+<span class="sd">        * FormatSource</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">_INTEGER_DTYPES</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.models.mps</span><span class="w"> </span><span class="kn">import</span> <span class="n">MPS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.models.mpo</span><span class="w"> </span><span class="kn">import</span> <span class="n">MPO</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats</span><span class="w"> </span><span class="kn">import</span> <span class="n">TT</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats.formats1d</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorFormat1D</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.decompositions.sources.base</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">BaseSource</span><span class="p">,</span>
+                                                      <span class="n">ConfigurationBatch</span><span class="p">,</span>
+                                                      <span class="n">_discrete_indices</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="FormatSource"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.FormatSource">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">FormatSource</span><span class="p">(</span><span class="n">BaseSource</span><span class="p">):</span>  <span class="c1"># MARK: FormatSource</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Finite tensor source represented directly by a lightweight format.</span>
+
+<span class="sd">    Construct the source from a :class:`~tensorkrowch.formats.TT`,</span>
+<span class="sd">    :class:`~tensorkrowch.formats.TR` or their matrix versions,</span>
+<span class="sd">    :class:`~tensorkrowch.formats.TTM` and :class:`~tensorkrowch.formats.TRM`.</span>
+<span class="sd">    Evaluation and dense contraction use the backing format without first</span>
+<span class="sd">    materializing its complete tensor. For vectors, configuration columns</span>
+<span class="sd">    have shape ``(batch, len(in_sites))`` in the format&#39;s ``in_sites`` order;</span>
+<span class="sd">    the remaining axes form ``out_shape``.</span>
+
+<span class="sd">    Matrix grouping is inferred from the format, so no separate ``matrix``</span>
+<span class="sd">    constructor is needed. Matrix evaluations receive indices for every input</span>
+<span class="sd">    site and return all output axes, independently of the format&#39;s evaluation</span>
+<span class="sd">    defaults, with ``out_shape == out_dim`` and ``len(in_sites) == n_sites``.</span>
+
+<span class="sd">    An :class:`~tensorkrowch.models.MPS` is converted to TT or TR, and an</span>
+<span class="sd">    :class:`~tensorkrowch.models.MPO` to TTM or TRM, according to their</span>
+<span class="sd">    boundaries. A sequence of cores instead constructs an open TT.</span>
+<span class="sd">    Quantics formats require an explicit :class:`CallableQuanticsSource`.</span>
+<span class="sd">    Environment and sketch contractions require an unbatched open TT with</span>
+<span class="sd">    every site selected as an input. Effective cores are prepared for each</span>
+<span class="sd">    contraction, with explicit bond factors absorbed.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    format : TensorFormat1D, MPS, MPO or sequence of torch.Tensor</span>
+<span class="sd">        Lightweight vector/matrix format, MPS, MPO or raw TT cores. Model</span>
+<span class="sd">        boundaries determine the open or cyclic representation.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; format = tk.formats.TT([torch.eye(2), torch.eye(2)])</span>
+<span class="sd">    &gt;&gt;&gt; source = tk.decompositions.FormatSource(format)</span>
+<span class="sd">    &gt;&gt;&gt; source.evaluate(tk.decompositions.ConfigurationBatch(</span>
+<span class="sd">    ...     torch.tensor([[0, 0], [0, 1]])))</span>
+<span class="sd">    tensor([1., 0.])</span>
+
+<span class="sd">    A matrix format already provides the input/output grouping:</span>
+
+<span class="sd">    &gt;&gt;&gt; format = tk.formats.TTM([torch.eye(2)])</span>
+<span class="sd">    &gt;&gt;&gt; source = tk.decompositions.FormatSource(format)</span>
+<span class="sd">    &gt;&gt;&gt; source.evaluate(tk.decompositions.ConfigurationBatch(</span>
+<span class="sd">    ...     torch.tensor([[1]])))</span>
+<span class="sd">    tensor([[0., 1.]])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="nb">format</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">TensorFormat1D</span><span class="p">,</span> <span class="n">MPS</span><span class="p">,</span> <span class="n">MPO</span><span class="p">,</span>
+                               <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">format</span><span class="p">,</span> <span class="n">MPS</span><span class="p">):</span>
+            <span class="nb">format</span> <span class="o">=</span> <span class="nb">format</span><span class="o">.</span><span class="n">to_tr</span><span class="p">()</span> <span class="k">if</span> <span class="nb">format</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span> \
+                <span class="k">else</span> <span class="nb">format</span><span class="o">.</span><span class="n">to_tt</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">format</span><span class="p">,</span> <span class="n">MPO</span><span class="p">):</span>
+            <span class="nb">format</span> <span class="o">=</span> <span class="nb">format</span><span class="o">.</span><span class="n">to_trm</span><span class="p">()</span> <span class="k">if</span> <span class="nb">format</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span> \
+                <span class="k">else</span> <span class="nb">format</span><span class="o">.</span><span class="n">to_ttm</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">format</span><span class="p">,</span> <span class="n">TensorFormat1D</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">format</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))</span> <span class="ow">or</span> \
+                    <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">format</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s1">&#39;`format` should be a format, MPS, MPO or core sequence&#39;</span><span class="p">)</span>
+            <span class="n">cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">format</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">cores</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">core</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span>
+                                    <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">cores</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`format` should contain torch.Tensor cores&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">cores</span> <span class="ow">and</span> <span class="p">(</span><span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">):</span>
+                <span class="n">cores</span> <span class="o">=</span> <span class="p">(</span><span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="o">*</span><span class="n">cores</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span> \
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),)</span>
+            <span class="nb">format</span> <span class="o">=</span> <span class="n">TT</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">format</span><span class="o">.</span><span class="n">_quantized</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;Quantics formats require an explicit Quantics source&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">format</span> <span class="o">=</span> <span class="nb">format</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="nb">format</span><span class="o">.</span><span class="n">n_sites</span><span class="p">,</span>
+                         <span class="n">n_batches</span><span class="o">=</span><span class="nb">format</span><span class="o">.</span><span class="n">n_batches</span><span class="p">,</span>
+                         <span class="n">in_sites</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="nb">format</span><span class="o">.</span><span class="n">out_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                                   <span class="k">else</span> <span class="nb">format</span><span class="o">.</span><span class="n">in_sites</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">format</span><span class="o">.</span><span class="n">out_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_matrix_dims</span> <span class="o">=</span> <span class="nb">format</span><span class="o">.</span><span class="n">in_dim</span><span class="p">,</span> <span class="nb">format</span><span class="o">.</span><span class="n">out_dim</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Dimensions of all vector variables or matrix input axes.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">in_dim</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Dtype of the backing format.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">dtype</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">device</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Device of the backing format.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">device</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_supports_tt_contractions</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Whether direct TT environment and sketch contractions are supported.&quot;&quot;&quot;</span>
+        <span class="nb">format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="nb">format</span><span class="p">,</span> <span class="n">TT</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">format</span><span class="o">.</span><span class="n">_cyclic</span> <span class="ow">and</span>
+                <span class="ow">not</span> <span class="nb">format</span><span class="o">.</span><span class="n">n_batches</span> <span class="ow">and</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">in_sites</span> <span class="o">==</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">format</span><span class="o">.</span><span class="n">n_sites</span><span class="p">)))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_partial_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                         <span class="n">configurations</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                         <span class="o">*</span><span class="p">,</span>
+                         <span class="n">start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                         <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validates index columns for consecutive sites beginning at ``start``.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">configurations</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be torch.Tensor type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">configurations</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">)</span> <span class="ow">or</span> \
+                <span class="n">configurations</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_INTEGER_DTYPES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` should be a two-dimensional integer tensor&#39;</span><span class="p">)</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">configurations</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">start</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">stop</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">n_sites</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` contains too many sites&#39;</span><span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">configurations</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">offset</span><span class="p">,</span> <span class="n">dimension</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]):</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[:,</span> <span class="n">offset</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">values</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="n">torch</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">values</span> <span class="o">&gt;=</span> <span class="n">dimension</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">` is out of bounds at partial site </span><span class="si">{</span><span class="n">offset</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">indices</span>
+
+<div class="viewcode-block" id="FormatSource.left_envs"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.FormatSource.left_envs">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">left_envs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configurations</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts the first TT sites at fixed indices, leaving their right</span>
+<span class="sd">        bond open.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        configurations : torch.Tensor</span>
+<span class="sd">            Integer indices with shape ``(batch, prefix_sites)`` for the first</span>
+<span class="sd">            ``prefix_sites`` sites, in chain order. Zero columns select the</span>
+<span class="sd">            empty prefix.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Shape ``(batch, right_rank)``, where ``right_rank`` is the bond</span>
+<span class="sd">            dimension after the prefix. An empty prefix returns ones with</span>
+<span class="sd">            shape ``(batch, 1)``. Direct contractions do not record point</span>
+<span class="sd">            evaluations.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partial_indices</span><span class="p">(</span>
+            <span class="n">configurations</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;configurations&#39;</span><span class="p">)</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">_effective_cores</span><span class="p">()</span>
+        <span class="n">environment</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_ones</span><span class="p">((</span><span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">matrices</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">][:,</span> <span class="n">indices</span><span class="p">[:,</span> <span class="n">site</span><span class="p">],</span> <span class="p">:]</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">environment</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ba,bar-&gt;br&#39;</span><span class="p">,</span> <span class="n">environment</span><span class="p">,</span> <span class="n">matrices</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">environment</span></div>
+
+<div class="viewcode-block" id="FormatSource.right_envs"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.FormatSource.right_envs">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">right_envs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configurations</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts the final TT sites at fixed indices, leaving their left</span>
+<span class="sd">        bond open.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        configurations : torch.Tensor</span>
+<span class="sd">            Integer indices with shape ``(batch, suffix_sites)`` for the final</span>
+<span class="sd">            ``suffix_sites`` sites, in chain order. Zero columns select the</span>
+<span class="sd">            empty suffix.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Shape ``(batch, left_rank)``, where ``left_rank`` is the bond</span>
+<span class="sd">            dimension before the suffix. An empty suffix returns ones with</span>
+<span class="sd">            shape ``(batch, 1)``. Direct contractions do not record point</span>
+<span class="sd">            evaluations.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">n_sites</span> <span class="o">-</span> <span class="n">configurations</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> \
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">configurations</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">and</span> \
+            <span class="p">(</span><span class="n">configurations</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partial_indices</span><span class="p">(</span>
+            <span class="n">configurations</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;configurations&#39;</span><span class="p">)</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">_effective_cores</span><span class="p">()</span>
+        <span class="n">environment</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_ones</span><span class="p">((</span><span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">offset</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">site</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">offset</span>
+            <span class="n">matrices</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">][:,</span> <span class="n">indices</span><span class="p">[:,</span> <span class="n">offset</span><span class="p">],</span> <span class="p">:]</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">environment</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;bar,br-&gt;ba&#39;</span><span class="p">,</span> <span class="n">matrices</span><span class="p">,</span> <span class="n">environment</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">environment</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_local_phi</span><span class="p">(</span><span class="n">core</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                   <span class="n">left</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                   <span class="n">right</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                   <span class="n">factor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts a ``(left, input, right)`` core with sketch environments.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">left</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`left` should be a matrix&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">right</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">right</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`right` should be a matrix&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">left</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`left` does not match the source left rank&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">right</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`right` does not match the source right rank&#39;</span><span class="p">)</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span>
+            <span class="n">core</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">left</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">right</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">factor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">factor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+                    <span class="n">factor</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`factor` should match the site input dimension&#39;</span><span class="p">)</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">factor</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">core</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">factor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">core</span> <span class="o">=</span> <span class="n">core</span> <span class="o">*</span> <span class="n">factor</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">core</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+                                    <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;la,aib,rb-&gt;lir&#39;</span><span class="p">,</span>
+                            <span class="n">left</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">core</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">),</span>
+                            <span class="n">core</span><span class="p">,</span>
+                            <span class="n">right</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">core</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">))</span>
+
+<div class="viewcode-block" id="FormatSource.local_phi"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.FormatSource.local_phi">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">local_phi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                  <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                  <span class="n">left</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                  <span class="n">right</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                  <span class="n">factor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts a TT core with left and right sketch environments, leaving</span>
+<span class="sd">        its input axis open. Environments are used without conjugation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        site : int</span>
+<span class="sd">            Site of the source core.</span>
+<span class="sd">        left : torch.Tensor</span>
+<span class="sd">            Shape ``(left_size, left_rank)``. Columns match the core&#39;s left</span>
+<span class="sd">            bond; rows identify left sketch coordinates.</span>
+<span class="sd">        right : torch.Tensor</span>
+<span class="sd">            Shape ``(right_size, right_rank)``. Columns match the core&#39;s right</span>
+<span class="sd">            bond; rows identify right sketch coordinates.</span>
+<span class="sd">        factor : torch.Tensor, optional</span>
+<span class="sd">            Multiplicative input weights of shape ``(in_dim[site],)``.</span>
+<span class="sd">            ``None`` uses unit weights.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Local Phi with shape ``(left_size, in_dim[site], right_size)``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`site` should be int type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">site</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">site</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">n_sites</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`site` should identify one source site&#39;</span><span class="p">)</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">_effective_cores</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_local_phi</span><span class="p">(</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">factor</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FormatSource.marginal_phi"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.FormatSource.marginal_phi">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">marginal_phi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                     <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                     <span class="n">factor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+                     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sums distant TT sites while retaining the central site and its local</span>
+<span class="sd">        neighbors for a Markov marginal sketch.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        site : int</span>
+<span class="sd">            Central site.</span>
+<span class="sd">        order : int</span>
+<span class="sd">            Maximum number of neighboring sites retained on each side,</span>
+<span class="sd">            limited by the chain boundaries. Defaults to ``1``.</span>
+<span class="sd">        factor : sequence of torch.Tensor, optional</span>
+<span class="sd">            One multiplicative weight vector of shape ``(in_dim[k],)`` per</span>
+<span class="sd">            site ``k``, applied before retaining or summing its input axis.</span>
+<span class="sd">            ``None`` uses unit weights.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Shape ``(left_size, in_dim[site], right_size)``. Retained neighbors</span>
+<span class="sd">            on each side are flattened in chain order into the first and last</span>
+<span class="sd">            axes. A side without neighbors has size ``1``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`site` should be int type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">site</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">site</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">n_sites</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`site` should identify one source site&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`order` should be int type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">order</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`order` should be positive&#39;</span><span class="p">)</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">_effective_cores</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">factor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">factors</span> <span class="o">=</span> <span class="p">[</span><span class="n">core</span><span class="o">.</span><span class="n">new_ones</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">cores</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">factors</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">factor</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">factors</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">n_sites</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`factor` should contain one vector per site&#39;</span><span class="p">)</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span>
+            <span class="k">for</span> <span class="n">position</span><span class="p">,</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dimension</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">factors</span><span class="p">,</span>
+                                                              <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+                        <span class="n">value</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">dimension</span><span class="p">,)):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s1">&#39;`factor` at site </span><span class="si">{</span><span class="n">position</span><span class="si">}</span><span class="s1"> has an invalid shape&#39;</span><span class="p">)</span>
+                <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">cores</span> <span class="o">=</span> <span class="p">[</span><span class="n">core</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">cores</span><span class="p">]</span>
+            <span class="n">factors</span> <span class="o">=</span> <span class="p">[</span><span class="n">value</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+                       <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">factors</span><span class="p">]</span>
+
+        <span class="n">left_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">site</span> <span class="o">-</span> <span class="n">order</span><span class="p">)</span>
+        <span class="n">left</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">left_start</span><span class="p">):</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                <span class="s1">&#39;aib,i-&gt;ab&#39;</span><span class="p">,</span> <span class="n">cores</span><span class="p">[</span><span class="n">position</span><span class="p">],</span> <span class="n">factors</span><span class="p">[</span><span class="n">position</span><span class="p">])</span>
+            <span class="n">left</span> <span class="o">=</span> <span class="n">left</span> <span class="o">@</span> <span class="n">matrix</span>
+        <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">left_start</span><span class="p">,</span> <span class="n">site</span><span class="p">):</span>
+            <span class="n">core</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="n">position</span><span class="p">]</span> <span class="o">*</span> <span class="n">factors</span><span class="p">[</span><span class="n">position</span><span class="p">][</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
+            <span class="n">left</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;la,aib-&gt;lib&#39;</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">core</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">right_stop</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cores</span><span class="p">),</span> <span class="n">site</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">order</span><span class="p">)</span>
+        <span class="n">right</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">right_stop</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                <span class="s1">&#39;aib,i-&gt;ab&#39;</span><span class="p">,</span> <span class="n">cores</span><span class="p">[</span><span class="n">position</span><span class="p">],</span> <span class="n">factors</span><span class="p">[</span><span class="n">position</span><span class="p">])</span>
+            <span class="n">right</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ab,rb-&gt;ra&#39;</span><span class="p">,</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">right_stop</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">site</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">core</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="n">position</span><span class="p">]</span> <span class="o">*</span> <span class="n">factors</span><span class="p">[</span><span class="n">position</span><span class="p">][</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
+            <span class="n">right</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;aib,rb-&gt;ira&#39;</span><span class="p">,</span> <span class="n">core</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">core</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_local_phi</span><span class="p">(</span><span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">factor</span><span class="o">=</span><span class="n">factors</span><span class="p">[</span><span class="n">site</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="FormatSource.tt_sketch_phis"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.FormatSource.tt_sketch_phis">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">tt_sketch_phis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">left_cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]],</span>
+                       <span class="n">right_cores</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]],</span>
+                       <span class="n">boundary_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts TT sketch stacks with the source to build every local Phi.</span>
+<span class="sd">        Sketches are contracted in a batch, reusing prefix and suffix</span>
+<span class="sd">        environments across sites. Sketch cores are used without conjugation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        left_cores : sequence of sequences of torch.Tensor</span>
+<span class="sd">            TT sketches in the left stack, each with one core per source site.</span>
+<span class="sd">            Core ``k`` has shape ``(left_rank, in_dim[k], right_rank)``, with</span>
+<span class="sd">            unit boundary ranks. Sketches share bond dimensions at each cut.</span>
+<span class="sd">        right_cores : sequence of sequences of torch.Tensor</span>
+<span class="sd">            TT sketches in the right stack, with the same layout and number</span>
+<span class="sd">            of sketches as ``left_cores``.</span>
+<span class="sd">        boundary_scale : float</span>
+<span class="sd">            Multiplier applied to the first left and last right sketch cores</span>
+<span class="sd">            in their environment contractions. Defaults to ``1.0``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple of torch.Tensor</span>
+<span class="sd">            One Phi per site ``k``, with shape</span>
+<span class="sd">            ``(left_size, in_dim[k], right_size)``. Each outer axis combines</span>
+<span class="sd">            sketch and bond indices; chain boundary axes have size ``1``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">left_cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sketch_cores</span><span class="p">)</span> <span class="k">for</span> <span class="n">sketch_cores</span> <span class="ow">in</span> <span class="n">left_cores</span><span class="p">)</span>
+        <span class="n">right_cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sketch_cores</span><span class="p">)</span> <span class="k">for</span> <span class="n">sketch_cores</span> <span class="ow">in</span> <span class="n">right_cores</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">left_cores</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">left_cores</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">right_cores</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Left and right stacks should contain the same number &#39;</span>
+                <span class="s1">&#39;of sketches&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sketch_cores</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">n_sites</span>
+               <span class="k">for</span> <span class="n">sketch_cores</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="n">left_cores</span><span class="p">,</span> <span class="o">*</span><span class="n">right_cores</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Every TT sketch should contain one core per site&#39;</span><span class="p">)</span>
+
+        <span class="n">source_cores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">_effective_cores</span><span class="p">()</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">source_cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="k">for</span> <span class="n">sketch_cores</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="n">left_cores</span><span class="p">,</span> <span class="o">*</span><span class="n">right_cores</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">sketch_cores</span><span class="p">:</span>
+                <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">promote_types</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">core</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="n">stack_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">left_cores</span><span class="p">)</span>
+        <span class="n">left_cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">site_cores</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+                                                      <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+                           <span class="k">for</span> <span class="n">site_cores</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">left_cores</span><span class="p">))</span>
+        <span class="n">right_cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">site_cores</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+                                                       <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+                            <span class="k">for</span> <span class="n">site_cores</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">right_cores</span><span class="p">))</span>
+        <span class="n">source_cores</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="n">source_cores</span><span class="p">)</span>
+
+        <span class="n">left</span> <span class="o">=</span> <span class="p">[</span><span class="n">source_cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+        <span class="n">left_envs</span> <span class="o">=</span> <span class="n">source_cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_ones</span><span class="p">((</span><span class="n">stack_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">source_cores</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">left_envs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                <span class="s1">&#39;sac,aib,scid-&gt;sbd&#39;</span><span class="p">,</span>
+                <span class="n">left_envs</span><span class="p">,</span> <span class="n">source_cores</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">left_cores</span><span class="p">[</span><span class="n">site</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">site</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">left_envs</span> <span class="o">=</span> <span class="n">left_envs</span> <span class="o">*</span> <span class="n">boundary_scale</span>
+            <span class="n">left</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">left_envs</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">left_envs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+        <span class="n">right</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">source_cores</span><span class="p">)</span>
+        <span class="n">right</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">source_cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">right_envs</span> <span class="o">=</span> <span class="n">source_cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_ones</span><span class="p">((</span><span class="n">stack_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">source_cores</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">right_envs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span>
+                <span class="s1">&#39;aib,scid,sbd-&gt;sac&#39;</span><span class="p">,</span>
+                <span class="n">source_cores</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">right_cores</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">right_envs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">site</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">source_cores</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">right_envs</span> <span class="o">=</span> <span class="n">right_envs</span> <span class="o">*</span> <span class="n">boundary_scale</span>
+            <span class="n">right</span><span class="p">[</span><span class="n">site</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">right_envs</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">right_envs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_local_phi</span><span class="p">(</span><span class="n">core</span><span class="p">,</span> <span class="n">left</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">right</span><span class="p">[</span><span class="n">site</span><span class="p">])</span>
+                     <span class="k">for</span> <span class="n">site</span><span class="p">,</span> <span class="n">core</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">source_cores</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="FormatSource.evaluate"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.FormatSource.evaluate">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configurations</span><span class="p">:</span> <span class="n">ConfigurationBatch</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluates discrete configurations through the backing format.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        configurations : ConfigurationBatch</span>
+<span class="sd">            Integer indices with shape ``(batch, len(in_sites))`` and columns</span>
+<span class="sd">            ordered by ``in_sites``. Matrix sources evaluate every paired site.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Values with shape ``(batch, *core_batch, *out_shape)``. Matrix</span>
+<span class="sd">            output axes remain open; vectors retain their selected inputs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">_discrete_indices</span><span class="p">(</span>
+            <span class="n">configurations</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_sites_dims</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_matrix</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span>
+                                          <span class="n">in_sites</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">n_sites</span><span class="p">),</span>
+                                          <span class="n">out_sites</span><span class="o">=</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">in_sites</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">in_sites</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_batches</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_batches</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_record_evaluation</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="FormatSource.fiber"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.FormatSource.fiber">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fiber</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+              <span class="n">configurations</span><span class="p">:</span> <span class="n">ConfigurationBatch</span><span class="p">,</span>
+              <span class="n">site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+              <span class="n">values</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Varies one input site while fixing the other inputs. Uses direct TT</span>
+<span class="sd">        environments when available, otherwise :meth:`BaseSource.fiber`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        configurations : ConfigurationBatch</span>
+<span class="sd">            Integer indices with shape ``(batch, len(in_sites))``, with columns</span>
+<span class="sd">            ordered by ``in_sites``.</span>
+<span class="sd">        site : int</span>
+<span class="sd">            Represented variable to vary; it must belong to ``in_sites``.</span>
+<span class="sd">        values : torch.Tensor, optional</span>
+<span class="sd">            Candidate integer indices with shape ``(n_values,)``. ``None``</span>
+<span class="sd">            evaluates every index in ``range(in_dim[site])``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Shape ``(batch, n_values, *core_batch, *out_shape)``. The first</span>
+<span class="sd">            axis follows configurations; the second follows candidate values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_supports_tt_contractions</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">fiber</span><span class="p">(</span><span class="n">configurations</span><span class="p">,</span> <span class="n">site</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`site` should be int type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">site</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">site</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">n_sites</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`site` should identify an input site&#39;</span><span class="p">)</span>
+
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">_discrete_indices</span><span class="p">(</span><span class="n">configurations</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">_effective_cores</span><span class="p">()</span>
+        <span class="n">matrices</span> <span class="o">=</span> <span class="p">[</span><span class="n">core</span><span class="p">[:,</span> <span class="n">indices</span><span class="p">[:,</span> <span class="n">position</span><span class="p">],</span> <span class="p">:]</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">position</span><span class="p">,</span> <span class="n">core</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cores</span><span class="p">)]</span>
+
+        <span class="n">left</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_ones</span><span class="p">((</span><span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">matrix</span> <span class="ow">in</span> <span class="n">matrices</span><span class="p">[:</span><span class="n">site</span><span class="p">]:</span>
+            <span class="n">left</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ba,bar-&gt;br&#39;</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">matrix</span><span class="p">)</span>
+        <span class="n">right</span> <span class="o">=</span> <span class="n">cores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_ones</span><span class="p">((</span><span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">matrix</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">matrices</span><span class="p">[</span><span class="n">site</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]):</span>
+            <span class="n">right</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;bar,br-&gt;ba&#39;</span><span class="p">,</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ba,apr,br-&gt;bp&#39;</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">cores</span><span class="p">[</span><span class="n">site</span><span class="p">],</span> <span class="n">right</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">values</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_record_evaluation</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="n">site</span><span class="p">])</span>
+            <span class="k">return</span> <span class="n">result</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`values` should be torch.Tensor type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_INTEGER_DTYPES</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`values` should be a one-dimensional integer tensor&#39;</span><span class="p">)</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">values</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="n">torch</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">values</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="n">site</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`values` are out of bounds for the selected site&#39;</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">index_select</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_record_evaluation</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="n">indices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="FormatSource.contract_dense"><a class="viewcode-back" href="../../../../decompositions_api.html#tensorkrowch.decompositions.FormatSource.contract_dense">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">contract_dense</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts the complete backing format in original site order,</span>
+<span class="sd">        independently of ``in_sites``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Shape ``(*core_batch, *in_dim)`` for vectors. Matrices interleave</span>
+<span class="sd">            input/output axes as ``(*core_batch, in_0, out_0, in_1, out_1, ...)``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">contract_dense</span><span class="p">()</span></div></div>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;FormatSource&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
     <title>How to subclass TensorNetwork to build Custom Models &#8212; TensorKrowch 1.1.6 documentation</title>
     
@@ -219,9 +219,31 @@
      Embeddings
     </a>
    </li>
-   <li class="toctree-l2">
+   <li class="toctree-l2 has-children">
     <a class="reference internal" href="../decompositions.html">
      Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../utils.html">
+     Utilities
     </a>
    </li>
   </ul>
@@ -520,12 +542,12 @@ is important. The last operation must be the one returning the final node.</p></
 <h3>2. Putting Everything Together<a class="headerlink" href="#putting-everything-together" title="Permalink to this headline">#</a></h3>
 <p>Let’s create a class for Matrix Product States that we will use to classify
 images:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">tensorkrowch</span> <span class="k">as</span> <span class="nn">tk</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tensorkrowch</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tk</span>
 
-<span class="k">class</span> <span class="nc">MPS</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MPS</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">):</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_size</span><span class="p">,</span> <span class="n">uniform</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_size</span><span class="p">,</span> <span class="n">uniform</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        In the __init__ method we define the tensor network</span>
 <span class="sd">        structure and initialize all the nodes</span>
@@ -615,7 +637,7 @@ images:</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">input_nodes</span> <span class="o">=</span> <span class="n">input_nodes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">output_node</span> <span class="o">=</span> <span class="n">output_node</span>
 
-    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        This method is optional. If overriden, it should not have</span>
 <span class="sd">        arguments other than self. Furthermore, we won&#39;t have to</span>
@@ -637,7 +659,7 @@ images:</p>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_data_nodes</span><span class="p">(</span><span class="n">input_edges</span><span class="p">,</span>
                                 <span class="n">num_batch_edges</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        In this method we define the contraction algorithm</span>
 <span class="sd">        for the tensor network.</span>

@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.models.mpo &#8212; TensorKrowch 1.1.5 documentation</title>
+    <title>tensorkrowch.models.mpo &#8212; TensorKrowch 1.1.6 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -216,9 +216,31 @@
      Embeddings
     </a>
    </li>
-   <li class="toctree-l2">
+   <li class="toctree-l2 has-children">
     <a class="reference internal" href="../../../decompositions.html">
      Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../../../decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../formats.html">
+     Formats
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../utils.html">
+     Utilities
     </a>
    </li>
   </ul>
@@ -331,21 +353,21 @@ title="Source repository"
 <span class="sd">        + UMPO</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">import</span> <span class="nn">warnings</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span><span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span>
                     <span class="n">Text</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">)</span>
 
-<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">sqrt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">sqrt</span>
 
-<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 
-<span class="kn">import</span> <span class="nn">tensorkrowch.operations</span> <span class="k">as</span> <span class="nn">op</span>
-<span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span>
-<span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">TensorNetwork</span>
-<span class="kn">from</span> <span class="nn">tensorkrowch.models</span> <span class="kn">import</span> <span class="n">MPSData</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tensorkrowch.operations</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.components</span><span class="w"> </span><span class="kn">import</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.components</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorNetwork</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">MPSData</span>
 
 
-<div class="viewcode-block" id="MPO"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO">[docs]</a><span class="k">class</span> <span class="nc">MPO</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>  <span class="c1"># MARK: MPO</span>
+<div class="viewcode-block" id="MPO"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">MPO</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>  <span class="c1"># MARK: MPO</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Matrix Product Operators. This is the base class from which</span>
 <span class="sd">    :class:`UMPO` inherits.</span>
@@ -406,6 +428,9 @@ title="Source repository"
 <span class="sd">    init_method : {&quot;zeros&quot;, &quot;ones&quot;, &quot;copy&quot;, &quot;rand&quot;, &quot;randn&quot;}, optional</span>
 <span class="sd">        Initialization method. Check :meth:`initialize` for a more detailed</span>
 <span class="sd">        explanation of the different initialization methods.</span>
+<span class="sd">    parameterized : bool, optional</span>
+<span class="sd">        Boolean indicating whether MPO nodes should be created as</span>
+<span class="sd">        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).</span>
 <span class="sd">    device : torch.device, optional</span>
 <span class="sd">        Device where to initialize the tensors if ``init_method`` is provided.</span>
 <span class="sd">    dtype : torch.dtype, optional</span>
@@ -440,7 +465,7 @@ title="Source repository"
 <span class="sd">    torch.Size([20, 7, 6, 5, 4, 3])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">n_features</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">in_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">out_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -449,6 +474,7 @@ title="Source repository"
                  <span class="n">tensors</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">init_method</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;randn&#39;</span><span class="p">,</span>
+                 <span class="n">parameterized</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                  <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">dtype</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -531,17 +557,17 @@ title="Source repository"
                                         <span class="s1">&#39; or list[torch.Tensor] type&#39;</span><span class="p">)</span>
                     
                     <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">ndim</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
                             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                                 <span class="s1">&#39;The first and last elements in `tensors` &#39;</span>
                                 <span class="s1">&#39;should be both rank-3 or rank-4 tensors. If&#39;</span>
                                 <span class="s1">&#39; the first element is also the last one,&#39;</span>
                                 <span class="s1">&#39; it should be a rank-2 tensor&#39;</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-                        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                        <span class="k">elif</span> <span class="n">t</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
@@ -552,14 +578,14 @@ title="Source repository"
                             <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
                     <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
-                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
                             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                                 <span class="s1">&#39;The first and last elements in `tensors` &#39;</span>
                                 <span class="s1">&#39;should have the same rank. Both should be &#39;</span>
                                 <span class="s1">&#39;rank-3 or rank-4 tensors. If the first &#39;</span>
                                 <span class="s1">&#39;element is also the last one, it should &#39;</span>
                                 <span class="s1">&#39;be a rank-2 tensor&#39;</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
                         <span class="k">else</span><span class="p">:</span>
@@ -573,7 +599,7 @@ title="Source repository"
                             <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
                             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                                 <span class="s1">&#39;The elements of `tensors` should be rank-4 &#39;</span>
                                 <span class="s1">&#39;tensors, except the first and lest elements&#39;</span>
@@ -586,6 +612,9 @@ title="Source repository"
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_batches</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`n_batches` should be int type&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span> <span class="o">=</span> <span class="n">n_batches</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parameterized</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`parameterized` should be bool type&#39;</span><span class="p">)</span>
         
         <span class="c1"># Properties</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">=</span> <span class="kc">None</span>
@@ -593,7 +622,7 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="c1"># Create Tensor Network</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">(</span><span class="n">parameterized</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">tensors</span><span class="o">=</span><span class="n">tensors</span><span class="p">,</span>
                         <span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span>
                         <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
@@ -604,41 +633,41 @@ title="Source repository"
     <span class="c1"># Properties</span>
     <span class="c1"># ----------</span>
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">n_features</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_features</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns input dimensions.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
     
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">out_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">out_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns output dimensions.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimensions.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
     
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boundary condition (&quot;obc&quot; or &quot;pbc&quot;).&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns number of batch edges of the ``data`` nodes. To change this</span>
 <span class="sd">        attribute, first call :meth:`~tensorkrowch.TensorNetwork.unset_data_nodes`</span>
 <span class="sd">        if there are already data nodes in the network.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span>
-    
+
     <span class="nd">@n_batches</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">n_batches</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -649,37 +678,66 @@ title="Source repository"
             <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span> <span class="o">=</span> <span class="n">n_batches</span>
     
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">left_node</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">left_node</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the ``left_node``.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span>
     
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">right_node</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">right_node</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the ``right_node``.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span>
     
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">mats_env</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mats_env</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the list of nodes in ``mats_env``.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span>
-    
+
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">tensors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">tensors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the list of MPO tensors.&quot;&quot;&quot;</span>
         <span class="n">mpo_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mpo_tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;l,liro,r-&gt;io&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span>
+                                      <span class="n">mpo_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">tensor</span><span class="p">)]</span>
             <span class="n">mpo_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;l,liro-&gt;iro&#39;</span><span class="p">,</span>
-                                          <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span>
+                                          <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span>
                                           <span class="n">mpo_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
             <span class="n">mpo_tensors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;liro,r-&gt;lio&#39;</span><span class="p">,</span>
                                            <span class="n">mpo_tensors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
-                                           <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">tensor</span><span class="p">)</span>
+                                           <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">tensor</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">mpo_tensors</span>
     
     <span class="c1"># -------</span>
     <span class="c1"># Methods</span>
     <span class="c1"># -------</span>
-    <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="MPO.to_ttm"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.to_ttm">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_ttm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a lightweight TTM from effective open-boundary tensors.&quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats</span><span class="w"> </span><span class="kn">import</span> <span class="n">TTM</span>
+        <span class="k">return</span> <span class="n">TTM</span><span class="o">.</span><span class="n">from_mpo</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MPO.to_trm"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.to_trm">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_trm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a lightweight TRM from effective periodic tensors.&quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats</span><span class="w"> </span><span class="kn">import</span> <span class="n">TRM</span>
+        <span class="k">return</span> <span class="n">TRM</span><span class="o">.</span><span class="n">from_mpo</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MPO.from_ttm"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.from_ttm">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_ttm</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">tensor_train_matrix</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Constructs MPO from an open matrix format.&quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats</span><span class="w"> </span><span class="kn">import</span> <span class="n">TTM</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensor_train_matrix</span><span class="p">,</span> <span class="n">TTM</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`tensor_train_matrix` should be TTM type&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">tensor_train_matrix</span><span class="o">.</span><span class="n">to_mpo</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MPO.from_trm"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.from_trm">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_trm</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">tensor_ring_matrix</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Constructs MPO from a cyclic matrix format.&quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">tensorkrowch.formats</span><span class="w"> </span><span class="kn">import</span> <span class="n">TRM</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensor_ring_matrix</span><span class="p">,</span> <span class="n">TRM</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`tensor_ring_matrix` should be TRM type&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">tensor_ring_matrix</span><span class="o">.</span><span class="n">to_mpo</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameterized</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPO.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create MPO nodes if the MPO already has &#39;</span>
@@ -691,25 +749,27 @@ title="Source repository"
             <span class="k">if</span> <span class="ow">not</span> <span class="n">aux_bond_dim</span><span class="p">:</span>
                 <span class="n">aux_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span>
                 
-            <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],),</span>
-                                        <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;right&#39;</span><span class="p">,),</span>
-                                        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;left_node&#39;</span><span class="p">,</span>
-                                        <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],),</span>
-                                         <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,),</span>
-                                         <span class="n">name</span><span class="o">=</span><span class="s1">&#39;right_node&#39;</span><span class="p">,</span>
-                                         <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],),</span>
+                                   <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;right&#39;</span><span class="p">,),</span>
+                                   <span class="n">name</span><span class="o">=</span><span class="s1">&#39;left_node&#39;</span><span class="p">,</span>
+                                   <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],),</span>
+                                    <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,),</span>
+                                    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;right_node&#39;</span><span class="p">,</span>
+                                    <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
             
             <span class="n">aux_bond_dim</span> <span class="o">=</span> <span class="n">aux_bond_dim</span> <span class="o">+</span> <span class="p">[</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">+</span> <span class="p">[</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
         
+        <span class="n">node_cls</span> <span class="o">=</span> <span class="n">ParamNode</span> <span class="k">if</span> <span class="n">parameterized</span> <span class="k">else</span> <span class="n">Node</span>
+        
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
-            <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span>
-                                    <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
-                                    <span class="n">aux_bond_dim</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
-                                    <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span>
-                             <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;output&#39;</span><span class="p">),</span>
-                             <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;mats_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
-                             <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">node_cls</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                   <span class="n">aux_bond_dim</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span>
+                            <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;output&#39;</span><span class="p">),</span>
+                            <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;mats_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
+                            <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
@@ -726,7 +786,7 @@ title="Source repository"
                 <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
     
-<div class="viewcode-block" id="MPO.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="MPO.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.initialize">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                    <span class="n">tensors</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                    <span class="n">init_method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;randn&#39;</span><span class="p">,</span>
                    <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -812,10 +872,11 @@ title="Source repository"
                     <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="c1"># Left node</span>
                         <span class="n">aux_tensor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">aux_tensor</span>
                     <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
                         <span class="c1"># Right node</span>
                         <span class="n">aux_tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
-                    <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">aux_tensor</span>
+                        <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">aux_tensor</span>
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">set_tensor</span><span class="p">(</span><span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;copy&#39;</span><span class="p">,</span>
@@ -825,7 +886,7 @@ title="Source repository"
                                         <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
                                         <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span></div>
     
-<div class="viewcode-block" id="MPO.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="MPO.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.set_data_nodes">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates ``data`` nodes and connects each of them to the ``&quot;input&quot;``</span>
 <span class="sd">        edge of each node.</span>
@@ -834,7 +895,7 @@ title="Source repository"
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_data_nodes</span><span class="p">(</span><span class="n">input_edges</span><span class="o">=</span><span class="n">input_edges</span><span class="p">,</span>
                                <span class="n">num_batch_edges</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span><span class="p">)</span></div>
     
-<div class="viewcode-block" id="MPO.copy"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">share_tensors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;MPO&#39;</span><span class="p">:</span>
+<div class="viewcode-block" id="MPO.copy"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.copy">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">share_tensors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;MPO&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates a copy of the :class:`MPO`.</span>
 
@@ -863,16 +924,27 @@ title="Source repository"
                       <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                       <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
         <span class="n">new_mpo</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_copy&#39;</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
+            <span class="n">new_mpo</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_mpo</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span>
+                <span class="n">set_param</span><span class="o">=</span><span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ParamNode</span><span class="p">))</span>
+        
         <span class="k">if</span> <span class="n">share_tensors</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">new_node</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">new_mpo</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">):</span>
                 <span class="n">new_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+                <span class="n">new_mpo</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">tensor</span>
+                <span class="n">new_mpo</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">tensor</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">new_node</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">new_mpo</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">):</span>
                 <span class="n">new_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+                <span class="n">new_mpo</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+                <span class="n">new_mpo</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
         
         <span class="k">return</span> <span class="n">new_mpo</span></div>
 
-<div class="viewcode-block" id="MPO.parameterize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="MPO.parameterize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.parameterize">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                      <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                      <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorNetwork&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -899,15 +971,11 @@ title="Source repository"
             <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">share_tensors</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
-            <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
-        
-        <span class="k">if</span> <span class="n">net</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-            <span class="n">net</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
-            <span class="n">net</span><span class="o">.</span><span class="n">_right_node</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_param</span><span class="p">)</span>
             
         <span class="k">return</span> <span class="n">net</span></div>
     
-<div class="viewcode-block" id="MPO.update_bond_dim"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.update_bond_dim">[docs]</a>    <span class="k">def</span> <span class="nf">update_bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="MPO.update_bond_dim"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.update_bond_dim">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">update_bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Updates the :attr:`bond_dim` attribute of the ``MPO``, in case it is</span>
 <span class="sd">        outdated.</span>
@@ -935,7 +1003,7 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">]</span></div>
     
-    <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                            <span class="n">nodes_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
                            <span class="n">input_nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
                            <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
@@ -963,7 +1031,7 @@ title="Source repository"
                 <span class="k">return</span> <span class="p">[]</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_inline_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_inline_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
                             <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts sequence of MPO nodes (matrices) inline.&quot;&quot;&quot;</span>
         <span class="n">result_node</span> <span class="o">=</span> <span class="n">mats_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -980,7 +1048,7 @@ title="Source repository"
             
         <span class="k">return</span> <span class="n">result_node</span>
 
-    <span class="k">def</span> <span class="nf">_contract_envs_inline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_contract_envs_inline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                               <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
                               <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                               <span class="n">mps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">MPSData</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
@@ -995,7 +1063,7 @@ title="Source repository"
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">mats_env</span><span class="p">,</span>
                                         <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_aux_pairwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_aux_pairwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                       <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
                       <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
     <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]:</span>
@@ -1030,7 +1098,7 @@ title="Source repository"
             <span class="k">return</span> <span class="n">aux_nodes</span><span class="p">,</span> <span class="n">leftover</span>
         <span class="k">return</span> <span class="n">mats_env</span><span class="p">,</span> <span class="p">[]</span>
 
-    <span class="k">def</span> <span class="nf">_pairwise_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pairwise_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                               <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                               <span class="n">mps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">MPSData</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                               <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
@@ -1054,8 +1122,31 @@ title="Source repository"
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">aux_nodes</span><span class="p">,</span>
                                           <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
                                           <span class="n">mps</span><span class="o">=</span><span class="n">mps</span><span class="p">)</span>
-    
-<div class="viewcode-block" id="MPO.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_zipup_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">nodes_envs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]],</span>
+                           <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts MPS-MPO via the zip-up method.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">node_tuple</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">nodes_envs</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">result_node</span> <span class="o">=</span> <span class="n">node_tuple</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">node_tuple</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                    <span class="n">result_node</span> <span class="o">@=</span> <span class="n">node</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">node_tuple</span><span class="p">:</span>
+                    <span class="n">result_node</span> <span class="o">@=</span> <span class="n">node</span>
+                    
+            <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+                <span class="n">right_axes</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">ax_name</span> <span class="ow">in</span> <span class="n">result_node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">ax_name</span><span class="p">:</span>
+                        <span class="n">right_axes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ax_name</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">right_axes</span><span class="p">:</span>
+                    <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">right_axes</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">result_node</span>
+
+<div class="viewcode-block" id="MPO.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.contract">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1074,7 +1165,7 @@ title="Source repository"
 <span class="sd">        MPO nodes by hand before contraction, it can be done. However, one</span>
 <span class="sd">        should first move the MPS nodes to the MPO network.</span>
 <span class="sd">        </span>
-<span class="sd">        Also, when contracting the MPO with and ``MPSData``, if any of the</span>
+<span class="sd">        Also, when contracting the MPO with an ``MPSData``, if any of the</span>
 <span class="sd">        contraction arguments, ``inline_input`` or ``inline_mats``, is set to</span>
 <span class="sd">        ``False``, the MPO (already connected to the MPS) should be</span>
 <span class="sd">        :meth:`~tensorkrowch.TensorNetwork.reset` before contraction if new</span>
@@ -1126,26 +1217,42 @@ title="Source repository"
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                     <span class="s1">&#39;`mps` should have as many features as the MPO&#39;</span><span class="p">)</span>
             
-            <span class="c1"># Move MPSData ndoes to self</span>
+            <span class="c1"># Move MPSData nodes to self</span>
             <span class="n">mps</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">move_to_network</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
             
             <span class="c1"># Connect mps nodes to mpo nodes</span>
             <span class="k">for</span> <span class="n">mps_node</span><span class="p">,</span> <span class="n">mpo_node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">):</span>
                 <span class="n">mps_node</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">mpo_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
-                
-        <span class="n">mats_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span>
-            <span class="n">nodes_env</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span>
-            <span class="n">input_nodes</span><span class="o">=</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">],</span>
-            <span class="n">inline_input</span><span class="o">=</span><span class="n">inline_input</span><span class="p">)</span>
+            
+            <span class="n">mpo_nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[:]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+                <span class="n">mpo_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">@</span> <span class="n">mpo_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">mpo_nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">mpo_nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span>
+            
+            <span class="n">mps_nodes</span> <span class="o">=</span> <span class="n">mps</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[:]</span>
+            <span class="k">if</span> <span class="n">mps</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+                <span class="n">mps_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">mps</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">@</span> <span class="n">mps_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">mps_nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">mps_nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="n">mps</span><span class="o">.</span><span class="n">_right_node</span>
+            
+            <span class="c1"># Contract nodes (MPS-MPO) via zip-up</span>
+            <span class="n">nodes_envs</span> <span class="o">=</span> <span class="p">[</span><span class="n">mps_nodes</span><span class="p">,</span> <span class="n">mpo_nodes</span><span class="p">]</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_zipup_contraction</span><span class="p">(</span><span class="n">nodes_envs</span><span class="o">=</span><span class="n">nodes_envs</span><span class="p">,</span>
+                                             <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">)</span>
         
-        <span class="k">if</span> <span class="n">inline_mats</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">mats_env</span><span class="p">,</span>
-                                                <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
-                                                <span class="n">mps</span><span class="o">=</span><span class="n">mps</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pairwise_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">mats_env</span><span class="p">,</span>
-                                                <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
-                                                <span class="n">mps</span><span class="o">=</span><span class="n">mps</span><span class="p">)</span>
+            <span class="n">mats_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span>
+                <span class="n">nodes_env</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span>
+                <span class="n">input_nodes</span><span class="o">=</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">],</span>
+                <span class="n">inline_input</span><span class="o">=</span><span class="n">inline_input</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">inline_mats</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">mats_env</span><span class="p">,</span>
+                                                    <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+                                                    <span class="n">mps</span><span class="o">=</span><span class="n">mps</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pairwise_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">mats_env</span><span class="p">,</span>
+                                                    <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+                                                    <span class="n">mps</span><span class="o">=</span><span class="n">mps</span><span class="p">)</span>
             
         <span class="c1"># Contract periodic edge</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">is_connected_to</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
@@ -1167,12 +1274,14 @@ title="Source repository"
         <span class="k">return</span> <span class="n">result</span></div>
     
 <div class="viewcode-block" id="MPO.canonicalize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.canonicalize">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
-    <span class="k">def</span> <span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                      <span class="n">oc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">mode</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;svd&#39;</span><span class="p">,</span>
                      <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                     <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">atol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">rtol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Turns MPO into `canonical` form via local SVD/QR decompositions in the</span>
@@ -1189,8 +1298,10 @@ title="Source repository"
 <span class="sd">        </span>
 <span class="sd">        If rank is not specified, the current bond dimensions will be used as</span>
 <span class="sd">        the rank. That is, the current bond dimensions will be the upper bound</span>
-<span class="sd">        for the possibly new bond dimensions given by the arguments</span>
-<span class="sd">        ``cum_percentage`` and/or ``cutoff``.</span>
+<span class="sd">        for the possibly new bond dimensions given by the truncation</span>
+
+<span class="sd">        This method internally calls :meth:`~tensorkrowch.TensorNetwork.reset`,</span>
+<span class="sd">        as canonicalization may change the form of the tensors.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1206,16 +1317,26 @@ title="Source repository"
 <span class="sd">            :func:`~tensorkrowch.rq_` will be used for nodes at the right.</span>
 <span class="sd">        rank : int, optional</span>
 <span class="sd">            Number of singular values to keep.</span>
-<span class="sd">        cum_percentage : float, optional</span>
-<span class="sd">            Proportion that should be satisfied between the sum of all singular</span>
-<span class="sd">            values kept and the total sum of all singular values.</span>
-<span class="sd">            </span>
-<span class="sd">            .. math::</span>
-<span class="sd">            </span>
-<span class="sd">                \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge</span>
-<span class="sd">                cum\_percentage</span>
 <span class="sd">        cutoff : float, optional</span>
-<span class="sd">            Quantity that lower bounds singular values in order to be kept.</span>
+<span class="sd">            Minimum singular value to keep. It must be non-negative. Singular</span>
+<span class="sd">            values ``&lt;= cutoff`` are removed.</span>
+<span class="sd">        atol : float, optional</span>
+<span class="sd">            Absolute tolerance over the tail sum of squared singular values. Starting</span>
+<span class="sd">            from the smallest singular value, values are discarded while the</span>
+<span class="sd">            accumulated sum of squares is ``&lt;= atol``. It must be non-negative.</span>
+<span class="sd">        rtol : float, optional</span>
+<span class="sd">            Relative tolerance over the tail sum of squared singular values. Starting</span>
+<span class="sd">            from the smallest singular value, values are discarded while the</span>
+<span class="sd">            tail sum of squares divided by the total sum of squares is ``&lt;= rtol``.</span>
+<span class="sd">            It must be in ``[0, 1]``.</span>
+<span class="sd">        cum_percentage : float, optional</span>
+<span class="sd">            Minimum fraction of squared singular-value mass to keep. Equivalent to setting</span>
+<span class="sd">            ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.</span>
+
+<span class="sd">            .. math::</span>
+
+<span class="sd">                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge</span>
+<span class="sd">                cum\_percentage</span>
 <span class="sd">        renormalize : bool</span>
 <span class="sd">            Indicates whether nodes should be renormalized after SVD/QR</span>
 <span class="sd">            decompositions. If not, it may happen that the norm explodes as it</span>
@@ -1255,6 +1376,9 @@ title="Source repository"
             <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span>
                 <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:])</span>
         
+        <span class="c1"># Keep track of which nodes are parameterized</span>
+        <span class="n">set_params</span> <span class="o">=</span> <span class="p">[</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ParamNode</span><span class="p">)</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">]</span>
+        
         <span class="c1"># If mode is svd or svr and none of the args is provided, the ranks are</span>
         <span class="c1"># kept as they were originally</span>
         <span class="n">keep_rank</span> <span class="o">=</span> <span class="kc">False</span>
@@ -1266,14 +1390,18 @@ title="Source repository"
                 <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span>
                     <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
                     <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">if</span> <span class="n">keep_rank</span> <span class="k">else</span> <span class="n">rank</span><span class="p">,</span>
-                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
-                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">,</span>
+                    <span class="n">atol</span><span class="o">=</span><span class="n">atol</span><span class="p">,</span>
+                    <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">,</span>
+                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svdr&#39;</span><span class="p">:</span>
                 <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svdr_</span><span class="p">(</span>
                     <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
                     <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">if</span> <span class="n">keep_rank</span> <span class="k">else</span> <span class="n">rank</span><span class="p">,</span>
-                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
-                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">,</span>
+                    <span class="n">atol</span><span class="o">=</span><span class="n">atol</span><span class="p">,</span>
+                    <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">,</span>
+                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;qr&#39;</span><span class="p">:</span>
                 <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">qr_</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
@@ -1285,8 +1413,7 @@ title="Source repository"
                     <span class="n">result2</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">aux_norm</span>
                     <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
 
-            <span class="n">result1</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
-            <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">result1</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_params</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
             <span class="n">nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">result2</span>
 
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">oc</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
@@ -1294,14 +1421,18 @@ title="Source repository"
                 <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span>
                     <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
                     <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">if</span> <span class="n">keep_rank</span> <span class="k">else</span> <span class="n">rank</span><span class="p">,</span>
-                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
-                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">,</span>
+                    <span class="n">atol</span><span class="o">=</span><span class="n">atol</span><span class="p">,</span>
+                    <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">,</span>
+                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svdr&#39;</span><span class="p">:</span>
                 <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svdr_</span><span class="p">(</span>
                     <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
                     <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">if</span> <span class="n">keep_rank</span> <span class="k">else</span> <span class="n">rank</span><span class="p">,</span>
-                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
-                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">,</span>
+                    <span class="n">atol</span><span class="o">=</span><span class="n">atol</span><span class="p">,</span>
+                    <span class="n">rtol</span><span class="o">=</span><span class="n">rtol</span><span class="p">,</span>
+                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;qr&#39;</span><span class="p">:</span>
                 <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">rq_</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
@@ -1313,11 +1444,10 @@ title="Source repository"
                     <span class="n">result1</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">aux_norm</span>
                     <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
 
-            <span class="n">result2</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
-            <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">result2</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_params</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
             <span class="n">nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">result1</span>
 
-        <span class="n">nodes</span><span class="p">[</span><span class="n">oc</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">oc</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
+        <span class="n">nodes</span><span class="p">[</span><span class="n">oc</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">oc</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_params</span><span class="p">[</span><span class="n">oc</span><span class="p">])</span>
         
         <span class="c1"># Rescale</span>
         <span class="k">if</span> <span class="n">log_norm</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
@@ -1334,7 +1464,7 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="n">prev_auto_stack</span></div></div>
 
 
-<div class="viewcode-block" id="UMPO"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPO">[docs]</a><span class="k">class</span> <span class="nc">UMPO</span><span class="p">(</span><span class="n">MPO</span><span class="p">):</span>  <span class="c1"># MARK: UMPO</span>
+<div class="viewcode-block" id="UMPO"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPO">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">UMPO</span><span class="p">(</span><span class="n">MPO</span><span class="p">):</span>  <span class="c1"># MARK: UMPO</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Uniform (translationally invariant) Matrix Product Operators. It is</span>
 <span class="sd">    the uniform version of :class:`MPO`, that is, all nodes share the same</span>
@@ -1369,6 +1499,9 @@ title="Source repository"
 <span class="sd">    init_method : {&quot;zeros&quot;, &quot;ones&quot;, &quot;copy&quot;, &quot;rand&quot;, &quot;randn&quot;}, optional</span>
 <span class="sd">        Initialization method. Check :meth:`initialize` for a more detailed</span>
 <span class="sd">        explanation of the different initialization methods.</span>
+<span class="sd">    parameterized : bool, optional</span>
+<span class="sd">        Boolean indicating whether UMPO nodes should be created as</span>
+<span class="sd">        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).</span>
 <span class="sd">    device : torch.device, optional</span>
 <span class="sd">        Device where to initialize the tensors if ``init_method`` is provided.</span>
 <span class="sd">    dtype : torch.dtype, optional</span>
@@ -1392,7 +1525,7 @@ title="Source repository"
 <span class="sd">    torch.Size([20, 2, 2, 2, 2])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">n_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">in_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">out_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1400,6 +1533,7 @@ title="Source repository"
                  <span class="n">tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">init_method</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;randn&#39;</span><span class="p">,</span>
+                 <span class="n">parameterized</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                  <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">dtype</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -1428,7 +1562,7 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`tensor` should be torch.Tensor type&#39;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">tensor</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`tensor` should be a rank-4 tensor&#39;</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`tensor` first and last dimensions should&#39;</span>
@@ -1445,30 +1579,32 @@ title="Source repository"
                          <span class="n">tensors</span><span class="o">=</span><span class="n">tensors</span><span class="p">,</span>
                          <span class="n">n_batches</span><span class="o">=</span><span class="n">n_batches</span><span class="p">,</span>
                          <span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span>
+                         <span class="n">parameterized</span><span class="o">=</span><span class="n">parameterized</span><span class="p">,</span>
                          <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
                          <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
                          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;umpo&#39;</span>
     
-    <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameterized</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPO.&quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">(</span><span class="n">parameterized</span><span class="p">)</span>
         
         <span class="c1"># Virtual node</span>
-        <span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                                          <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                                          <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                                          <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
-                                   <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;output&#39;</span><span class="p">),</span>
-                                   <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_uniform&#39;</span><span class="p">,</span>
-                                   <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
-                                   <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">node_cls</span> <span class="o">=</span> <span class="n">ParamNode</span> <span class="k">if</span> <span class="n">parameterized</span> <span class="k">else</span> <span class="n">Node</span>
+        <span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">node_cls</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;output&#39;</span><span class="p">),</span>
+                                  <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_uniform&#39;</span><span class="p">,</span>
+                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+                                  <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">uniform_memory</span>
         
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">:</span>
             <span class="n">node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="n">uniform_memory</span><span class="p">)</span>
     
-<div class="viewcode-block" id="UMPO.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPO.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="UMPO.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPO.initialize">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                    <span class="n">tensors</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                    <span class="n">init_method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;randn&#39;</span><span class="p">,</span>
                    <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1509,7 +1645,7 @@ title="Source repository"
                                            <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
                                            <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
     
-<div class="viewcode-block" id="UMPO.copy"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPO.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">share_tensors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;UMPO&#39;</span><span class="p">:</span>
+<div class="viewcode-block" id="UMPO.copy"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPO.copy">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">share_tensors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;UMPO&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates a copy of the :class:`UMPO`.</span>
 
@@ -1534,6 +1670,7 @@ title="Source repository"
                        <span class="n">tensor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                        <span class="n">n_batches</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span><span class="p">,</span>
                        <span class="n">init_method</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                       <span class="n">parameterized</span><span class="o">=</span><span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="p">,</span> <span class="n">ParamNode</span><span class="p">),</span>
                        <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                        <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
         <span class="n">new_mpo</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_copy&#39;</span>
@@ -1543,7 +1680,7 @@ title="Source repository"
             <span class="n">new_mpo</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">new_mpo</span></div>
     
-<div class="viewcode-block" id="UMPO.parameterize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPO.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="UMPO.parameterize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPO.parameterize">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                      <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                      <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorNetwork&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1570,11 +1707,11 @@ title="Source repository"
             <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">share_tensors</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
-            <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_param</span><span class="p">)</span>
         
         <span class="c1"># It is important that uniform_memory is parameterized after the rest</span>
         <span class="c1"># of the nodes</span>
-        <span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+        <span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_param</span><span class="p">)</span>
         
         <span class="c1"># Tensor addresses have to be reassigned to reference</span>
         <span class="c1"># the uniform memory</span>
@@ -1583,12 +1720,14 @@ title="Source repository"
             
         <span class="k">return</span> <span class="n">net</span></div>
     
-    <span class="k">def</span> <span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                      <span class="n">oc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">mode</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;svd&#39;</span><span class="p">,</span>
                      <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                     <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">atol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">rtol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;:meta private:&quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>

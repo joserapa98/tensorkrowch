@@ -177,7 +177,7 @@
     "        n_blocks = self.n_features // block_length\n",
     "        \n",
     "        if even:\n",
-    "            # Leave reamining nodes at the end\n",
+    "            # Leave remaining nodes at the end\n",
     "            mats_env = self.mats_env[:(n_blocks * block_length)]\n",
     "        else:\n",
     "            # Leave remaining nodes at the beggining\n",

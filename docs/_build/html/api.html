@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
     <title>API Reference &#8212; TensorKrowch 1.1.6 documentation</title>
     
@@ -219,9 +219,43 @@
      Embeddings
     </a>
    </li>
-   <li class="toctree-l2">
+   <li class="toctree-l2 has-children">
     <a class="reference internal" href="decompositions.html">
      Decompositions
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="decompositions_api.html">
+       Decomposition API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="formats.html">
+     Formats
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+    <label for="toctree-checkbox-5">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="formats_api.html">
+       Format API reference
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="utils.html">
+     Utilities
     </a>
    </li>
   </ul>
@@ -496,9 +530,112 @@ title="Print to PDF"
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="decompositions.html">Decompositions</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="decompositions.html#vec-to-mps">vec_to_mps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="decompositions.html#mat-to-mpo">mat_to_mpo</a></li>
-<li class="toctree-l2"><a class="reference internal" href="decompositions.html#tt-rss">tt_rss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions.html#choosing-a-method">Choosing a method</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions.html#describing-the-input">Describing the input</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#dataset-constructors">Dataset constructors</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions.html#svd-decompositions">SVD decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#tt-svd">TT-SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#tr-svd">TR-SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#repeated-fits-and-numerical-options">Repeated fits and numerical options</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions.html#alternating-least-squares">Alternating least squares</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#tt-als">TT-ALS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#tr-als">TR-ALS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#configuring-convergence-and-local-solves">Configuring convergence and local solves</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#sampling-and-partial-observations">Sampling and partial observations</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions.html#tt-to-tr-conversion-and-spectral-recovery">TT to TR conversion and spectral recovery</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#converting-an-existing-tt">Converting an existing TT</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#choosing-a-loop-opener">Choosing a loop opener</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#recursion-and-enrichment">Recursion and enrichment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#exact-spectral-recovery">Exact spectral recovery</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions.html#recursive-sketching">Recursive sketching</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#tt-rss-a-tensor-train-from-evaluations">TT-RSS: a tensor train from evaluations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#tr-rss-a-tensor-ring-from-evaluations">TR-RSS: a tensor ring from evaluations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#choosing-fitters-and-projectors">Choosing fitters and projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#transforming-evaluations">Transforming evaluations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#tensor-valued-functions">Tensor-valued functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#tt-rs-explicit-contraction-sketches">TT-RS: explicit contraction sketches</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions.html#matrix-and-quantics-extensions">Matrix and Quantics extensions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#matrices">Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="decompositions.html#quantics">Quantics</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions.html#results-progress-and-diagnostics">Results, progress and diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions.html#api-reference">API reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="decompositions_api.html">Decomposition API reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="decompositions_api.html#input-sources">Input sources</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decompositions_api.html#svd-engines-and-functions">SVD engines and functions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decompositions_api.html#als-engines-and-policies">ALS engines and policies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decompositions_api.html#als-objectives-samplers-and-environments">ALS objectives, samplers and environments</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decompositions_api.html#ring-conversion-and-spectral-functions">Ring conversion and spectral functions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decompositions_api.html#loop-opening-strategies-and-gauge-recursions">Loop-opening strategies and gauge recursions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decompositions_api.html#sketching-engines-and-functions">Sketching engines and functions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decompositions_api.html#sketching-fitters-projectors-and-operators">Sketching fitters, projectors and operators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decompositions_api.html#sketching-evaluation-and-extension-objects">Sketching evaluation and extension objects</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decompositions_api.html#results-and-diagnostics">Results and diagnostics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="decompositions_api.html#compatibility-helpers">Compatibility helpers</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions.html#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="formats.html">Formats</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="formats.html#choosing-a-format">Choosing a format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="formats.html#tensor-trains-and-tensor-rings">Tensor trains and tensor rings</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="formats.html#tensor-trains">Tensor trains</a></li>
+<li class="toctree-l3"><a class="reference internal" href="formats.html#tensor-rings">Tensor rings</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="formats.html#evaluation-and-numerical-operations">Evaluation and numerical operations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="formats.html#evaluating-selected-entries">Evaluating selected entries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="formats.html#arithmetic-and-errors">Arithmetic and errors</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="formats.html#cores-bonds-and-gauges">Cores, bonds and gauges</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="formats.html#canonical-forms">Canonical forms</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="formats.html#compression-and-blocking">Compression and blocking</a></li>
+<li class="toctree-l2"><a class="reference internal" href="formats.html#matrix-formats">Matrix formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="formats.html#quantics-formats">Quantics formats</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="formats.html#layouts-and-coordinate-maps">Layouts and coordinate maps</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="formats.html#models-and-decomposition-results">Models and decomposition results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="formats.html#api-reference">API reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="formats_api.html">Format API reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="formats_api.html#format-interfaces">Format interfaces</a></li>
+<li class="toctree-l4"><a class="reference internal" href="formats_api.html#vector-and-matrix-formats">Vector and matrix formats</a></li>
+<li class="toctree-l4"><a class="reference internal" href="formats_api.html#layouts-and-coordinate-maps">Layouts and coordinate maps</a></li>
+<li class="toctree-l4"><a class="reference internal" href="formats_api.html#quantics-formats">Quantics formats</a></li>
+<li class="toctree-l4"><a class="reference internal" href="formats_api.html#bond-factors">Bond factors</a></li>
+<li class="toctree-l4"><a class="reference internal" href="formats_api.html#gauge-orbits">Gauge orbits</a></li>
+<li class="toctree-l4"><a class="reference internal" href="formats_api.html#blocks">Blocks</a></li>
+<li class="toctree-l4"><a class="reference internal" href="formats_api.html#diagnostics">Diagnostics</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#strings-and-names">Strings and names</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#sequences-and-permutations">Sequences and permutations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#combinatorics">Combinatorics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#tensor-construction">Tensor construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#tensor-scaling-and-normalization">Tensor scaling and normalization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html#singular-value-decompositions">Singular-value decompositions</a></li>
 </ul>
 </li>
 </ul>

@@ -153,6 +153,12 @@ Ring conversion and spectral functions
 
 .. autofunction:: tt2tr
 
+.. autoclass:: BLOSTR
+   :members: fit
+
+.. autoclass:: BLOSTRSVD
+   :members: fit
+
 .. autofunction:: tr_blostr
 
 .. autofunction:: tr_blostr_svd

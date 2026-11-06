@@ -24,6 +24,157 @@ def _error(result, tensor):
     return (result.contract_dense() - tensor).norm() / tensor.norm()
 
 
+class TestBLOSTR:  # MARK: TestBLOSTR
+
+    @pytest.mark.parametrize('algorithm', [tk.decompositions.BLOSTR,
+                                         tk.decompositions.BLOSTRSVD])
+    @pytest.mark.parametrize('n_sites', [3, 5])
+    @pytest.mark.parametrize('kind', ['tensor', 'dense', 'sparse', 'callable',
+                                     'format', 'raw_format'])
+    def test_finite_sources_and_function_equivalence(
+            self, algorithm, n_sites, kind):
+        tensor = _tensor([2] * n_sites, [4] * n_sites)
+        if kind == 'tensor':
+            source = tensor
+        elif kind == 'dense':
+            source = tk.decompositions.DenseTensorSource(tensor)
+        elif kind == 'sparse':
+            indices = torch.cartesian_prod(
+                *(torch.arange(size) for size in tensor.shape))
+            source = tk.decompositions.SparseTensorSource(
+                indices, tensor.flatten(), tensor.shape)
+        elif kind == 'callable':
+            source = tk.decompositions.CallableTensorSource(
+                lambda indices: tensor[tuple(indices.T)],
+                in_dim=tensor.shape, out_shape=(), dtype=tensor.dtype,
+                batch_size=37)
+        else:
+            format = tk.decompositions.TTSVD(tensor).fit().to_format()
+            source = tk.decompositions.FormatSource(format) \
+                if kind == 'format' else format
+        engine = algorithm(source, out_device=None)
+        result = engine.fit(
+            rank=2, generator=torch.Generator().manual_seed(81),
+            collect_metrics=True)
+        function = tr_blostr if algorithm is tk.decompositions.BLOSTR \
+            else tr_blostr_svd
+        direct = function(source, rank=2, out_device=None,
+                          generator=torch.Generator().manual_seed(81))
+
+        assert isinstance(engine.source, tk.decompositions.BaseSource)
+        if isinstance(source, tk.decompositions.BaseSource):
+            assert engine.source is source
+        assert result.device == tensor.device
+        assert result.rank == [2] * n_sites
+        assert _error(result, tensor) < 1e-9
+        for core, expected in zip(result.cores, direct.cores):
+            torch.testing.assert_close(core, expected)
+
+    @pytest.mark.parametrize('algorithm', [tk.decompositions.BLOSTR,
+                                         tk.decompositions.BLOSTRSVD])
+    def test_materializes_once_and_repeats_fits(self, algorithm, monkeypatch):
+        tensor = _tensor([2] * 3, [4] * 3)
+        before = tensor.clone()
+        source = tk.decompositions.DenseTensorSource(tensor)
+        materializations = []
+        contract_dense = source.contract_dense
+
+        def materialize():
+            materializations.append(True)
+            return contract_dense()
+
+        monkeypatch.setattr(source, 'contract_dense', materialize)
+        engine = algorithm(source)
+        results = [engine.fit(
+            rank=rank, projection=projection, collect_metrics=True,
+            generator=torch.Generator().manual_seed(81))
+            for rank, projection in ((2, 'slices'), (None, 'gaussian'))]
+        assert len(materializations) == 1
+        assert results[0].metrics is not results[1].metrics
+        for result in results:
+            assert result.rank == [2] * 3
+            assert _error(result, tensor) < 1e-9
+            assert len(result.metrics.errors) == 1
+        torch.testing.assert_close(tensor, before, atol=0, rtol=0)
+
+    @pytest.mark.parametrize('algorithm', [tk.decompositions.BLOSTR,
+                                         tk.decompositions.BLOSTRSVD])
+    def test_minimal_rank_one(self, algorithm):
+        result = algorithm(torch.ones(1, 1, 1)).fit(
+            rank=1, projection='gaussian',
+            generator=torch.Generator().manual_seed(81))
+        assert result.rank == [1] * 3
+        torch.testing.assert_close(result.contract_dense().real,
+                                   torch.ones(1, 1, 1))
+
+    @pytest.mark.parametrize('algorithm', [tk.decompositions.BLOSTR,
+                                         tk.decompositions.BLOSTRSVD])
+    def test_matrix_source_restores_paired_axes(self, algorithm):
+        tensor = _tensor([2] * 3, [4] * 3).reshape((2, 2) * 3)
+        source = tk.decompositions.DenseTensorSource.matrix(
+            tensor, ordering='interleaved')
+        result = algorithm(source).fit(
+            rank=2, projection='gaussian',
+            generator=torch.Generator().manual_seed(81))
+        assert isinstance(result, tk.decompositions.TRMDecomposition)
+        assert result.in_dim == (2,) * 3
+        assert result.out_dim == (2,) * 3
+        assert _error(result, tensor) < 1e-9
+
+    @pytest.mark.parametrize('algorithm', [tk.decompositions.BLOSTR,
+                                         tk.decompositions.BLOSTRSVD])
+    def test_quantics_source_preserves_coordinates(self, algorithm):
+        source = tk.decompositions.CallableQuanticsSource(
+            lambda coordinates: torch.exp(
+                coordinates.to(torch.float64).sum(-1)), 1,
+            base=2, level=3, domain=(0., 1.), dtype=torch.float64)
+        result = algorithm(source).fit(
+            rank=1, projection='gaussian',
+            generator=torch.Generator().manual_seed(81))
+        assert isinstance(result, tk.decompositions.QTRDecomposition)
+        assert result.layout == source.layout
+        assert result.coordinate_map == source.coordinate_map
+        assert _error(result, source.contract_dense()) < 1e-9
+
+    @pytest.mark.parametrize('algorithm', [tk.decompositions.BLOSTR,
+                                         tk.decompositions.BLOSTRSVD])
+    def test_preserves_input_site_selection(self, algorithm):
+        tensor = _tensor([2] * 3, [4] * 3)
+        source = tk.decompositions.DenseTensorSource(tensor, in_sites=(2, 0))
+        result = algorithm(source).fit(
+            rank=2, generator=torch.Generator().manual_seed(81))
+        assert result.in_sites == (2, 0)
+        assert result.out_shape == (4,)
+        assert _error(result, tensor) < 1e-9
+
+    @pytest.mark.parametrize('algorithm', [tk.decompositions.BLOSTR,
+                                         tk.decompositions.BLOSTRSVD])
+    @pytest.mark.parametrize('kind', ['continuous', 'batched'])
+    def test_unsupported_sources(self, algorithm, kind):
+        if kind == 'continuous':
+            source = tk.decompositions.CallableSource(
+                lambda values: values.sum(-1), n_sites=3)
+        else:
+            source = tk.decompositions.DenseTensorSource(
+                torch.ones(2, 3, 3, 3), n_batches=1)
+        with pytest.raises(ValueError, match='discrete tensor|n_batches'):
+            algorithm(source)
+
+    @pytest.mark.parametrize('algorithm', [tk.decompositions.BLOSTR,
+                                         tk.decompositions.BLOSTRSVD])
+    @pytest.mark.parametrize('target,error', [
+        ([1, 2], TypeError),
+        (lambda values: values, TypeError),
+        (torch.ones(3), ValueError),
+        (torch.ones(2, 2), ValueError),
+        (torch.ones(3, 3, 3, dtype=torch.long), TypeError),
+        (torch.full((3, 3, 3), float('nan')), ValueError),
+    ])
+    def test_invalid_source(self, algorithm, target, error):
+        with pytest.raises(error):
+            algorithm(target)
+
+
 class TestTRBLOSTR:  # MARK: TestTRBLOSTR
 
     @pytest.mark.parametrize('function', [tr_blostr, tr_blostr_svd])

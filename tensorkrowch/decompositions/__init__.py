@@ -14,7 +14,8 @@ Tensor decomposition algorithms and their numerical results.
         * qtt_svd, qtr_svd, qttm_svd, qtrm_svd
         * TTALS, TRALS
         * tt_als, tr_als
-        * TT2TR, tt2tr, tr_blostr, tr_blostr_svd
+        * TT2TR, BLOSTR, BLOSTRSVD
+        * tt2tr, tr_blostr, tr_blostr_svd
         * TTRSS, TRRSS, TTRS
         * tt_rss, tr_rss, tt_rs
         * qtt_rss, qtr_rss
@@ -86,7 +87,9 @@ from tensorkrowch.decompositions.results import (QTRDecomposition,
                                                  TensorDecomposition)
 from tensorkrowch.decompositions.ring import (ALSLoopOpener,
                                               AdjointGaugeRecursion,
+                                              BLOSTR,
                                               BLOSTRLoopOpener,
+                                              BLOSTRSVD,
                                               BLOSTRSVDLoopOpener,
                                               CallableLoopOpener,
                                               ExperimentalWarning,
@@ -166,6 +169,8 @@ __all__ = [
     'BLOSTRSVDLoopOpener',
     'tr_blostr',
     'tr_blostr_svd',
+    'BLOSTR',
+    'BLOSTRSVD',
     'GaugeRecursion',
     'OrthGaugeRecursion',
     'PinvGaugeRecursion',

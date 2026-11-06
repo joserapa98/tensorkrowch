@@ -781,7 +781,7 @@ class BLOSTRLoopOpener:  # MARK: BLOSTRLoopOpener
     ----------
     fit_options : mapping, optional
         Spectral projection and clustering options forwarded to
-        :func:`tr_blostr`. Target, rank, output device and metric collection
+        :meth:`BLOSTR.fit`. Target, rank, output device and metric collection
         are controlled by :meth:`open`. Fixed gauges are unsupported.
 
     Examples
@@ -800,7 +800,7 @@ class BLOSTRLoopOpener:  # MARK: BLOSTRLoopOpener
             fit_options = {}
         if not isinstance(fit_options, Mapping):
             raise TypeError('`fit_options` should be a mapping or None')
-        reserved = {'tensor', 'rank', 'out_device',
+        reserved = {'source', 'rank', 'out_device',
                     'collect_metrics', 'verbose'}
         overlap = reserved.intersection(fit_options)
         if overlap:
@@ -826,13 +826,13 @@ class BLOSTRLoopOpener:  # MARK: BLOSTRLoopOpener
         return options
 
     def _decompose(self,
-                   tensor: torch.Tensor,
+                   source: BaseSource,
                    rank: Optional[_Rank],
-                   context: Mapping[str, Any]) -> TRDecomposition:
+                   context: Mapping[str, Any]) -> TensorDecomposition:
         """Runs the complete spectral factorization."""
-        from tensorkrowch.decompositions.ring.blostr import tr_blostr
-        return tr_blostr(
-            tensor, rank=rank, out_device=None,
+        from tensorkrowch.decompositions.ring.blostr import BLOSTR
+        return BLOSTR(source, out_device=None).fit(
+            rank=rank,
             collect_metrics=context.get('collect_metrics', False),
             **self._options(context))
 
@@ -840,7 +840,7 @@ class BLOSTRLoopOpener:  # MARK: BLOSTRLoopOpener
                   target: Any,
                   rank: Optional[_Rank] = None,
                   *,
-                  context: _Context = None) -> TRDecomposition:
+                  context: _Context = None) -> TensorDecomposition:
         """
         Decomposes a complete target without adding external gauge cores.
 
@@ -857,12 +857,12 @@ class BLOSTRLoopOpener:  # MARK: BLOSTRLoopOpener
 
         Returns
         -------
-        TRDecomposition
-            Spectral factorization in the original physical-axis order.
+        TensorDecomposition
+            Spectral factorization retaining the source's axis semantics.
         """
         context = _normalize_context(context)
-        tensor = _source_from_context(target, context).contract_dense()
-        return self._decompose(tensor, rank, context)
+        source = _source_from_context(target, context)
+        return self._decompose(source, rank, context)
 
     def open(self,
              target: Any,
@@ -899,17 +899,17 @@ class BLOSTRLoopOpener:  # MARK: BLOSTRLoopOpener
         """
         context = _normalize_context(context)
         orientation = _normalize_orientation(orientation)
-        tensor = _source_from_context(target, context).contract_dense()
+        source = _source_from_context(target, context)
         self.capabilities.require(
             fixed_left=fixed_left is not None,
             fixed_right=fixed_right is not None,
-            block_size=tensor.ndim - 2)
+            block_size=source.n_sites - 2)
         if orientation == 'left':
-            tensor = tensor.permute(*reversed(range(tensor.ndim)))
+            source = _mirror_source(source)
             if rank is not None:
-                rank = _mirror_rank(_normalize_rank(rank, tensor.ndim))
+                rank = _mirror_rank(_normalize_rank(rank, source.n_sites))
         context['_spectral_orientation'] = orientation
-        result = self.decompose(tensor, rank, context=context)
+        result = self.decompose(source, rank, context=context)
         return _opening_from_result(result, orientation)
 
 
@@ -920,7 +920,7 @@ class BLOSTRSVDLoopOpener(BLOSTRLoopOpener):  # MARK: BLOSTRSVDLoopOpener
     Parameters
     ----------
     fit_options : mapping, optional
-        Options forwarded to :func:`tr_blostr_svd`, including spectral
+        Options forwarded to :meth:`BLOSTRSVD.fit`, including spectral
         projections, clustering and tail truncation. Target, rank, output
         device and metric collection are controlled by :meth:`open`.
 
@@ -934,13 +934,13 @@ class BLOSTRSVDLoopOpener(BLOSTRLoopOpener):  # MARK: BLOSTRSVDLoopOpener
     """
 
     def _decompose(self,
-                   tensor: torch.Tensor,
+                   source: BaseSource,
                    rank: Optional[_Rank],
-                   context: Mapping[str, Any]) -> TRDecomposition:
+                   context: Mapping[str, Any]) -> TensorDecomposition:
         """Runs first-core spectral recovery followed by TT-SVD."""
-        from tensorkrowch.decompositions.ring.blostr import tr_blostr_svd
-        return tr_blostr_svd(
-            tensor, rank=rank, out_device=None,
+        from tensorkrowch.decompositions.ring.blostr import BLOSTRSVD
+        return BLOSTRSVD(source, out_device=None).fit(
+            rank=rank,
             collect_metrics=context.get('collect_metrics', False),
             **self._options(context))
 

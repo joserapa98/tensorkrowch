@@ -1,6 +1,10 @@
 """
 This script contains:
 
+    Public classes:
+        * BLOSTR
+        * BLOSTRSVD
+
     Public functions:
         * tr_blostr
         * tr_blostr_svd
@@ -13,7 +17,6 @@ This script contains:
         * _spectral_order
         * _first_core
         * _recover_cores
-        * _fit_blostr
 """
 
 from dataclasses import dataclass
@@ -35,8 +38,13 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 from tensorkrowch.decompositions.observers import (_normalize_verbosity,
                                                  _resolve_observer,
                                                  DecompositionEvent)
-from tensorkrowch.decompositions.results import TRDecomposition
+from tensorkrowch.decompositions.results import (TensorDecomposition,
+                                               TRDecomposition,
+                                               _result_from_source)
 from tensorkrowch.decompositions.ring.blocks import _split_block
+from tensorkrowch.decompositions.sources.base import BaseSource
+from tensorkrowch.decompositions.sources.factory import (SourceLike,
+                                                       as_tensor_source)
 
 
 _Rank = Optional[Union[int, Sequence[int]]]
@@ -306,189 +314,453 @@ def _recover_cores(tensor: torch.Tensor,
     return tuple(cores)
 
 
-def _fit_blostr(tensor: torch.Tensor,
-                rank: _Rank,
-                *,
-                use_svd: bool,
-                slices: Optional[Sequence[Sequence[int]]] = None,
-                projection: str = 'slices',
-                spectral_atol: float = 1e-10,
-                n_attempts: int = 8,
-                n_iters: int = 50,
-                n_restarts: int = 10,
-                generator: Optional[torch.Generator] = None,
-                truncation: Optional[_TruncationSpec] = None,
-                out_device: _Device = 'cpu',
-                collect_metrics: bool = False,
-                verbose: Union[bool, int] = 0) -> TRDecomposition:
-    """Runs spectral attempts and retains the smallest reconstruction error."""
-    if not isinstance(tensor, torch.Tensor):
-        raise TypeError('`tensor` should be torch.Tensor type')
-    if tensor.ndim < 3:
-        raise ValueError('`tensor` should contain at least three axes')
-    if not tensor.is_floating_point() and not tensor.is_complex():
-        raise TypeError('`tensor` should have floating or complex dtype')
-    if not torch.isfinite(tensor).all():
-        raise ValueError('`tensor` should contain finite values')
-    ranks = None if rank is None else _normalize_rank(rank, tensor.ndim)
-    if ranks is not None:
-        if (not use_svd) and (len(set(ranks)) != 1):
+class BLOSTR:  # MARK: BLOSTR
+    r"""
+    Recovers a tensor ring from a finite source using spectral BLOSTR.
+
+    Two pairs of interior projections identify the first core through blockwise
+    simultaneous diagonalization. Each remaining core is recovered by a linear
+    solve with its physical axis and the previous one left open. Slice
+    projection uses discrete indices throughout, following Section 3 of `A
+    Provably Efficient Method for Tensor Ring Decomposition and Its
+    Applications <https://arxiv.org/abs/2512.01016>`_. Gaussian projection is
+    an extension: the first step jointly projects all interior axes; later
+    steps use independent dense projections of the known prefix and unknown
+    suffix, preserving separability only between those two groups.
+
+    The full construction targets exact tensors with uniform ranks, injective
+    physical unfoldings at every site and nondegenerate projection ratios. Each
+    physical dimension must therefore be at least the squared TR rank. With
+    slices, the selected recovery environments must also be full rank;
+    injectivity alone does not ensure this. Blocking physical sites, when
+    needed, is left to the caller. :class:`BLOSTRSVD` instead requires
+    injectivity only at its two external physical axes. No accuracy guarantee
+    is made for approximate inputs or rank-deficient recovery environments.
+
+    Parameters
+    ----------
+    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor
+        Finite tensor source, format or dense tensor. The complete tensor is
+        materialized once when constructing the algorithm. At least three sites
+        are required; structural batches and continuous sources are
+        unsupported. Matrix sources group input/output axes at each site.
+    out_device : str or torch.device, optional
+        Final core storage device. Default is ``"cpu"``; ``None`` keeps the
+        input device.
+
+    Examples
+    --------
+    >>> source = tk.decompositions.DenseTensorSource(torch.ones(3, 3, 3))
+    >>> result = tk.decompositions.BLOSTR(source).fit(rank=1)
+    >>> result.rank
+    [1, 1, 1]
+    """
+
+    _algorithm = 'blostr'
+
+    def __init__(self, source: SourceLike, *,
+                 out_device: _Device = 'cpu') -> None:
+        self._source = as_tensor_source(source)
+        if not self._source.is_discrete_tensor:
+            raise ValueError('`source` should represent a discrete tensor')
+        if self._source.n_batches:
+            raise ValueError('BLOSTR does not support `n_batches`')
+        tensor = self._source.contract_dense()
+        if self._source.is_matrix:
+            dimensions = tuple(a * b for a, b in zip(
+                self._source.in_dim, self._source.out_dim))
+            tensor = tensor.reshape(dimensions)
+        if tensor.ndim < 3:
+            raise ValueError('`source` should contain at least three sites')
+        if any(size < 1 for size in tensor.shape):
+            raise ValueError('`source` should have positive input dimensions')
+        if not (tensor.is_floating_point() or tensor.is_complex()):
+            raise TypeError('`source` should have floating or complex dtype')
+        if not torch.isfinite(tensor).all():
+            raise ValueError('`source` should contain finite values')
+        dtype = torch.complex128 if tensor.dtype in (
+            torch.float64, torch.complex128) else torch.complex64
+
+        # Cache the materialization in the complex working dtype for repeated
+        # fits without modifying the source's storage.
+        self._tensor = tensor.to(dtype=dtype)
+        self._runtime = _RuntimePolicy.from_tensor(
+            self._tensor, out_device=out_device)
+
+    @property
+    def source(self) -> BaseSource:
+        """Source describing the fixed decomposition input."""
+        return self._source
+
+    def _validate_rank(self, rank: Optional[Sequence[int]]) -> None:
+        """Checks the uniform ranks and physical capacities of full BLOSTR."""
+        if rank is None:
+            return
+        if len(set(rank)) != 1:
             warn('Full BLOSTR does not support different TR ranks; use '
-                 'BLOSTR-SVD instead.', UserWarning, stacklevel=3)
+                 'BLOSTR-SVD instead.', UserWarning, stacklevel=4)
             raise ValueError('Full BLOSTR requires uniform `rank`')
-        if use_svd and (ranks[0] != ranks[-2]):
-            raise ValueError('BLOSTR-SVD requires `rank[0] == rank[-2]`')
-        if (not use_svd) and (min(tensor.shape) < ranks[0]**2):
+        if min(self._tensor.shape) < rank[0]**2:
             warn('Full BLOSTR cannot satisfy injectivity: a physical '
                  'dimension is smaller than the product of its TR ranks. '
                  'Block the TT format before TT2TR, or group the physical '
                  'axes of a dense input, to meet this dimension condition.',
-                 UserWarning, stacklevel=3)
+                 UserWarning, stacklevel=4)
             raise RuntimeError('Full BLOSTR requires every physical '
                                'dimension to be at least rank**2')
-    if projection not in ('slices', 'gaussian'):
-        raise ValueError('`projection` should be "slices" or "gaussian"')
-    if (slices is not None) and (projection != 'slices'):
-        raise ValueError('Explicit `slices` require `projection="slices"`')
-    if slices is not None:
-        slices = _validate_slices(slices, tensor.shape)
-    if isinstance(spectral_atol, bool) or not isinstance(
-            spectral_atol, (int, float)):
-        raise TypeError('`spectral_atol` should be a non-negative number')
-    if (spectral_atol < 0) or (not isfinite(spectral_atol)):
-        raise ValueError('`spectral_atol` should be finite and non-negative')
-    for name, value in (('n_attempts', n_attempts), ('n_iters', n_iters),
-                        ('n_restarts', n_restarts)):
-        _normalize_positive_int(value, name)
-    if generator is not None and not isinstance(generator, torch.Generator):
-        raise TypeError('`generator` should be torch.Generator type or None')
-    if not isinstance(collect_metrics, bool):
-        raise TypeError('`collect_metrics` should be bool type')
-    verbosity = _normalize_verbosity(verbose)
-    observer = _resolve_observer(verbosity, None) if verbosity else None
-    if observer is not None:
-        observer.emit(DecompositionEvent(
-            name='start', phase='BLOSTR',
-            values={'rank': rank, 'attempts': n_attempts}))
-    collect_metrics = collect_metrics or bool(verbosity)
-    runtime = _RuntimePolicy.from_tensor(tensor, out_device=out_device)
-    dtype = torch.complex128 if tensor.dtype in (
-        torch.float64, torch.complex128) else torch.complex64
 
-    # Spectral factors may be complex even when the original tensor is real.
-    active = tensor.to(dtype=dtype)
-    metrics = DecompositionMetrics()
-    failures = []
-    best = None
-    attempts = n_attempts if slices is None else 1
-    with runtime.timer() as timer:
+    def _recover(self, first: torch.Tensor,
+                 rank: Optional[Sequence[int]], projection: str,
+                 spectral_atol: float, generator: Optional[torch.Generator],
+                 truncation: Optional[_TruncationSpec],
+                 metrics: Optional[DecompositionMetrics]
+                 ) -> Tuple[torch.Tensor, ...]:
+        """Recovers every remaining core by the full spectral construction."""
+        cyclic, _, adjacent = first.shape
+        if cyclic != adjacent:
+            warn('Full BLOSTR does not support different TR ranks; use '
+                 'BLOSTR-SVD instead.', UserWarning, stacklevel=4)
+            raise ValueError('Full BLOSTR requires uniform discovered ranks')
+        if rank is None:
+            self._validate_rank((cyclic, adjacent))
+        return _recover_cores(self._tensor, first, projection, generator)
 
-        # Reject degenerate projections and keep the best full reconstruction.
-        for attempt in range(attempts):
-            local_metrics = DecompositionMetrics()
-            try:
-                first = _first_core(active, ranks, slices, projection,
-                                    spectral_atol, n_iters, n_restarts,
-                                    generator)
-                cyclic, _, adjacent = first.core.shape
-                if use_svd:
-
-                    # Remove the first factor and place its virtual axes at the
-                    # TT ends.
-                    first_matrix = first.core.permute(1, 0, 2).reshape(
-                        active.shape[0], -1)
-                    tail = torch.linalg.pinv(first_matrix) @ active.reshape(
-                        active.shape[0], -1)
-                    tail = tail.reshape(cyclic, adjacent, *active.shape[1:])
-                    tail = tail.movedim(0, -1)
-                    options = {} if truncation is None else \
-                        truncation.as_kwargs()
-                    if (ranks is None) and all(
-                            options.get(name) is None for name in
-                            ('cutoff', 'atol', 'rtol', 'cum_percentage')):
-                        precision = (10 * max(active.shape) *
-                                     torch.finfo(active.real.dtype).eps *
-                                     torch.linalg.cond(first_matrix))
-                        options['rtol'] = min(
-                            max(spectral_atol, float(precision))**2, 1)
-                    tail_cores = _split_block(
-                        tail, active.shape[1:],
-                        rank=None if ranks is None else ranks[1:-1],
-                        cutoff=options.get('cutoff'),
-                        atol=options.get('atol'), rtol=options.get('rtol'),
-                        cum_percentage=options.get('cum_percentage'),
-                        metrics=local_metrics if collect_metrics else None)
-                    cores = (first.core, *tail_cores)
-                else:
-                    if cyclic != adjacent:
-                        warn('Full BLOSTR does not support different TR '
-                             'ranks; use BLOSTR-SVD instead.', UserWarning,
-                             stacklevel=3)
-                        raise ValueError('Full BLOSTR requires uniform '
-                                         'discovered ranks')
-                    if min(active.shape) < cyclic * cyclic:
-                        warn('Full BLOSTR cannot satisfy injectivity: a '
-                             'physical dimension is smaller than the '
-                             'product of its discovered TR ranks. Block the '
-                             'TT format before TT2TR, or group the physical '
-                             'axes of a dense input, to meet this dimension '
-                             'condition.', UserWarning, stacklevel=3)
-                        raise ValueError('Full BLOSTR requires every physical '
-                                         'dimension to be at least rank**2')
-                    cores = _recover_cores(
-                        active, first.core, projection, generator)
-                candidate = TRDecomposition(cores)
-                approximation = candidate.contract_dense()
-                absolute = torch.linalg.vector_norm(approximation - active)
-                denominator = torch.linalg.vector_norm(active)
-                relative = safe_divide(absolute, denominator,
-                                       zero_value=absolute)
-                if (best is None) or (relative < best[0]):
-                    best = (relative, candidate, first,
-                            local_metrics.truncations, absolute)
-                if observer is not None:
-                    observer.emit(DecompositionEvent(
-                        name='attempt_complete', phase='BLOSTR', values={
-                            'attempt': attempt + 1, 'attempts': attempts,
-                            'relative_error': relative.detach()}))
-            except (RuntimeError, ValueError) as error:
-                failures.append(str(error))
-    if best is None:
-        detail = '; '.join(dict.fromkeys(failures))
-        raise RuntimeError(f'Every BLOSTR spectral attempt failed. {detail}')
-
-    # Report the accepted attempt, not the final projection that was tried.
-    relative, candidate, first, records, absolute = best
-    if collect_metrics:
-        metrics.errors.append(ErrorRecord(
-            kind='reconstruction', absolute=absolute, relative=relative,
-            denominator=torch.linalg.vector_norm(active)))
-        metrics.truncations.extend(records)
-        metrics.timings.append(TimingRecord(name='fit', elapsed=timer.elapsed))
-        metrics.warnings.extend(failures)
-    result = TRDecomposition(
-        [runtime.finalize(core) for core in candidate.cores], metrics=metrics,
-        metadata={
-            'algorithm': 'blostr_svd' if use_svd else 'blostr',
-            'requested_rank': None if ranks is None else list(ranks),
-            'adaptive': ranks is None, 'projection': projection,
-            'slices': first.slices, 'attempts': attempts,
-            'cluster_error': first.cluster_error.detach(),
-        })
-    if observer is not None:
-        observer.emit(DecompositionEvent(
-            name='summary', phase='BLOSTR', values={
-                'rank': result.rank, 'absolute_error': absolute,
-                'relative_error': relative, 'elapsed': timer.elapsed}))
-        for site, core in enumerate(result.cores):
+    def _fit(self, rank: _Rank, *, projection: str,
+             slices: Optional[Sequence[Sequence[int]]], spectral_atol: float,
+             n_attempts: int, n_iters: int, n_restarts: int,
+             generator: Optional[torch.Generator],
+             truncation: Optional[_TruncationSpec] = None,
+             collect_metrics: bool, verbose: Union[bool, int]
+             ) -> TensorDecomposition:
+        """Retains the smallest reconstruction error over spectral attempts."""
+        ranks = None if rank is None else _normalize_rank(
+            rank, self._tensor.ndim)
+        self._validate_rank(ranks)
+        if projection not in ('slices', 'gaussian'):
+            raise ValueError('`projection` should be "slices" or "gaussian"')
+        if (slices is not None) and (projection != 'slices'):
+            raise ValueError('Explicit `slices` require `projection="slices"`')
+        if slices is not None:
+            slices = _validate_slices(slices, self._tensor.shape)
+        if isinstance(spectral_atol, bool) or not isinstance(
+                spectral_atol, (int, float)):
+            raise TypeError('`spectral_atol` should be a non-negative number')
+        if (spectral_atol < 0) or (not isfinite(spectral_atol)):
+            raise ValueError(
+                '`spectral_atol` should be finite and non-negative')
+        for name, value in (('n_attempts', n_attempts), ('n_iters', n_iters),
+                            ('n_restarts', n_restarts)):
+            _normalize_positive_int(value, name)
+        if generator is not None and not isinstance(
+                generator, torch.Generator):
+            raise TypeError(
+                '`generator` should be torch.Generator type or None')
+        if not isinstance(collect_metrics, bool):
+            raise TypeError('`collect_metrics` should be bool type')
+        phase = self._algorithm.upper().replace('_', '-')
+        verbosity = _normalize_verbosity(verbose)
+        observer = _resolve_observer(verbosity, None) if verbosity else None
+        if observer is not None:
             observer.emit(DecompositionEvent(
-                name='core', phase='BLOSTR', level=3, site=site,
-                values={'shape': tuple(core.shape), 'tensor': core}))
-        observer.close(metrics)
-    return result
+                name='start', phase=phase,
+                values={'rank': rank, 'attempts': n_attempts}))
+        collect_metrics = collect_metrics or bool(verbosity)
+        active = self._tensor
+        metrics = DecompositionMetrics()
+        failures = []
+        best = None
+        attempts = n_attempts if slices is None else 1
+        with self._runtime.timer() as timer:
+
+            # Reject degenerate projections and keep the best reconstruction.
+            for attempt in range(attempts):
+                local_metrics = DecompositionMetrics()
+                try:
+                    first = _first_core(active, ranks, slices, projection,
+                                        spectral_atol, n_iters, n_restarts,
+                                        generator)
+                    cores = self._recover(
+                        first.core, ranks, projection, spectral_atol,
+                        generator, truncation,
+                        local_metrics if collect_metrics else None)
+                    candidate = TRDecomposition(cores)
+                    approximation = candidate.contract_dense()
+                    absolute = torch.linalg.vector_norm(
+                        approximation - active)
+                    denominator = torch.linalg.vector_norm(active)
+                    relative = safe_divide(absolute, denominator,
+                                           zero_value=absolute)
+                    if (best is None) or (relative < best[0]):
+                        best = (relative, candidate, first,
+                                local_metrics.truncations, absolute)
+                    if observer is not None:
+                        observer.emit(DecompositionEvent(
+                            name='attempt_complete', phase=phase, values={
+                                'attempt': attempt + 1, 'attempts': attempts,
+                                'relative_error': relative.detach()}))
+                except (RuntimeError, ValueError) as error:
+                    failures.append(str(error))
+        if best is None:
+            detail = '; '.join(dict.fromkeys(failures))
+            raise RuntimeError(
+                f'Every BLOSTR spectral attempt failed. {detail}')
+
+        # Report the accepted attempt, not the final projection that was tried.
+        relative, candidate, first, records, absolute = best
+        if collect_metrics:
+            metrics.errors.append(ErrorRecord(
+                kind='reconstruction', absolute=absolute, relative=relative,
+                denominator=torch.linalg.vector_norm(active)))
+            metrics.truncations.extend(records)
+            metrics.timings.append(TimingRecord(name='fit',
+                                               elapsed=timer.elapsed))
+            metrics.warnings.extend(failures)
+        result = TRDecomposition(
+            [self._runtime.finalize(core) for core in candidate.cores],
+            metrics=metrics,
+            metadata={
+                'algorithm': self._algorithm,
+                'requested_rank': None if ranks is None else list(ranks),
+                'adaptive': ranks is None, 'projection': projection,
+                'slices': first.slices, 'attempts': attempts,
+                'cluster_error': first.cluster_error.detach(),
+            })
+        result = _result_from_source(result, self._source)
+        if observer is not None:
+            observer.emit(DecompositionEvent(
+                name='summary', phase=phase, values={
+                    'rank': result.rank, 'absolute_error': absolute,
+                    'relative_error': relative, 'elapsed': timer.elapsed}))
+            for site, core in enumerate(result.cores):
+                observer.emit(DecompositionEvent(
+                    name='core', phase=phase, level=3, site=site,
+                    values={'shape': tuple(core.shape), 'tensor': core}))
+            observer.close(metrics)
+        return result
+
+    def fit(self,
+            rank: _Rank = None,
+            *,
+            projection: str = 'slices',
+            slices: Optional[Sequence[Sequence[int]]] = None,
+            spectral_atol: float = 1e-10,
+            n_attempts: int = 8,
+            n_iters: int = 50,
+            n_restarts: int = 10,
+            generator: Optional[torch.Generator] = None,
+            collect_metrics: bool = False,
+            verbose: Union[bool, int] = 0) -> TensorDecomposition:
+        r"""
+        Runs spectral recovery with prescribed or discovered TR ranks.
+
+        Parameters
+        ----------
+        rank : int or sequence[int], optional
+            Prescribed right-link ranks, including the cyclic last entry. Full
+            BLOSTR requires equal ranks. With ``None``, balanced k-means
+            discovers the multiplicities of the nonzero spectrum and requires
+            them to imply equal cyclic and adjacent ranks.
+        slices : sequence of four index sequences, optional
+            Configurations fixing every interior axis for the two spectral
+            ratios. With ``None``, configurations are drawn using
+            ``generator``.
+        projection : {"slices", "gaussian"}
+            Coordinate slices or dense Gaussian projections. The first step
+            uses four interior projections. Full BLOSTR then uses discrete
+            indices with ``"slices"``, or independent dense known/unknown
+            contractions with ``"gaussian"``. BLOSTR-SVD instead splits the
+            tail with SVDs. Explicit ``slices`` require ``"slices"``.
+        spectral_atol : float
+            Absolute eigenvalue cutoff and relative within-cluster tolerance
+            used when discovering balanced spectral multiplicities. A
+            machine-precision floor is applied to both tests. Default is 1e-10.
+        n_attempts : int
+            Number of independent spectral attempts. Default is 8; explicit
+            ``slices`` use one attempt. The smallest reconstruction error is
+            kept.
+        n_iters, n_restarts : int
+            Balanced k-means iteration and restart budgets. Defaults are 50 and
+            10.
+        generator : torch.Generator, optional
+            Controls spectral projections, balanced clustering and recovery
+            projections.
+        collect_metrics : bool
+            Whether to retain reconstruction, truncation and timing
+            diagnostics.
+        verbose : bool or int
+            Console verbosity from 0 (silent) to 3.
+
+        Returns
+        -------
+        TensorDecomposition
+            Recovered TR cores and construction metadata. Spectral factors use
+            a complex dtype even for real input tensors.
+
+        Warns
+        -----
+        UserWarning
+            Different prescribed or discovered TR ranks recommend BLOSTR-SVD.
+            An insufficient physical dimension recommends blocking the input.
+            Both conditions still raise an error; blocking meets a necessary
+            dimension condition, but does not guarantee numerical injectivity.
+        """
+        return self._fit(
+            rank, projection=projection, slices=slices,
+            spectral_atol=spectral_atol, n_attempts=n_attempts,
+            n_iters=n_iters, n_restarts=n_restarts, generator=generator,
+            collect_metrics=collect_metrics, verbose=verbose)
 
 
-def tr_blostr(tensor: torch.Tensor,
+class BLOSTRSVD(BLOSTR):  # MARK: BLOSTRSVD
+    r"""
+    Recovers the first TR core spectrally and splits the rest with TT-SVD.
+
+    Unlike :class:`BLOSTR`, interior ranks may differ. The two ranks bounding
+    the projected interior chain must coincide: ``rank[0] == rank[-2]``. The
+    cyclic rank may differ. Gaussian joint projections can retain full matrix
+    rank even when an intermediate bond makes each coordinate slice deficient.
+    The physical first and last axes must both have dimension at least
+    ``rank[-1] * rank[0]``. These conditions permit spectral recovery; they do
+    not guarantee spectral separation for a particular projection.
+
+    Parameters
+    ----------
+    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor
+        Finite tensor source, format or dense tensor. The complete tensor is
+        materialized once when constructing the algorithm. At least three sites
+        are required; structural batches and continuous sources are
+        unsupported. Matrix sources group input/output axes at each site.
+    out_device : str or torch.device, optional
+        Final core storage device. Default is ``"cpu"``; ``None`` keeps the
+        input device.
+
+    Examples
+    --------
+    >>> source = tk.decompositions.DenseTensorSource(torch.ones(3, 3, 3))
+    >>> result = tk.decompositions.BLOSTRSVD(source).fit(rank=1)
+    >>> result.rank
+    [1, 1, 1]
+    """
+
+    _algorithm = 'blostr_svd'
+
+    def _validate_rank(self, rank: Optional[Sequence[int]]) -> None:
+        """Checks the matching ranks bounding the projected interior chain."""
+        if (rank is not None) and (rank[0] != rank[-2]):
+            raise ValueError('BLOSTR-SVD requires `rank[0] == rank[-2]`')
+
+    def _recover(self, first: torch.Tensor,
+                 rank: Optional[Sequence[int]], projection: str,
+                 spectral_atol: float, generator: Optional[torch.Generator],
+                 truncation: Optional[_TruncationSpec],
+                 metrics: Optional[DecompositionMetrics]
+                 ) -> Tuple[torch.Tensor, ...]:
+        """Removes the first factor and splits the remaining open chain."""
+        cyclic, _, adjacent = first.shape
+        first_matrix = first.permute(1, 0, 2).reshape(
+            self._tensor.shape[0], -1)
+        tail = torch.linalg.pinv(first_matrix) @ self._tensor.reshape(
+            self._tensor.shape[0], -1)
+        tail = tail.reshape(cyclic, adjacent, *self._tensor.shape[1:])
+        tail = tail.movedim(0, -1)
+        options = truncation.as_kwargs()
+        if (rank is None) and all(
+                options.get(name) is None for name in
+                ('cutoff', 'atol', 'rtol', 'cum_percentage')):
+            precision = (10 * max(self._tensor.shape) *
+                         torch.finfo(self._tensor.real.dtype).eps *
+                         torch.linalg.cond(first_matrix))
+            options['rtol'] = min(max(spectral_atol, float(precision))**2, 1)
+        tail_cores = _split_block(
+            tail, self._tensor.shape[1:],
+            rank=None if rank is None else rank[1:-1],
+            cutoff=options.get('cutoff'), atol=options.get('atol'),
+            rtol=options.get('rtol'),
+            cum_percentage=options.get('cum_percentage'), metrics=metrics)
+        return (first, *tail_cores)
+
+    def fit(self,
+            rank: _Rank = None,
+            *,
+            projection: str = 'slices',
+            slices: Optional[Sequence[Sequence[int]]] = None,
+            spectral_atol: float = 1e-10,
+            n_attempts: int = 8,
+            n_iters: int = 50,
+            n_restarts: int = 10,
+            generator: Optional[torch.Generator] = None,
+            cutoff: Optional[float] = None,
+            atol: Optional[float] = None,
+            rtol: Optional[float] = None,
+            cum_percentage: Optional[float] = None,
+            collect_metrics: bool = False,
+            verbose: Union[bool, int] = 0) -> TensorDecomposition:
+        r"""
+        Recovers the first core spectrally and splits the tail with SVDs.
+
+        Parameters
+        ----------
+        rank : int or sequence[int], optional
+            Prescribed right-link ranks, including the cyclic last entry. With
+            ``None``, balanced k-means discovers the first cyclic and adjacent
+            ranks; TT-SVD discovers the remaining bonds numerically.
+        slices : sequence of four index sequences, optional
+            Configurations fixing every interior axis for the two spectral
+            ratios. With ``None``, configurations are drawn using
+            ``generator``.
+        projection : {"slices", "gaussian"}
+            Coordinate slices or dense Gaussian projections. The first step
+            uses four interior projections. Full BLOSTR then uses discrete
+            indices with ``"slices"``, or independent dense known/unknown
+            contractions with ``"gaussian"``. BLOSTR-SVD instead splits the
+            tail with SVDs. Explicit ``slices`` require ``"slices"``.
+        spectral_atol : float
+            Absolute eigenvalue cutoff and relative within-cluster tolerance
+            used when discovering balanced spectral multiplicities. A
+            machine-precision floor is applied to both tests. Default is 1e-10.
+        n_attempts : int
+            Number of independent spectral attempts. Default is 8; explicit
+            ``slices`` use one attempt. The smallest reconstruction error is
+            kept.
+        n_iters, n_restarts : int
+            Balanced k-means iteration and restart budgets. Defaults are 50 and
+            10.
+        generator : torch.Generator, optional
+            Controls spectral projections, balanced clustering and recovery
+            projections.
+        cutoff : float, optional
+            Singular values at or below this value are discarded in tail
+            TT-SVD.
+        atol, rtol, cum_percentage : float, optional
+            Absolute or relative discarded-energy tolerance, or retained
+            squared singular-value fraction, in tail TT-SVD. With no rank or
+            tolerance, a numerical threshold accounts for the precision and
+            conditioning of the recovered first core. A supplied rank is an
+            upper bound; smaller retained ranks are returned without zero
+            padding.
+        collect_metrics : bool
+            Whether to retain reconstruction, truncation and timing
+            diagnostics.
+        verbose : bool or int
+            Console verbosity from 0 (silent) to 3.
+
+        Returns
+        -------
+        TensorDecomposition
+            Recovered TR cores and construction metadata. Spectral factors use
+            a complex dtype even for real input tensors.
+        """
+        truncation = _TruncationSpec(cutoff=cutoff, atol=atol, rtol=rtol,
+                                     cum_percentage=cum_percentage)
+        return self._fit(
+            rank, projection=projection, slices=slices,
+            spectral_atol=spectral_atol, n_attempts=n_attempts,
+            n_iters=n_iters, n_restarts=n_restarts, generator=generator,
+            truncation=truncation,
+            collect_metrics=collect_metrics, verbose=verbose)
+
+
+def tr_blostr(source: SourceLike,
               rank: _Rank = None,
               *,
               slices: Optional[Sequence[Sequence[int]]] = None,
@@ -500,33 +772,18 @@ def tr_blostr(tensor: torch.Tensor,
               generator: Optional[torch.Generator] = None,
               out_device: _Device = 'cpu',
               collect_metrics: bool = False,
-              verbose: Union[bool, int] = 0) -> TRDecomposition:
+              verbose: Union[bool, int] = 0) -> TensorDecomposition:
     r"""
-    Recovers a dense tensor ring using spectral BLOSTR at every site.
+    Decomposes a finite source using :class:`BLOSTR`.
 
-    Two pairs of interior projections identify the first core through
-    blockwise simultaneous diagonalization. Each remaining core is recovered
-    by a linear solve with its physical axis and the previous one left open.
-    Slice projection uses discrete indices throughout, following Section 3 of
-    `A Provably Efficient Method for Tensor Ring Decomposition and Its
-    Applications <https://arxiv.org/abs/2512.01016>`_. Gaussian projection is
-    an extension: the first step jointly projects all interior axes; later
-    steps use independent dense projections of the known prefix and unknown
-    suffix, preserving separability only between those two groups.
-
-    The full construction targets exact tensors with uniform ranks, injective
-    physical unfoldings at every site and nondegenerate projection ratios.
-    Each physical dimension must therefore be at least the squared TR rank.
-    With slices, the selected recovery environments must also be full rank;
-    injectivity alone does not ensure this. Blocking physical sites, when
-    needed, is left to the caller. :func:`tr_blostr_svd` instead requires
-    injectivity only at its two external physical axes. No accuracy guarantee
-    is made for approximate inputs or rank-deficient recovery environments.
+    This is equivalent to ``BLOSTR(source, out_device=...).fit(...)``. The
+    source is materialized once; returned cores use complex dtype. See
+    :meth:`BLOSTR.fit` for spectral options, restrictions and diagnostics.
 
     Parameters
     ----------
-    tensor : torch.Tensor
-        Dense tensor with one physical axis per future TR core.
+    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor
+        Finite source, format or dense tensor to decompose.
     rank : int or sequence[int], optional
         Prescribed right-link ranks, including the cyclic last entry. Full
         BLOSTR requires equal ranks. With ``None``, balanced k-means discovers
@@ -537,10 +794,10 @@ def tr_blostr(tensor: torch.Tensor,
         With ``None``, configurations are drawn using ``generator``.
     projection : {"slices", "gaussian"}
         Coordinate slices or dense Gaussian projections. The first step uses
-        four interior projections. Full BLOSTR then uses discrete indices
-        with ``"slices"``, or independent dense known/unknown contractions
-        with ``"gaussian"``. BLOSTR-SVD instead splits the tail with SVDs.
-        Explicit ``slices`` require ``"slices"``.
+        four interior projections. Full BLOSTR then uses discrete indices with
+        ``"slices"``, or independent dense known/unknown contractions with
+        ``"gaussian"``. BLOSTR-SVD instead splits the tail with SVDs. Explicit
+        ``slices`` require ``"slices"``.
     spectral_atol : float
         Absolute eigenvalue cutoff and relative within-cluster tolerance used
         when discovering balanced spectral multiplicities. A machine-precision
@@ -562,34 +819,33 @@ def tr_blostr(tensor: torch.Tensor,
 
     Returns
     -------
-    TRDecomposition
+    TensorDecomposition
         Recovered TR cores and construction metadata. Spectral factors use a
         complex dtype even for real input tensors.
 
     Warns
     -----
     UserWarning
-        Different prescribed or discovered TR ranks recommend BLOSTR-SVD.
-        An insufficient physical dimension recommends blocking the input.
-        Both conditions still raise an error; blocking meets a necessary
-        dimension condition, but does not guarantee numerical injectivity.
+        Different prescribed or discovered TR ranks recommend BLOSTR-SVD. An
+        insufficient physical dimension recommends blocking the input. Both
+        conditions still raise an error; blocking meets a necessary dimension
+        condition, but does not guarantee numerical injectivity.
 
     Examples
     --------
-    >>> cores = [torch.randn(1, 3, 1, dtype=torch.float64) for _ in range(3)]
-    >>> tensor = tk.formats.TR(cores).contract_dense()
-    >>> result = tk.decompositions.tr_blostr(tensor, rank=1)
-    >>> torch.allclose(result.contract_dense(), tensor.to(torch.complex128))
-    True
+    >>> source = tk.decompositions.DenseTensorSource(torch.ones(3, 3, 3))
+    >>> result = tk.decompositions.tr_blostr(source, rank=1)
+    >>> result.rank
+    [1, 1, 1]
     """
-    return _fit_blostr(
-        tensor, rank, use_svd=False, slices=slices, projection=projection,
+    return BLOSTR(source, out_device=out_device).fit(
+        rank, projection=projection, slices=slices,
         spectral_atol=spectral_atol, n_attempts=n_attempts, n_iters=n_iters,
-        n_restarts=n_restarts, generator=generator, out_device=out_device,
+        n_restarts=n_restarts, generator=generator,
         collect_metrics=collect_metrics, verbose=verbose)
 
 
-def tr_blostr_svd(tensor: torch.Tensor,
+def tr_blostr_svd(source: SourceLike,
                   rank: _Rank = None,
                   *,
                   slices: Optional[Sequence[Sequence[int]]] = None,
@@ -605,22 +861,18 @@ def tr_blostr_svd(tensor: torch.Tensor,
                   cum_percentage: Optional[float] = None,
                   out_device: _Device = 'cpu',
                   collect_metrics: bool = False,
-                  verbose: Union[bool, int] = 0) -> TRDecomposition:
+                  verbose: Union[bool, int] = 0) -> TensorDecomposition:
     r"""
-    Recovers the first TR core spectrally and splits the rest with TT-SVD.
+    Decomposes a finite source using :class:`BLOSTRSVD`.
 
-    Unlike :func:`tr_blostr`, interior ranks may differ. The two ranks bounding
-    the projected interior chain must coincide: ``rank[0] == rank[-2]``.
-    The cyclic rank may differ. Gaussian joint projections can retain full
-    matrix rank even when an intermediate bond makes each coordinate slice
-    deficient. The physical first and last axes must both have dimension at
-    least ``rank[-1] * rank[0]``. These conditions permit spectral recovery;
-    they do not guarantee spectral separation for a particular projection.
+    This is equivalent to ``BLOSTRSVD(source, out_device=...).fit(...)``. The
+    source is materialized once; returned cores use complex dtype. See
+    :meth:`BLOSTRSVD.fit` for spectral options, restrictions and diagnostics.
 
     Parameters
     ----------
-    tensor : torch.Tensor
-        Dense tensor with one physical axis per future TR core.
+    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor
+        Finite source, format or dense tensor to decompose.
     rank : int or sequence[int], optional
         Prescribed right-link ranks, including the cyclic last entry. With
         ``None``, balanced k-means discovers the first cyclic and adjacent
@@ -630,10 +882,10 @@ def tr_blostr_svd(tensor: torch.Tensor,
         With ``None``, configurations are drawn using ``generator``.
     projection : {"slices", "gaussian"}
         Coordinate slices or dense Gaussian projections. The first step uses
-        four interior projections. Full BLOSTR then uses discrete indices
-        with ``"slices"``, or independent dense known/unknown contractions
-        with ``"gaussian"``. BLOSTR-SVD instead splits the tail with SVDs.
-        Explicit ``slices`` require ``"slices"``.
+        four interior projections. Full BLOSTR then uses discrete indices with
+        ``"slices"``, or independent dense known/unknown contractions with
+        ``"gaussian"``. BLOSTR-SVD instead splits the tail with SVDs. Explicit
+        ``slices`` require ``"slices"``.
     spectral_atol : float
         Absolute eigenvalue cutoff and relative within-cluster tolerance used
         when discovering balanced spectral multiplicities. A machine-precision
@@ -650,9 +902,9 @@ def tr_blostr_svd(tensor: torch.Tensor,
         Singular values at or below this value are discarded in tail TT-SVD.
     atol, rtol, cum_percentage : float, optional
         Absolute or relative discarded-energy tolerance, or retained squared
-        singular-value fraction, in tail TT-SVD. With no rank or tolerance,
-        a numerical threshold accounts for the precision and conditioning of
-        the recovered first core. A supplied rank is an upper bound; smaller
+        singular-value fraction, in tail TT-SVD. With no rank or tolerance, a
+        numerical threshold accounts for the precision and conditioning of the
+        recovered first core. A supplied rank is an upper bound; smaller
         retained ranks are returned without zero padding.
     out_device : str or torch.device, optional
         Final core storage device. ``None`` keeps the input device.
@@ -663,26 +915,23 @@ def tr_blostr_svd(tensor: torch.Tensor,
 
     Returns
     -------
-    TRDecomposition
+    TensorDecomposition
         Recovered TR cores and construction metadata. Spectral factors use a
         complex dtype even for real input tensors.
 
     Examples
     --------
-    >>> cores = [torch.randn(1, 3, 1, dtype=torch.float64) for _ in range(3)]
-    >>> tensor = tk.formats.TR(cores).contract_dense()
-    >>> result = tk.decompositions.tr_blostr_svd(tensor, rank=1)
-    >>> torch.allclose(result.contract_dense(), tensor.to(torch.complex128))
-    True
+    >>> source = tk.decompositions.DenseTensorSource(torch.ones(3, 3, 3))
+    >>> result = tk.decompositions.tr_blostr_svd(source, rank=1)
+    >>> result.rank
+    [1, 1, 1]
     """
-    truncation = _TruncationSpec(cutoff=cutoff, atol=atol, rtol=rtol,
-                                 cum_percentage=cum_percentage)
-    return _fit_blostr(
-        tensor, rank, use_svd=True, slices=slices, projection=projection,
+    return BLOSTRSVD(source, out_device=out_device).fit(
+        rank, projection=projection, slices=slices,
         spectral_atol=spectral_atol, n_attempts=n_attempts, n_iters=n_iters,
-        n_restarts=n_restarts, generator=generator, truncation=truncation,
-        out_device=out_device, collect_metrics=collect_metrics,
-        verbose=verbose)
+        n_restarts=n_restarts, generator=generator, cutoff=cutoff,
+        atol=atol, rtol=rtol, cum_percentage=cum_percentage,
+        collect_metrics=collect_metrics, verbose=verbose)
 
 
-__all__ = ['tr_blostr', 'tr_blostr_svd']
+__all__ = ['BLOSTR', 'BLOSTRSVD', 'tr_blostr', 'tr_blostr_svd']

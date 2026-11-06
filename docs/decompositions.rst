@@ -54,7 +54,7 @@ Choosing a method
    * - Conversion and spectral recovery
      - Convert an existing TT, or recover an exact TR by spectral methods.
      - The TT is the input to conversion.
-     - :class:`TT2TR`, :func:`tr_blostr`, :func:`tr_blostr_svd`
+     - :class:`TT2TR`, :class:`BLOSTR`, :class:`BLOSTRSVD`
 
 The examples use engine objects. Functions such as :func:`tt_svd`,
 :func:`tr_als` and :func:`tt_rss` provide shorter interfaces for a single fit.
@@ -467,9 +467,35 @@ its TR ranks, it warns to block the input TT (or group axes of a dense input).
 This dimension condition is necessary for injectivity, but meeting it does
 not guarantee full-rank unfoldings or nonsingular slice environments.
 
-The standalone functions :func:`tr_blostr` and :func:`tr_blostr_svd` instead
-take a dense tensor and return a TR decomposition directly. Their API
-documents rank discovery, slice selection and Gaussian projection options.
+The standalone engines :class:`BLOSTR` and :class:`BLOSTRSVD` instead recover
+a TR from a finite source. Their constructors accept ``source`` and
+``out_device`` and materialize the complete tensor once. Subsequent ``fit``
+calls can vary ranks, projection choices and random generators without
+reevaluating the source:
+
+.. code-block:: python
+
+   cores = [torch.randn(2, 4, 2, dtype=torch.float64) for _ in range(5)]
+   tensor = tk.formats.TR(cores).contract_dense()
+   source = d.DenseTensorSource(tensor)
+   engine = d.BLOSTR(source)
+   result = engine.fit(rank=2, projection='gaussian')
+
+``rank=None`` discovers spectral multiplicities using balanced k-means.
+``spectral_atol`` controls spectral acceptance, ``n_attempts`` limits the
+projection attempts, and ``n_iters``/``n_restarts`` configure clustering.
+``generator``, ``collect_metrics`` and ``verbose`` have their usual fit roles.
+:class:`BLOSTRSVD` has the same interface, adding ``cutoff``, ``atol``,
+``rtol`` and ``cum_percentage`` for its tail SVDs. Both preserve the source's
+matrix grouping, Quantics coordinates and input-site selection in the result.
+Structural batches and continuous sources are unsupported.
+
+The functions :func:`tr_blostr` and :func:`tr_blostr_svd` delegate to these
+engines and accept the same sources, including a tensor directly. Configured
+:class:`BLOSTRLoopOpener` and :class:`BLOSTRSVDLoopOpener` also use these
+engines; their ``fit_options`` configure the corresponding ``fit`` method,
+while the local target, rank and output device are controlled by the opener.
+
 With ``projection='slices'``, full BLOSTR uses discrete configurations in both
 its spectral and subsequent recovery steps. With ``projection='gaussian'``,
 the first step uses dense projections over all interior physical axes. Each

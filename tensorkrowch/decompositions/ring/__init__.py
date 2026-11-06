@@ -50,14 +50,22 @@ that would otherwise be omitted by projection. Auxiliary coordinates may
 increase, while prescribed TR ranks and the input tensor remain unchanged.
 :class:`GaugeMap` exposes directional gauge duals and their numerical checks.
 
-Standalone :func:`tr_blostr` and :func:`tr_blostr_svd` decompose dense tensors
-using the same two spectral algorithms as their corresponding openers.
+Standalone spectral recovery follows the same source-to-fit interface:
+
+    tr_blostr(source, ...) = BLOSTR(source).fit(...)
+    tr_blostr_svd(source, ...) = BLOSTRSVD(source).fit(...)
+
+Both classes materialize a finite source once and use the same spectral
+algorithms as their corresponding openers.
 BLOSTR requires exact spectral structure; a small local optimization residual
 alone does not certify a small global TR error. TT conversion measures final
 fidelity and reconstruction error without materializing the full tensor.
 """
 
-from tensorkrowch.decompositions.ring.blostr import tr_blostr, tr_blostr_svd
+from tensorkrowch.decompositions.ring.blostr import (BLOSTR,
+                                                     BLOSTRSVD,
+                                                     tr_blostr,
+                                                     tr_blostr_svd)
 from tensorkrowch.decompositions.ring.gauges import (AdjointGaugeRecursion,
                                                      ExperimentalWarning,
                                                      GaugeMap,
@@ -78,6 +86,8 @@ from tensorkrowch.decompositions.ring.tt2tr import TT2TR, tt2tr
 __all__ = [
     'TT2TR',
     'tt2tr',
+    'BLOSTR',
+    'BLOSTRSVD',
     'tr_blostr',
     'tr_blostr_svd',
     'LoopOpener',

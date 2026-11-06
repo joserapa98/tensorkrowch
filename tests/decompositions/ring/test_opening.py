@@ -301,7 +301,19 @@ class TestBLOSTROpeners:
         with pytest.raises(TypeError, match='fit_options'):
             cls(invalid)
 
-    def test_hybrid_joint_projection_and_nonuniform_ranks(self):
+    @pytest.mark.parametrize('name', ['blostr', 'blostr_svd'])
+    @pytest.mark.parametrize('option', ['source', 'rank', 'out_device',
+                                       'collect_metrics', 'verbose'])
+    def test_reserved_options(self, name, option):
+        cls = tk.decompositions.BLOSTRLoopOpener if name == 'blostr' \
+            else tk.decompositions.BLOSTRSVDLoopOpener
+        with pytest.raises(ValueError, match='should not override'):
+            cls({option: None})
+
+    @pytest.mark.parametrize('orientation', ['right', 'left'])
+    @pytest.mark.parametrize('kind', ['tensor', 'dense', 'callable'])
+    def test_hybrid_joint_projection_and_nonuniform_ranks(
+            self, orientation, kind):
         generator = torch.Generator().manual_seed(515)
         rank = (3, 1, 3, 2)
         cores = make_tr_cores(
@@ -312,7 +324,14 @@ class TestBLOSTROpeners:
             'projection': 'gaussian',
             'generator': torch.Generator().manual_seed(516),
         })
-        result = opener.open(tensor, rank)
+        source = tensor
+        if kind == 'dense':
+            source = tk.decompositions.DenseTensorSource(tensor)
+        elif kind == 'callable':
+            source = tk.decompositions.CallableTensorSource(
+                lambda indices: tensor[tuple(indices.T)],
+                in_dim=tensor.shape, dtype=tensor.dtype, out_shape=())
+        result = opener.open(source, rank, orientation=orientation)
         torch.testing.assert_close(
             result.contract_dense(), tensor, rtol=1e-8, atol=1e-8)
 

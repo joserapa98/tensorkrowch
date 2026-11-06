@@ -108,12 +108,12 @@ def _evaluate_standard_tr(cores: Sequence[torch.Tensor],
 
 def _tr_gauge_core_update(cores: Sequence[torch.Tensor],
                           fixed_sites: Sequence[int],
-                          gauge: str,
+                          orthogonalize: bool,
                           direction: str,
                           site: int,
                           proposal: torch.Tensor
                           ) -> Mapping[int, torch.Tensor]:
-    """Builds an atomic cyclic current-plus-receiver ``gauge`` update."""
+    """Builds an atomic cyclic current-plus-receiver gauge update."""
     n_sites = len(cores)
     receiver = (site + 1) % n_sites if direction == 'forward' else \
         (site - 1) % n_sites
@@ -122,7 +122,7 @@ def _tr_gauge_core_update(cores: Sequence[torch.Tensor],
         feasible = proposal.shape[0] * proposal.shape[1] >= proposal.shape[2]
     else:
         feasible = proposal.shape[1] * proposal.shape[2] >= proposal.shape[0]
-    if (gauge == 'qr') and legal_receiver and feasible:
+    if orthogonalize and legal_receiver and feasible:
         gauged_core, factor = _factor_core(proposal, direction)
     else:
         gauged_core, factor = proposal, None
@@ -165,7 +165,7 @@ class _TRALSBackend:  # MARK: _TRALSBackend
                  cores: Sequence[torch.Tensor],
                  target: Optional[torch.Tensor],
                  solver: LeastSquaresSolver,
-                 gauge: str,
+                 orthogonalize: bool,
                  fixed_sites: Sequence[int],
                  normalize: bool,
                  renormalize: bool,
@@ -173,7 +173,7 @@ class _TRALSBackend:  # MARK: _TRALSBackend
         self.problem = problem
         self.full_target = None if target is None else target.reshape(-1)
         self.solver = solver
-        self.gauge = gauge
+        self.orthogonalize = orthogonalize
         self.fixed_sites = frozenset(fixed_sites)
         self.normalize = normalize
         self.cache = TRSegmentEnvironmentCache(
@@ -235,7 +235,7 @@ class _TRALSBackend:  # MARK: _TRALSBackend
         replacements = _tr_gauge_core_update(
             cores=self.cache.cores,
             fixed_sites=self.fixed_sites,
-            gauge=self.gauge,
+            orthogonalize=self.orthogonalize,
             direction=self._direction,
             site=site,
             proposal=proposal)
@@ -294,7 +294,7 @@ class _TRSampledALSBackend:  # MARK: _TRSampledALSBackend
                  problem: ALSProblem,
                  cores: Sequence[torch.Tensor],
                  solver: LeastSquaresSolver,
-                 gauge: str,
+                 orthogonalize: bool,
                  fixed_sites: Sequence[int],
                  sampling_policy: SamplingPolicy,
                  generator: Optional[torch.Generator],
@@ -304,7 +304,7 @@ class _TRSampledALSBackend:  # MARK: _TRSampledALSBackend
         self._cores = TRSegmentEnvironmentCache._validate_cores(cores)
         self._versions = (0,) * len(self._cores)
         self.solver = solver
-        self.gauge = gauge
+        self.orthogonalize = orthogonalize
         self.fixed_sites = frozenset(fixed_sites)
         self.sampling_policy = sampling_policy
         self.n_samples = sampling_policy.n_samples
@@ -391,7 +391,7 @@ class _TRSampledALSBackend:  # MARK: _TRSampledALSBackend
         replacements = _tr_gauge_core_update(
             cores=self._cores,
             fixed_sites=self.fixed_sites,
-            gauge=self.gauge,
+            orthogonalize=self.orthogonalize,
             direction=self._direction,
             site=site,
             proposal=proposal)
@@ -571,17 +571,17 @@ class TRALS(TTALS):  # MARK: TRALS
     def _make_backend(self, problem: ALSProblem,
                       cores: Sequence[torch.Tensor],
                       target: Optional[torch.Tensor],
-                      solver: LeastSquaresSolver, gauge: str,
+                      solver: LeastSquaresSolver, orthogonalize: bool,
                       fixed_sites: Sequence[int], renormalize: bool,
                       generator: Optional[torch.Generator],
                       sampler: Optional[SamplingPolicy]) -> ALSBackend:
         """Builds the topology-specific full-row or sampled backend."""
         if sampler is not None:
             return _TRSampledALSBackend(
-                problem, cores, solver, gauge, fixed_sites, sampler,
+                problem, cores, solver, orthogonalize, fixed_sites, sampler,
                 generator, True, renormalize)
         return _TRALSBackend(
-            problem, cores, target, solver, gauge, fixed_sites,
+            problem, cores, target, solver, orthogonalize, fixed_sites,
             True, renormalize, None)
 
     def fit(self,
@@ -589,7 +589,7 @@ class TRALS(TTALS):  # MARK: TRALS
             initial_cores: Optional[Union[TensorFormat1D,
                 Sequence[torch.Tensor]]] = None,
             fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
-            gauge: str = 'qr',
+            orthogonalize: bool = True,
             renormalize: bool = True,
             sampler: Optional[SamplingPolicy] = None,
             solver: Optional[LeastSquaresSolver] = None,
@@ -601,7 +601,8 @@ class TRALS(TTALS):  # MARK: TRALS
         Fits a TR by alternating one-site least-squares solves.
 
         Sweeps visit sites in increasing order around the ring. Each complete
-        pass counts once toward ``max_sweeps``.
+        pass counts once toward ``max_sweeps``. QR orthogonalization is local;
+        it does not establish a global canonical form for the ring.
         Without ``initial_cores``, initializes random cores at the requested
         ranks. To start from an SVD approximation, compute it separately and
         pass its result as ``initial_cores``. Supplied cores are copied.
@@ -617,9 +618,10 @@ class TRALS(TTALS):  # MARK: TRALS
         fixed_cores : sequence of torch.Tensor or None, optional
             One entry per site. Tensor entries replace the corresponding
             initial core and remain bitwise unchanged throughout ALS.
-        gauge : {``"none"``, ``"qr"``}
-            QR moves a factor into the immediate trainable neighbor after each
-            local solve. No factor is discarded if that receiver is
+        orthogonalize : bool
+            Whether QR moves a factor into the immediate trainable neighbor
+            after each local solve. Defaults to ``True``. ``False`` replaces
+            cores directly. No factor is discarded if the receiver is
             unavailable.
         renormalize : bool
             Whether cached environments remove global norms and retain their
@@ -659,7 +661,8 @@ class TRALS(TTALS):  # MARK: TRALS
         """
         return super().fit(
             rank=rank, initial_cores=initial_cores, fixed_cores=fixed_cores,
-            gauge=gauge, renormalize=renormalize, sampler=sampler,
+            orthogonalize=orthogonalize, renormalize=renormalize,
+            sampler=sampler,
             solver=solver, convergence=convergence, generator=generator,
             collect_metrics=collect_metrics, verbose=verbose)
 
@@ -668,7 +671,7 @@ def tr_als(source: 'SourceLike',
            initial_cores: Optional[Union[TensorFormat1D,
                Sequence[torch.Tensor]]] = None,
            fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
-           gauge: str = 'qr',
+           orthogonalize: bool = True,
            renormalize: bool = True,
            max_sweeps: int = 10,
            atol: Optional[float] = None,
@@ -701,9 +704,11 @@ def tr_als(source: 'SourceLike',
     fixed_cores : sequence of torch.Tensor or None, optional
         One entry per site. Tensor entries replace the corresponding
         initial core and remain bitwise unchanged throughout ALS.
-    gauge : {``"none"``, ``"qr"``}
-        QR moves a factor into the immediate trainable neighbor after each
-        local solve. No factor is discarded if that receiver is unavailable.
+    orthogonalize : bool
+        Whether QR moves a factor into the immediate trainable neighbor
+        after each local solve. Defaults to ``True``. ``False`` replaces
+        cores directly. No factor is discarded if the receiver is
+        unavailable.
     renormalize : bool
         Whether cached environments remove global norms and retain their
         logarithmic scales. The local least-squares objective is preserved.
@@ -747,7 +752,7 @@ def tr_als(source: 'SourceLike',
     """
     return TRALS(source, mask=mask, weights=weights, out_device=out_device
     ).fit(
-        rank, initial_cores, fixed_cores, gauge, renormalize,
+        rank, initial_cores, fixed_cores, orthogonalize, renormalize,
         convergence=ConvergencePolicy(
             max_sweeps=max_sweeps, atol=atol, rtol=rtol),
         generator=generator, collect_metrics=collect_metrics, verbose=verbose)

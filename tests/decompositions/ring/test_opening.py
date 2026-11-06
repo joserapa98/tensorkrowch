@@ -95,7 +95,7 @@ class TestALSLoopOpener:
         cores, tensor = _local_problem()
         gauge = cores[0] if side == 'left' else cores[-1]
         opener = tk.decompositions.ALSLoopOpener({
-            'gauge': 'qr',
+            'orthogonalize': True,
             'convergence': tk.decompositions.ConvergencePolicy(max_sweeps=2),
         })
         opening = opener.open(

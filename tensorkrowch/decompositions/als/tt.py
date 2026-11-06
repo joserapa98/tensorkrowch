@@ -181,15 +181,15 @@ def _prepare_tt_cores(cores: Sequence[torch.Tensor],
 
 def _gauge_core_update(cores: Sequence[torch.Tensor],
                        fixed_sites: Sequence[int],
-                       gauge: str,
+                       orthogonalize: bool,
                        direction: str,
                        site: int,
                        proposal: torch.Tensor) -> Mapping[int, torch.Tensor]:
-    """Builds one atomic current-plus-receiver ``gauge`` update."""
+    """Builds one atomic current-plus-receiver gauge update."""
     receiver = site + 1 if direction == 'forward' else site - 1
     legal_receiver = (0 <= receiver < len(cores)) and \
         (receiver not in fixed_sites)
-    if (gauge == 'qr') and legal_receiver:
+    if orthogonalize and legal_receiver:
         gauged_core, factor = _factor_core(proposal, direction)
     else:
         gauged_core, factor = proposal, None
@@ -209,13 +209,13 @@ class _TTALSBackend:  # MARK: _TTALSBackend
                  cores: Sequence[torch.Tensor],
                  target: Optional[torch.Tensor],
                  solver: LeastSquaresSolver,
-                 gauge: str,
+                 orthogonalize: bool,
                  fixed_sites: Sequence[int],
                  renormalize: bool) -> None:
         self.problem = problem
         self.full_target = None if target is None else target.reshape(-1)
         self.solver = solver
-        self.gauge = gauge
+        self.orthogonalize = orthogonalize
         self.fixed_sites = frozenset(fixed_sites)
         self.cache = TTEnvironmentCache(
             cores, renormalize=renormalize)
@@ -276,7 +276,7 @@ class _TTALSBackend:  # MARK: _TTALSBackend
         replacements = _gauge_core_update(
             cores=self.cache.cores,
             fixed_sites=self.fixed_sites,
-            gauge=self.gauge,
+            orthogonalize=self.orthogonalize,
             direction=self._direction,
             site=site,
             proposal=proposal)
@@ -365,7 +365,7 @@ class _TTSampledALSBackend:  # MARK: _TTSampledALSBackend
                  problem: ALSProblem,
                  cores: Sequence[torch.Tensor],
                  solver: LeastSquaresSolver,
-                 gauge: str,
+                 orthogonalize: bool,
                  fixed_sites: Sequence[int],
                  sampling_policy: SamplingPolicy,
                  generator: Optional[torch.Generator],
@@ -374,7 +374,7 @@ class _TTSampledALSBackend:  # MARK: _TTSampledALSBackend
         self._cores = TTEnvironmentCache._validate_cores(cores)
         self._versions = (0,) * len(self._cores)
         self.solver = solver
-        self.gauge = gauge
+        self.orthogonalize = orthogonalize
         self.fixed_sites = frozenset(fixed_sites)
         self.sampling_policy = sampling_policy
         self.n_samples = sampling_policy.n_samples
@@ -444,7 +444,7 @@ class _TTSampledALSBackend:  # MARK: _TTSampledALSBackend
                       sweep: int) -> Tuple[Optional[int], bool]:
         """Prepares the initial QR gauge and current sampling generation."""
         direction = 'forward' if order[0] == 0 else 'reverse'
-        if (self.gauge == 'qr') and (
+        if self.orthogonalize and (
                 (self._direction is None) or (direction == self._direction)):
             self._canonicalize_start(direction)
         generation = self.sampling_policy.generation(sweep)
@@ -474,7 +474,7 @@ class _TTSampledALSBackend:  # MARK: _TTSampledALSBackend
         replacements = _gauge_core_update(
             cores=self._cores,
             fixed_sites=self.fixed_sites,
-            gauge=self.gauge,
+            orthogonalize=self.orthogonalize,
             direction=self._direction,
             site=site,
             proposal=proposal)
@@ -809,25 +809,26 @@ class TTALS:  # MARK: TTALS
     def _make_backend(self, problem: ALSProblem,
                       cores: Sequence[torch.Tensor],
                       target: Optional[torch.Tensor],
-                      solver: LeastSquaresSolver, gauge: str,
+                      solver: LeastSquaresSolver, orthogonalize: bool,
                       fixed_sites: Sequence[int], renormalize: bool,
                       generator: Optional[torch.Generator],
                       sampler: Optional[SamplingPolicy]) -> ALSBackend:
         """Builds the topology-specific full-row or sampled backend."""
         if sampler is not None:
             if (sampler.method == 'leverage') and (
-                    (gauge != 'qr') or fixed_sites):
+                    (not orthogonalize) or fixed_sites):
                 raise ValueError(
-                    'TT leverage requires `gauge="qr"` without fixed cores')
+                    'TT leverage requires `orthogonalize=True` without '
+                    'fixed cores')
             return _TTSampledALSBackend(
-                problem, cores, solver, gauge, fixed_sites, sampler,
+                problem, cores, solver, orthogonalize, fixed_sites, sampler,
                 generator, renormalize)
-        if gauge == 'qr':
+        if orthogonalize:
             stop = min(fixed_sites, default=len(cores))
             cores = _prepare_tt_cores(
                 cores, range(stop - 1, 0, -1), 'reverse')
         return _TTALSBackend(
-            problem, cores, target, solver, gauge, fixed_sites,
+            problem, cores, target, solver, orthogonalize, fixed_sites,
             renormalize)
 
     def fit(self,
@@ -835,7 +836,7 @@ class TTALS:  # MARK: TTALS
             initial_cores: Optional[Union[TensorFormat1D,
                 Sequence[torch.Tensor]]] = None,
             fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
-            gauge: str = 'qr',
+            orthogonalize: bool = True,
             renormalize: bool = True,
             sampler: Optional[SamplingPolicy] = None,
             solver: Optional[LeastSquaresSolver] = None,
@@ -852,8 +853,9 @@ class TTALS:  # MARK: TTALS
         ranks. To start from an SVD approximation, compute it separately and
         pass its result as ``initial_cores``. Supplied cores are copied.
 
-        With ``gauge="qr"``, prepares right-isometric cores before the first
-        sweep, starting at the right end of the initial trainable segment.
+        With ``orthogonalize=True``, prepares right-isometric cores before
+        the first sweep, starting at the right end of the initial trainable
+        segment.
         This segment ends before the first fixed core, or at the chain's
         right boundary when no cores are fixed. The contraction is preserved;
         fixed cores and sites beyond that segment are unchanged.
@@ -870,9 +872,10 @@ class TTALS:  # MARK: TTALS
         fixed_cores : sequence of torch.Tensor or None, optional
             One entry per site. Tensor entries replace the corresponding
             initial core and remain bitwise unchanged throughout ALS.
-        gauge : {``"none"``, ``"qr"``}
-            QR moves a factor into the immediate trainable neighbor after each
-            local solve. No factor is discarded if that receiver is
+        orthogonalize : bool
+            Whether QR moves a factor into the immediate trainable neighbor
+            after each local solve. Defaults to ``True``. ``False`` replaces
+            cores directly. No factor is discarded if the receiver is
             unavailable.
         renormalize : bool
             Whether cached environments remove global norms and retain their
@@ -913,10 +916,8 @@ class TTALS:  # MARK: TTALS
         phase = f'{self._topology.upper()}-ALS'
         direction = 'forward' if self._topology == 'tr' else 'alternating'
         self._validate_initial_format(initial_cores)
-        if not isinstance(gauge, str):
-            raise TypeError('`gauge` should be str type')
-        if gauge not in ('none', 'qr'):
-            raise ValueError("`gauge` should be 'none' or 'qr'")
+        if not isinstance(orthogonalize, bool):
+            raise TypeError('`orthogonalize` should be bool type')
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')
         if not isinstance(collect_metrics, bool):
@@ -970,13 +971,13 @@ class TTALS:  # MARK: TTALS
             target=runtime_reference, initial_cores=initial_cores, rank=rank,
             fixed_cores=fixed_cores, generator=generator)
         backend = self._make_backend(
-            problem, cores, target, solver, gauge, fixed_sites, renormalize,
-            generator, sampler)
+            problem, cores, target, solver, orthogonalize, fixed_sites,
+            renormalize, generator, sampler)
         if fit_observer is not None:
             fit_observer.emit(DecompositionEvent(
                 name='start', phase=phase, values={
                     'sites': len(cores), 'in_dim': self.in_dim,
-                    'sampling': sampling, 'gauge': gauge,
+                    'sampling': sampling, 'orthogonalize': orthogonalize,
                     'max_sweeps': convergence.max_sweeps,
                     'sweep_direction': direction,
                 }))
@@ -994,7 +995,7 @@ class TTALS:  # MARK: TTALS
                 'algorithm': f'{self._topology}_als',
                 'initialization': (
                     'random' if initial_cores is None else 'cores'),
-                'gauge': gauge, 'converged': fitted.converged,
+                'orthogonalize': orthogonalize, 'converged': fitted.converged,
                 'keep_best': convergence.keep_best,
                 'stop_reason': fitted.stop_reason, 'n_sweeps': fitted.n_sweeps,
                 'sweep_direction': direction,
@@ -1021,7 +1022,7 @@ def tt_als(source: 'SourceLike',
            initial_cores: Optional[Union[TensorFormat1D,
                Sequence[torch.Tensor]]] = None,
            fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
-           gauge: str = 'qr',
+           orthogonalize: bool = True,
            renormalize: bool = True,
            max_sweeps: int = 10,
            atol: Optional[float] = None,
@@ -1054,9 +1055,11 @@ def tt_als(source: 'SourceLike',
     fixed_cores : sequence of torch.Tensor or None, optional
         One entry per site. Tensor entries replace the corresponding
         initial core and remain bitwise unchanged throughout ALS.
-    gauge : {``"none"``, ``"qr"``}
-        QR moves a factor into the immediate trainable neighbor after each
-        local solve. No factor is discarded if that receiver is unavailable.
+    orthogonalize : bool
+        Whether QR moves a factor into the immediate trainable neighbor
+        after each local solve. Defaults to ``True``. ``False`` replaces
+        cores directly. No factor is discarded if the receiver is
+        unavailable.
     renormalize : bool
         Whether cached environments remove global norms and retain their
         logarithmic scales. The local least-squares objective is preserved.
@@ -1100,7 +1103,7 @@ def tt_als(source: 'SourceLike',
     """
     return TTALS(source, mask=mask, weights=weights, out_device=out_device
     ).fit(
-        rank, initial_cores, fixed_cores, gauge, renormalize,
+        rank, initial_cores, fixed_cores, orthogonalize, renormalize,
         convergence=ConvergencePolicy(
             max_sweeps=max_sweeps, atol=atol, rtol=rtol),
         generator=generator, collect_metrics=collect_metrics, verbose=verbose)

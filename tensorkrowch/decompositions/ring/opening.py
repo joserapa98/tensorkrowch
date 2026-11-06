@@ -422,7 +422,7 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
         Options forwarded to :meth:`TRALS.fit`. Target, rank, fixed cores,
         output device and orientation remain controlled by :meth:`open`.
         ALS sweeps visit sites in increasing order on every pass. Defaults
-        use ``gauge="none"``, ``max_sweeps=100``, ``rtol=1e-10`` and
+        use ``orthogonalize=False``, ``max_sweeps=100``, ``rtol=1e-10`` and
         ``keep_best=True``.
 
     Examples
@@ -452,7 +452,7 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
             raise ValueError(
                 f'`fit_options` should not override {sorted(overlap)}')
         self.fit_options = dict(fit_options)
-        self.fit_options.setdefault('gauge', 'none')
+        self.fit_options.setdefault('orthogonalize', False)
         self.fit_options.setdefault(
             'convergence', ConvergencePolicy(
                 max_sweeps=100, rtol=1e-10, keep_best=True))

@@ -250,8 +250,8 @@ optimization [ttals]_; it does not implement two-core MALS rank adaptation.
 Without ``initial_cores``, initialization is random. To refine another fit,
 pass its result or cores as ``initial_cores``; an SVD initialization is an
 explicit composition with ``TTSVD``. ``fixed_cores`` freezes selected cores.
-The default ``gauge="qr"`` moves the orthogonality center between updates;
-``gauge="none"`` replaces cores without that QR preparation.
+The default ``orthogonalize=True`` prepares and moves the orthogonality center
+using QR. ``orthogonalize=False`` replaces cores directly.
 
 A rank sequence has one entry per open-chain bond, so a four-site TT uses
 three entries. Each directional pass counts as one sweep.

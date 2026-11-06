@@ -393,7 +393,7 @@ class TestPinvGaugeRecursionIntegration:
         tt = tk.decompositions.TTSVD(
             dense, out_device=None).fit()
         opener = tk.decompositions.ALSLoopOpener({
-            'gauge': 'none',
+            'orthogonalize': False,
             'convergence': tk.decompositions.ConvergencePolicy(max_sweeps=3),
         })
 

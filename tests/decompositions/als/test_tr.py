@@ -38,7 +38,7 @@ class TestTRALSExact:  # MARK: TestTRALSExact
                 expected, tensor, site, topology='tr')
 
         result = tk.decompositions.TRALS(tensor, out_device=None).fit(
-            initial_cores=initial, gauge='none', renormalize=False,
+            initial_cores=initial, orthogonalize=False, renormalize=False,
             solver=tk.decompositions.LeastSquaresSolver(
                 column_scaling=False, system_scaling=False),
             convergence=tk.decompositions.ConvergencePolicy(max_sweeps=2))
@@ -62,7 +62,7 @@ class TestTRALSExact:  # MARK: TestTRALSExact
         result = tk.decompositions.TRALS(
             tensor, out_device=None).fit(
                 initial_cores=initial,
-                gauge='none',
+                orthogonalize=False,
                 solver=tk.decompositions.LeastSquaresSolver(
                     column_scaling=False,
                     system_scaling=False),
@@ -80,13 +80,13 @@ class TestTRALSExact:  # MARK: TestTRALSExact
         assert result.rank == [2, 3, 2]
         assert target_cores[0].dtype == result.dtype
 
-    @pytest.mark.parametrize('gauge', ['none', 'qr'])
-    def test_exact_objective_is_monotone(self, gauge):
+    @pytest.mark.parametrize('orthogonalize', [False, True])
+    def test_exact_objective_is_monotone(self, orthogonalize):
         _, tensor = _exact_tr()
         result = tk.decompositions.TRALS(
             tensor, out_device=None).fit(
                 rank=(2, 2, 2),
-                gauge=gauge,
+                orthogonalize=orthogonalize,
                 generator=torch.Generator().manual_seed(102),
                 convergence=tk.decompositions.ConvergencePolicy(
                     max_sweeps=4),
@@ -103,7 +103,7 @@ class TestTRALSExact:  # MARK: TestTRALSExact
             tensor, out_device=None).fit(
                 rank=3,
                 initial_cores=tk.decompositions.TRSVD(tensor).fit(rank=3),
-                gauge='none',
+                orthogonalize=False,
                 convergence=tk.decompositions.ConvergencePolicy(
                     max_sweeps=1))
 
@@ -119,7 +119,7 @@ class TestTRALSExact:  # MARK: TestTRALSExact
             tensor, out_device=None).fit(
                 initial_cores=initial,
                 fixed_cores=(fixed, None, None),
-                gauge='qr',
+                orthogonalize=True,
                 convergence=tk.decompositions.ConvergencePolicy(
                     max_sweeps=2))
 
@@ -257,7 +257,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
             out_device=None,
         ).fit(
             rank=2,
-            gauge='none',
+            orthogonalize=False,
             sampler=tk.decompositions.SamplingPolicy(
                 10, method='product_leverage', uniform_mix=0.2
             ),
@@ -310,7 +310,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
             out_device=None,
         ).fit(
             rank=2,
-            gauge='none',
+            orthogonalize=False,
             sampler=tk.decompositions.SamplingPolicy(
                 6, method='leverage'
             ),
@@ -339,7 +339,7 @@ class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
         result = tk.decompositions.TRALS(
             tensor, out_device=None).fit(
                 rank=(2, 3, 4),
-                gauge='none',
+                orthogonalize=False,
                 convergence=tk.decompositions.ConvergencePolicy(
                     max_sweeps=1))
 
@@ -373,9 +373,9 @@ class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
         assert result.metadata['sampler'] is None
 
 
-@pytest.mark.parametrize('gauge', ['none', 'qr'])
+@pytest.mark.parametrize('orthogonalize', [False, True])
 @pytest.mark.parametrize('quantized', [False, True])
-def test_als_formats_devices_and_quantization(gauge,
+def test_als_formats_devices_and_quantization(orthogonalize,
                                               quantized,
                                               device_dtype,
                                               assert_close):
@@ -397,11 +397,11 @@ def test_als_formats_devices_and_quantization(gauge,
         data = source.contract_dense_grid_axes()
     else:
         problem = engine(data, out_device=None)
-    options = dict(rank=1, gauge=gauge,
+    options = dict(rank=1, orthogonalize=orthogonalize,
                    convergence=tk.decompositions.ConvergencePolicy(
                        max_sweeps=2),
                    collect_metrics=True)
-    if (device == 'mps') and dtype.is_complex and (gauge == 'qr'):
+    if (device == 'mps') and dtype.is_complex and orthogonalize:
         with pytest.raises(RuntimeError, match='geqrf.*float32'):
             problem.fit(**options)
         return
@@ -547,9 +547,9 @@ def test_tr_als_integrates_matrix_source_families(matrix_source_case):
 
 
 @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-@pytest.mark.parametrize('gauge', ['none', 'qr'])
+@pytest.mark.parametrize('orthogonalize', [False, True])
 def test_perturbed_nontrivial_ring_initialization_recovers_dense_target(
-    dtype, gauge
+    dtype, orthogonalize
 ):
     generator = torch.Generator().manual_seed(148)
     cores = make_tr_cores((3, 3, 3, 3), (2, 2, 2, 2), dtype, generator)
@@ -558,7 +558,7 @@ def test_perturbed_nontrivial_ring_initialization_recovers_dense_target(
                                          generator=generator)
                for core in cores]
     result = tk.decompositions.TRALS(tensor, out_device=None).fit(
-        initial_cores=initial, gauge=gauge,
+        initial_cores=initial, orthogonalize=orthogonalize,
         convergence=tk.decompositions.ConvergencePolicy(
             max_sweeps=60, rtol=1e-9),
         collect_metrics=True)
@@ -616,8 +616,8 @@ def test_ring_rank_validation(rank, error):
 @pytest.mark.parametrize(
     'kwargs, error',
     [
-        ({'gauge': 'svd'}, ValueError),
-        ({'gauge': True}, TypeError),
+        ({'orthogonalize': 'qr'}, TypeError),
+        ({'orthogonalize': 1}, TypeError),
         ({'renormalize': 1}, TypeError),
         ({'collect_metrics': 1}, TypeError),
         ({'generator': 1}, TypeError),

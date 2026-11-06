@@ -16,9 +16,9 @@ class TestTTALS:  # MARK: TestTTALS
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('n_sites', [1, 2, 5])
-    @pytest.mark.parametrize('gauge', ['none', 'qr'])
+    @pytest.mark.parametrize('orthogonalize', [False, True])
     def test_low_error_recovery_from_perturbed_cores(
-        self, dtype, n_sites, gauge
+        self, dtype, n_sites, orthogonalize
     ):
         dimensions = (3,) * n_sites
         cores = make_tt_cores(dimensions, (2,) * (n_sites - 1), dtype,
@@ -27,7 +27,7 @@ class TestTTALS:  # MARK: TestTTALS
         initial = [core + 1e-3 * torch.randn_like(core) for core in cores]
         original = [core.clone() for core in initial]
         result = d.TTALS(tensor, out_device=None).fit(
-            initial_cores=initial, gauge=gauge,
+            initial_cores=initial, orthogonalize=orthogonalize,
             convergence=d.ConvergencePolicy(max_sweeps=40, rtol=1e-9),
             collect_metrics=True)
         relative = (result.contract_dense() - tensor).norm() / tensor.norm()
@@ -68,7 +68,7 @@ class TestTTALS:  # MARK: TestTTALS
             for site in order:
                 expected[site] = solve_local_core(expected, tensor, site, 'tt')
         result = d.TTALS(tensor).fit(
-            initial_cores=initial, gauge='none', renormalize=False,
+            initial_cores=initial, orthogonalize=False, renormalize=False,
             solver=d.LeastSquaresSolver(column_scaling=False,
                                         system_scaling=False),
             convergence=d.ConvergencePolicy(max_sweeps=2))
@@ -101,7 +101,8 @@ class TestTTALS:  # MARK: TestTTALS
         initial = make_tt_cores(tensor.shape, (2, 2))
         engine = d.TTALS(tensor)
         solver = d.LeastSquaresSolver(l2_reg=1e-3)
-        options = dict(initial_cores=initial, solver=solver, gauge='none',
+        options = dict(initial_cores=initial, solver=solver,
+                       orthogonalize=False,
                        convergence=d.ConvergencePolicy(max_sweeps=2))
         direct = engine.fit(renormalize=False, **options)
         actual = engine.fit(renormalize=renormalize, **options)
@@ -365,7 +366,8 @@ class TestTTALSValidation:  # MARK: TestTTALSValidation
             d.TTALS(torch.ones(2, 3, 2)).fit(rank=rank)
 
     @pytest.mark.parametrize('options', [
-        {}, {'rank': 2, 'gauge': 'svd'}, {'rank': 2, 'gauge': None},
+        {}, {'rank': 2, 'orthogonalize': 'svd'},
+        {'rank': 2, 'orthogonalize': None},
         {'rank': 2, 'renormalize': 1}, {'rank': 2, 'sampler': 'uniform'},
         {'rank': 2, 'solver': object()}, {'rank': 2, 'convergence': 10},
         {'rank': 2, 'generator': 1}, {'rank': 2, 'collect_metrics': 1},
@@ -404,10 +406,10 @@ class TestTTALSValidation:  # MARK: TestTTALSValidation
             d.TTALS(torch.ones(2, 3), mask=torch.ones(2, 3))
         with pytest.raises(ValueError, match='dimensions'):
             d.TTALS(torch.ones(2, 3), mask=torch.ones(2, 2, dtype=torch.bool))
-        with pytest.raises(ValueError, match='gauge'):
+        with pytest.raises(ValueError, match='orthogonalize'):
             d.TTALS(torch.ones(2, 3)).fit(
                 rank=1,
-                gauge='none',
+                orthogonalize=False,
                 sampler=d.SamplingPolicy(5, method='leverage'),
             )
         cores = make_tt_cores((2, 3), (1,), dtype=torch.float32)
@@ -456,13 +458,13 @@ def test_initial_ranks_must_allow_directional_qr(method):
 
 
 @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-@pytest.mark.parametrize('gauge', ['none', 'qr'])
+@pytest.mark.parametrize('orthogonalize', [False, True])
 @pytest.mark.parametrize('n_sites,fixed_sites', [
     (1, ()), (1, (0,)), (5, ()), (5, (3,)), (5, (2, 4)),
     (5, (1,)), (5, (0,)), (5, (0, 3)), (5, (0, 1, 2, 3, 4)),
 ])
 def test_first_sweep_qr_prepares_only_initial_free_segment(
-        monkeypatch, dtype, gauge, n_sites, fixed_sites):
+        monkeypatch, dtype, orthogonalize, n_sites, fixed_sites):
     from tensorkrowch.decompositions.als.driver import ALSSweepDriver
 
     cores = make_tt_cores((3,) * n_sites, (2,) * (n_sites - 1), dtype)
@@ -478,12 +480,12 @@ def test_first_sweep_qr_prepares_only_initial_free_segment(
 
     monkeypatch.setattr(ALSSweepDriver, 'fit', capture)
     d.TTALS(target).fit(
-        initial_cores=cores, gauge=gauge,
+        initial_cores=cores, orthogonalize=orthogonalize,
         fixed_cores=[core if site in fixed_sites else None
                      for site, core in enumerate(cores)],
         convergence=d.ConvergencePolicy(max_sweeps=1))
 
-    stop = min(fixed_sites, default=n_sites) if gauge == 'qr' else 0
+    stop = min(fixed_sites, default=n_sites) if orthogonalize else 0
     for site in range(n_sites):
         if 1 <= site < stop:
             matrix = captured[site].reshape(captured[site].shape[0], -1)
@@ -623,7 +625,8 @@ def test_complete_sweep_errors_match_an_independent_weighted_oracle(
         measured.append((float(relative), actual.clone()))
 
     result = engine(tensor, mask=mask, weights=weights, out_device=None).fit(
-        rank=1, gauge='qr', sampler=d.SamplingPolicy(16, method=method),
+        rank=1, orthogonalize=True,
+        sampler=d.SamplingPolicy(16, method=method),
         convergence=d.ConvergencePolicy(
             max_sweeps=3, error_samples=budget, callback=callback,
             keep_best=True),
@@ -830,7 +833,7 @@ def test_uniform_fiber_solves_preserve_objective_weights_and_dense_masks(
              for size in tensor.shape]
     result = engine(source, mask=mask, weights=weights, out_device=None).fit(
         initial_cores=cores, fixed_cores=[cores[0], None, cores[2]],
-        gauge='none', sampler=d.SamplingPolicy(
+        orthogonalize=False, sampler=d.SamplingPolicy(
             20, n_reuse_sweeps=n_reuse_sweeps),
         convergence=d.ConvergencePolicy(max_sweeps=1),
         generator=torch.Generator().manual_seed(189))
@@ -840,3 +843,26 @@ def test_uniform_fiber_solves_preserve_objective_weights_and_dense_masks(
     expected = (tensor[selected] * factors.square()).sum(0) / \
         factors.square().sum(0)
     torch.testing.assert_close(result.cores[1].reshape(-1), expected)
+
+
+@pytest.mark.parametrize('algorithm', [d.TTALS, d.TRALS, d.tt_als, d.tr_als])
+@pytest.mark.parametrize('orthogonalize', [None, 0, 1, 'qr', 'none'])
+def test_orthogonalize_requires_a_boolean(algorithm, orthogonalize):
+    source = d.DenseTensorSource(torch.ones(2, 3, 2))
+    with pytest.raises(TypeError, match='orthogonalize'):
+        if algorithm in (d.TTALS, d.TRALS):
+            algorithm(source).fit(rank=1, orthogonalize=orthogonalize)
+        else:
+            algorithm(source, rank=1, orthogonalize=orthogonalize)
+
+
+@pytest.mark.parametrize('algorithm', [d.TTALS, d.TRALS, d.tt_als, d.tr_als])
+@pytest.mark.parametrize('orthogonalize', [False, True])
+def test_orthogonalize_is_recorded_as_a_boolean(algorithm, orthogonalize):
+    source = d.DenseTensorSource(torch.ones(2, 3, 2))
+    if algorithm in (d.TTALS, d.TRALS):
+        result = algorithm(source).fit(rank=1, orthogonalize=orthogonalize)
+    else:
+        result = algorithm(source, rank=1, orthogonalize=orthogonalize)
+    assert result.metadata['orthogonalize'] is orthogonalize
+    torch.testing.assert_close(result.contract_dense(), source.tensor)

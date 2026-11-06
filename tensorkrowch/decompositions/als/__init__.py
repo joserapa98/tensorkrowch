@@ -43,11 +43,11 @@ unstored sparse source entries remain known zeros.
 Advanced fitting controls:
 
     TTALS(source).fit(...)
-        ├─ gauge="qr" / "none"     QR movement or direct core replacement
-        ├─ renormalize             Scale environments without changing the loss
-        ├─ sampler                 SamplingPolicy, or full objective by default
-        ├─ solver                  LeastSquaresSolver
-        └─ convergence             ConvergencePolicy
+        ├─ orthogonalize    QR movement or direct core replacement
+        ├─ renormalize      Scale environments without changing the loss
+        ├─ sampler          SamplingPolicy, or full objective by default
+        ├─ solver           LeastSquaresSolver
+        └─ convergence      ConvergencePolicy
 
 :class:`SamplingPolicy` groups sample count, method, reuse and optional uniform
 mixing. Every sampled method retains complete active input fibers.

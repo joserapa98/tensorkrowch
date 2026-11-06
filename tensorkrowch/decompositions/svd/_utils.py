@@ -9,7 +9,7 @@ This script contains:
 """
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch
 
@@ -18,8 +18,9 @@ from tensorkrowch.utils import safe_divide
 from tensorkrowch.decompositions.metrics import TruncationRecord
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    DecompositionObserver)
-from tensorkrowch.decompositions.sources.dense import DenseTensorSource
-from tensorkrowch.decompositions.sources.factory import SourceLike
+from tensorkrowch.decompositions.sources.base import BaseSource
+from tensorkrowch.decompositions.sources.factory import (SourceLike,
+                                                        as_tensor_source)
 
 
 @dataclass(frozen=True)
@@ -59,18 +60,15 @@ class _SVDProgress:  # MARK: _SVDProgress
             values=values))
 
 
-def _prepare_svd_source(source: SourceLike):
-    """Obtains canonical dense site axes from a source's materialization."""
-    if isinstance(source, torch.Tensor):
-        source = DenseTensorSource(source)
-
-    if not callable(getattr(source, 'contract_dense', None)):
-        raise TypeError('`source` should provide `contract_dense`')
-    if not getattr(source, 'is_discrete_tensor', True):
+def _prepare_svd_source(source: SourceLike) -> Tuple[
+        BaseSource, torch.Tensor, int]:
+    """Adapts the source and materializes its canonical dense site axes."""
+    source = as_tensor_source(source)
+    if not source.is_discrete_tensor:
         raise ValueError('`source` should represent a discrete tensor')
 
     tensor = source.contract_dense()
-    batches = getattr(source, 'n_batches', 0)
+    batches = source.n_batches
 
     if not isinstance(tensor, torch.Tensor):
         raise TypeError('`contract_dense` should return a torch.Tensor')
@@ -84,7 +82,7 @@ def _prepare_svd_source(source: SourceLike):
         raise TypeError(
             'Decomposition target values should be floating or complex')
 
-    if getattr(source, 'is_matrix', False):
+    if source.is_matrix:
         dims = tuple(a * b for a, b in zip(source.in_dim, source.out_dim))
         tensor = tensor.reshape(*tensor.shape[:batches], *dims)
 

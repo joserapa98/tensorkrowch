@@ -234,6 +234,8 @@ class TRRSS(TTRSS):  # MARK: TRRSS
             Maximum discarded sum of squared singular values divided by their
             total sum of squares. Must lie in ``[0, 1]``. Also controls SVD
             splitting within end blocks, together with prescribed rank caps.
+            Local ALS convergence is configured independently through the
+            loop opener's convergence policy.
         cum_percentage : float, optional
             Minimum retained squared singular-value fraction. Equivalent to
             ``rtol=1-cum_percentage``.

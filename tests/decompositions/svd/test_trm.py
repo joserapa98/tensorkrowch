@@ -69,13 +69,13 @@ def _near_exact_tensor():
 
 class TestTRMSVD:  # MARK: TestTRMSVD
 
-    def test_public_signature_uses_shared_rank_and_internal_observer(self):
+    def test_public_signature_uses_rank_first_and_internal_observer(self):
         fit_parameters = list(inspect.signature(
             tk.decompositions.TRMSVD.fit).parameters)
         function_parameters = inspect.signature(
             tk.decompositions.trm_svd).parameters
 
-        assert fit_parameters.index('center') < fit_parameters.index('rank')
+        assert fit_parameters.index('rank') < fit_parameters.index('center')
         assert 'observer' not in fit_parameters
         assert {'source', 'center', 'out_device'} <= set(
             inspect.signature(tk.decompositions.TRMSVD).parameters)

@@ -12,7 +12,7 @@ This script contains:
 from contextlib import nullcontext
 from dataclasses import replace
 from math import prod
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 import torch
 
@@ -31,6 +31,7 @@ from tensorkrowch.decompositions.results import (TensorDecomposition,
                                                  QTRDecomposition,
                                                  _result_from_source)
 
+from tensorkrowch.decompositions.sources.base import BaseSource
 from tensorkrowch.decompositions.sources.factory import SourceLike
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 
@@ -39,7 +40,7 @@ from tensorkrowch.decompositions.svd._utils import (_SVDProgress,
                                                     _prepare_svd_source)
 
 
-_Rank = Optional[int]
+_Rank = Optional[Union[int, Sequence[int]]]
 
 
 class TRSVD:  # MARK: TRSVD
@@ -72,9 +73,12 @@ class TRSVD:  # MARK: TRSVD
     :class:`~tensorkrowch.decompositions.CallableTensorSource` and
     :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
     SVD materializes their complete tensor once.
-    A ``torch.Tensor`` is accepted directly, as is a non-Quantics TT/TR format
-    or its matrix version. Wrap an :class:`~tensorkrowch.models.MPS`
-    in ``FormatSource`` first.
+    A ``torch.Tensor``, non-Quantics tensor format,
+    :class:`~tensorkrowch.models.MPS`
+    or :class:`~tensorkrowch.models.MPO` is adapted automatically through
+    :func:`~tensorkrowch.decompositions.as_tensor_source`. Existing sources
+    are retained unchanged. Quantics formats require an explicit
+    ``CallableQuanticsSource``.
 
     To declare matrix inputs, use
     :meth:`~tensorkrowch.decompositions.DenseTensorSource.matrix` or the
@@ -85,11 +89,13 @@ class TRSVD:  # MARK: TRSVD
 
     Parameters
     ----------
-    source : BaseSource, TensorFormat1D or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor
         Finite tensor input, with shape and evaluation defined by the source.
     center : int, optional
-        Interior cut between sites ``center - 1`` and ``center``. It should
-        satisfy ``1 <= center < tensor.ndim``. The default is the middle cut.
+        First site of the right subchain: the initial SVD acts on the cut
+        immediately to its left. It must satisfy ``1 <= center < n_sites``.
+        Defaults to the middle cut. Matrix sites are input/output pairs;
+        Quantics sites are digits.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
         If ``None``, cores remain on the tensor's device.
@@ -123,8 +129,8 @@ class TRSVD:  # MARK: TRSVD
             self._source, 'is_matrix', False) else 'TR-SVD'
 
     @property
-    def source(self) -> SourceLike:
-        """Original source describing the fixed decomposition input."""
+    def source(self) -> BaseSource:
+        """Normalized source describing the fixed decomposition input."""
         return self._source
 
     @staticmethod
@@ -143,16 +149,17 @@ class TRSVD:  # MARK: TRSVD
 
     @staticmethod
     def _split_cycle_rank(selected_rank: int,
-                          rank_cap: Optional[int]) -> Tuple[int, int]:
+                          cycle_cap: Optional[int],
+                          center_cap: Optional[int]) -> Tuple[int, int]:
         """Finds the smallest admissible cyclic/interior rank capacity."""
-        if rank_cap is None:
-            rank_cap = selected_rank
+        if cycle_cap is None:
+            cycle_cap = center_cap = selected_rank
 
         candidates = []
-        for cycle_rank in range(1, rank_cap + 1):
+        for cycle_rank in range(1, min(cycle_cap, selected_rank) + 1):
             center_rank = (
                 selected_rank + cycle_rank - 1) // cycle_rank
-            if center_rank <= rank_cap:
+            if center_rank <= center_cap:
                 capacity = cycle_rank * center_rank
                 candidates.append((
                     capacity,
@@ -237,8 +244,9 @@ class TRSVD:  # MARK: TRSVD
                        progress: Optional[_SVDProgress] = None
                        ) -> TRDecomposition:
         """Runs the cyclic SVD kernel from already validated fit options."""
-        rank_cap = truncation.rank
-        initial_cap = None if rank_cap is None else rank_cap * rank_cap
+        cycle_cap = truncation.rank_at(-1)
+        center_cap = truncation.rank_at(center - 1)
+        initial_cap = None if cycle_cap is None else cycle_cap * center_cap
         initial_truncation = (
             truncation if initial_cap == truncation.rank else
             replace(truncation, rank=initial_cap))
@@ -261,7 +269,7 @@ class TRSVD:  # MARK: TRSVD
 
             cycle_rank, center_rank = self._split_cycle_rank(
                 selected_rank=selected_rank,
-                rank_cap=rank_cap)
+                cycle_cap=cycle_cap, center_cap=center_cap)
             initial_capacity = cycle_rank * center_rank
             initial_padding = initial_capacity - selected_rank
 
@@ -319,14 +327,14 @@ class TRSVD:  # MARK: TRSVD
             left_cores, left_metrics = self._decompose_subchain(
                 subchain=left_subchain,
                 in_dim=in_dim[:center],
-                truncation=truncation,
+                truncation=truncation.for_links(0, center - 1),
                 renormalize=renormalize,
                 collect_metrics=collect_metrics,
                 progress=left_progress)
             right_cores, right_metrics = self._decompose_subchain(
                 subchain=right_subchain,
                 in_dim=in_dim[center:],
-                truncation=truncation,
+                truncation=truncation.for_links(center, -1),
                 renormalize=renormalize,
                 collect_metrics=collect_metrics,
                 progress=right_progress)
@@ -379,14 +387,13 @@ class TRSVD:  # MARK: TRSVD
             metadata={
                 'algorithm': 'tr_svd',
                 'center': center,
-                'rank_mode': 'discovery' if rank_cap is None else 'shared',
                 'renormalize': renormalize,
                 'initial_padding': initial_padding,
             })
 
     def fit(self,
-            center: Optional[int] = None,
             rank: _Rank = None,
+            center: Optional[int] = None,
             cutoff: Optional[float] = None,
             atol: Optional[float] = None,
             rtol: Optional[float] = None,
@@ -404,15 +411,14 @@ class TRSVD:  # MARK: TRSVD
         not combined into a global reconstruction bound because the successive
         TR-SVD truncations are not all orthogonal in one common scale.
 
-        If ``rank`` is an integer, it is a shared upper bound for every TR
-        ``rank`` and its square bounds the initial bipartition. Local
-        truncation criteria may therefore select a different effective
-        ``rank`` at each site. With ``None``, ranks are discovered from the
-        selected SVD dimensions. The selected ``rank`` is split with the
-        smallest admissible product and the most balanced pair breaks ties.
-        Any extra capacity
-        required by the cap is padded only with structural zeros and recorded
-        in ``result.metadata``.
+        ``rank`` bounds the TR links, either uniformly or bond by bond. The
+        initial SVD is capped by the product of the cyclic and central bounds.
+        Its selected rank is split into the smallest admissible product; the
+        most balanced pair breaks ties. Other SVDs use their own link bounds.
+        Tolerances may reduce any retained rank. With no rank or tolerance,
+        reduced SVD dimensions are retained, including numerical zeros.
+        Extra capacity needed by the factorization is padded with structural
+        zeros and recorded in ``result.metadata``.
 
         Here, ``initial_rank`` is the ``rank`` actually selected by the initial
         SVD, whereas ``initial_capacity`` is the product of the two TR ranks
@@ -428,14 +434,21 @@ class TRSVD:  # MARK: TRSVD
 
         Parameters
         ----------
+        rank : int or sequence[int], optional
+            Shared maximum rank or one maximum per right link, with ``n_sites``
+            entries in site order. The last entry bounds the cyclic link. The
+            initial SVD retains at most ``rank[-1] * rank[center - 1]``
+            singular values for a sequence, or ``rank ** 2`` for an integer.
+            Its rank is split into cyclic and central ranks within those
+            bounds. Each remaining SVD uses the bound for its link; tolerances
+            may select smaller ranks. ``None`` imposes no rank cap. Without any
+            truncation criterion, reduced SVD dimensions are retained. Matrix
+            sites are input/output pairs; Quantics sites are digits.
         center : int, optional
-            Interior cut used for this fit. If omitted, the ``center`` fixed at
-            construction is used.
-        rank : int, optional
-            Maximum ``rank`` allowed at every link. At each subchain SVD cut,
-            at most this many singular values are retained. The initial
-            bipartition retains at most ``rank ** 2`` singular values before
-            its selected ``rank`` is factorized into two TR ranks.
+            First site of the right subchain: the initial SVD acts on the cut
+            immediately to its left. It must satisfy ``1 <= center < n_sites``.
+            Omission uses the center fixed at construction. Matrix sites are
+            input/output pairs; Quantics sites are digits.
         cutoff : float, optional
             Minimum singular value to keep. It must be finite and
             non-negative. Singular values ``<= cutoff`` are removed.
@@ -456,8 +469,9 @@ class TRSVD:  # MARK: TRSVD
 
             .. math::
 
-        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
-                cum\_percentage
+                \frac{\sum_{i \in \{kept\}}{s_i^2}}
+                     {\sum_{i \in \{all\}}{s_i^2}}
+                \ge cum\_percentage
 
         renormalize : bool
             If ``True``, normalizes the residual before every SVD and
@@ -508,6 +522,10 @@ class TRSVD:  # MARK: TRSVD
             atol=atol,
             rtol=rtol,
             cum_percentage=cum_percentage)
+        truncation.validate_rank(self._tensor.ndim)
+        rank_mode = ('discovery' if truncation.rank is None else
+                     'per_link' if isinstance(truncation.rank, tuple)
+                     else 'shared')
         if center is None:
             center = self._center
         else:
@@ -529,8 +547,7 @@ class TRSVD:  # MARK: TRSVD
                         self._source, 'is_matrix', False) else in_dim,
                     'out_dim': getattr(self._source, 'out_dim', None),
                     'center': center,
-                    'rank_mode': (
-                        'discovery' if truncation.rank is None else 'shared'),
+                    'rank_mode': rank_mode,
                     'renormalize': renormalize,
                 }))
         progress = (
@@ -543,6 +560,7 @@ class TRSVD:  # MARK: TRSVD
             renormalize=renormalize,
             collect_metrics=collect_metrics,
             progress=progress)
+        result.metadata['rank_mode'] = rank_mode
 
         if fit_observer is not None:
             initial_padding = result.metadata['initial_padding']
@@ -585,8 +603,8 @@ class TRSVD:  # MARK: TRSVD
 
 
 def tr_svd(source: 'SourceLike',
-           center: Optional[int] = None,
            rank: _Rank = None,
+           center: Optional[int] = None,
            cutoff: Optional[float] = None,
            atol: Optional[float] = None,
            rtol: Optional[float] = None,
@@ -606,9 +624,12 @@ def tr_svd(source: 'SourceLike',
     :class:`~tensorkrowch.decompositions.CallableTensorSource` and
     :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
     SVD materializes their complete tensor once.
-    A ``torch.Tensor`` is accepted directly, as is a non-Quantics TT/TR format
-    or its matrix version. Wrap an :class:`~tensorkrowch.models.MPS`
-    in ``FormatSource`` first.
+    A ``torch.Tensor``, non-Quantics tensor format,
+    :class:`~tensorkrowch.models.MPS`
+    or :class:`~tensorkrowch.models.MPO` is adapted automatically through
+    :func:`~tensorkrowch.decompositions.as_tensor_source`. Existing sources
+    are retained unchanged. Quantics formats require an explicit
+    ``CallableQuanticsSource``.
 
     To declare matrix inputs, use
     :meth:`~tensorkrowch.decompositions.DenseTensorSource.matrix` or the
@@ -619,16 +640,23 @@ def tr_svd(source: 'SourceLike',
 
     Parameters
     ----------
-    source : BaseSource, TensorFormat1D or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor
         Finite tensor input, with shape and evaluation defined by the source.
+    rank : int or sequence[int], optional
+        Shared maximum rank or one maximum per right link, with ``n_sites``
+        entries in site order. The last entry bounds the cyclic link. The
+        initial SVD retains at most ``rank[-1] * rank[center - 1]`` singular
+        values for a sequence, or ``rank ** 2`` for an integer. Its rank is
+        split into cyclic and central ranks within those bounds. Each remaining
+        SVD uses the bound for its link; tolerances may select smaller ranks.
+        ``None`` imposes no rank cap. Without any truncation criterion, reduced
+        SVD dimensions are retained. Matrix sites are input/output pairs;
+        Quantics sites are digits.
     center : int, optional
-        Interior cut satisfying ``1 <= center < tensor.ndim``. The default is
-        the middle cut.
-    rank : int, optional
-        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at
-        most this many singular values are retained. The initial bipartition
-        retains at most ``rank ** 2`` singular values before its selected
-        ``rank`` is factorized into two TR ranks.
+        First site of the right subchain: the initial SVD acts on the cut
+        immediately to its left. It must satisfy ``1 <= center < n_sites``.
+        Defaults to the middle cut. Matrix sites are input/output pairs;
+        Quantics sites are digits.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
         Singular values ``<= cutoff`` are removed.
@@ -649,8 +677,9 @@ def tr_svd(source: 'SourceLike',
 
         .. math::
 
-        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
-            cum\_percentage
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}
+                 {\sum_{i \in \{all\}}{s_i^2}}
+            \ge cum\_percentage
 
     renormalize : bool
         If ``True``, normalizes residuals before SVDs and accumulates their
@@ -704,9 +733,9 @@ def tr_svd(source: 'SourceLike',
 
 
 def qtr_svd(source: CallableQuanticsSource,
-            center: Optional[int] = None,
             *,
-            rank: Optional[int] = None,
+            rank: _Rank = None,
+            center: Optional[int] = None,
             cutoff: Optional[float] = None,
             atol: Optional[float] = None,
             rtol: Optional[float] = None,
@@ -732,14 +761,21 @@ def qtr_svd(source: CallableQuanticsSource,
     ----------
     source : CallableQuanticsSource
         Callable with its digit layout and coordinate map.
+    rank : int or sequence[int], optional
+        Shared maximum rank or one maximum per right link, with ``n_sites``
+        entries in site order. The last entry bounds the cyclic link. The
+        initial SVD retains at most ``rank[-1] * rank[center - 1]`` singular
+        values for a sequence, or ``rank ** 2`` for an integer. Its rank is
+        split into cyclic and central ranks within those bounds. Each remaining
+        SVD uses the bound for its link; tolerances may select smaller ranks.
+        ``None`` imposes no rank cap. Without any truncation criterion, reduced
+        SVD dimensions are retained. Matrix sites are input/output pairs;
+        Quantics sites are digits.
     center : int, optional
-        Interior cut from which the cyclic decomposition starts. If omitted,
-        uses the middle of the digit chain.
-    rank : int, optional
-        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at
-        most this many singular values are retained. The initial bipartition
-        retains at most ``rank ** 2`` singular values before its selected
-        ``rank`` is factorized into two TR ranks.
+        First site of the right subchain: the initial SVD acts on the cut
+        immediately to its left. It must satisfy ``1 <= center < n_sites``.
+        Defaults to the middle cut. Matrix sites are input/output pairs;
+        Quantics sites are digits.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
         Singular values ``<= cutoff`` are removed.

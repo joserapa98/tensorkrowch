@@ -390,7 +390,7 @@ class TestTTMSVD:  # MARK: TestTTMSVD
     @pytest.mark.parametrize(
         'kwargs, error_type, match',
         [
-            ({'rank': 0}, ValueError, '`rank` should be a positive integer'),
+            ({'rank': 0}, ValueError, '`rank` should be positive'),
             ({'rank': True}, TypeError, '`rank` should be int type'),
             ({'cutoff': True}, TypeError,
              '`cutoff` should be a real number'),

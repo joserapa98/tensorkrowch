@@ -23,12 +23,9 @@ also accept matrix sources and infer the corresponding result type.
 
 Input preparation at engine construction:
 
-    torch.Tensor
-        └─ DenseTensorSource
-            Matrix interfaces use DenseTensorSource.matrix(...).
-
-    Finite source
+    Tensor / non-Quantics format / MPS / MPO / finite source
         └─ _prepare_svd_source(source)
+            ├─ as_tensor_source(source) ──────────> normalized source
             ├─ source.contract_dense() ───────────> dense site axes
             ├─ matrix source: fuse local input/output pairs
             └─ retain source and prepared tensor in the engine
@@ -45,10 +42,10 @@ Finite sources include
 :class:`~tensorkrowch.decompositions.CallableTensorSource` and
 :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
 
-Tensors and non-Quantics vector formats are accepted directly; wrap an
-:class:`~tensorkrowch.models.MPS` in ``FormatSource``. Matrix interfaces
-require a matrix source: use the dense, sparse or callable source's
-``.matrix(...)`` constructor, or ``FormatSource`` with a matrix format.
+Tensors, non-Quantics formats, MPS and MPO inputs are adapted automatically
+through :func:`~tensorkrowch.decompositions.as_tensor_source`. Matrix
+interfaces require paired axes: use a matrix format, an MPO, or the dense,
+sparse or callable source's ``.matrix(...)`` constructor.
 They also accept tensors with grouped axes
 ``(in_0, in_1, ..., out_0, out_1, ...)`` directly. Interleaved input tensors
 require ``DenseTensorSource.matrix(tensor, ordering="interleaved")``; the
@@ -56,8 +53,15 @@ legacy :func:`mat_to_mpo` retains interleaved inputs by default.
 Continuous callables require Quantics discretization before SVD.
 
 Preparation materializes the source once; the public ``source`` property
-retains the original source, while repeated calls to ``fit`` use the prepared
-dense tensor.
+retains the normalized source, while repeated calls to ``fit`` use the
+prepared dense tensor. An existing source is retained unchanged.
+
+``rank`` accepts a shared integer cap or one cap per internal TT bond / right
+TR bond, with the last TR entry bounding the cyclic bond. Tolerances may
+select smaller ranks. Matrix sites are input/output pairs; Quantics sites
+are digits. ``None`` removes rank caps; without other truncation criteria,
+all reduced-SVD dimensions are retained. ``TRSVD.fit(rank, center=...)``
+starts at the cut immediately left of the site named by ``center``.
 
 Numerical workflows:
 

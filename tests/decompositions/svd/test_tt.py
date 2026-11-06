@@ -504,7 +504,7 @@ class TestTTSVD:  # MARK: TestTTSVD
     @pytest.mark.parametrize(
         'kwargs, error_type, match',
         [
-            ({'rank': 0}, ValueError, '`rank` should be a positive integer'),
+            ({'rank': 0}, ValueError, '`rank` should be positive'),
             ({'rank': True}, TypeError, '`rank` should be int type'),
             ({'cutoff': True}, TypeError,
              '`cutoff` should be a real number'),
@@ -768,12 +768,12 @@ def test_qtt_svd_rejects_dense_input():
         tk.decompositions.qtt_svd(torch.ones(2, 2, 2, 2))
 
 
-def test_dense_contraction_capability_does_not_require_a_builtin_source(capsys):
-    class Source:
+def test_custom_source_can_override_dense_contraction(capsys):
+    class Source(tk.decompositions.DenseTensorSource):
         def contract_dense(self):
             return torch.ones(2, 2)
 
-    source = Source()
+    source = Source(torch.empty(2, 2))
     engine = tk.decompositions.TTSVD(source)
     result = engine.fit(rank=1, verbose=1)
     assert engine.source is source

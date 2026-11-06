@@ -17,10 +17,11 @@ from tensorkrowch.decompositions.results import (TTMDecomposition,
                                                  QTTMDecomposition)
 
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
-from tensorkrowch.decompositions.sources.factory import SourceLike
+from tensorkrowch.decompositions.sources.factory import (SourceLike,
+                                                        as_tensor_source)
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 
-from tensorkrowch.decompositions.svd.tt import TTSVD
+from tensorkrowch.decompositions.svd.tt import TTSVD, _Rank
 
 if TYPE_CHECKING:
     from tensorkrowch.decompositions.results import _DecompositionOutput
@@ -42,9 +43,12 @@ class TTMSVD(TTSVD):  # MARK: TTMSVD
     :class:`~tensorkrowch.decompositions.CallableTensorSource` and
     :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
     SVD materializes their complete tensor once.
-    A ``torch.Tensor`` is accepted directly, as is a non-Quantics TT/TR format
-    or its matrix version. Wrap an :class:`~tensorkrowch.models.MPS`
-    in ``FormatSource`` first.
+    A ``torch.Tensor``, non-Quantics tensor format,
+    :class:`~tensorkrowch.models.MPS`
+    or :class:`~tensorkrowch.models.MPO` is adapted automatically through
+    :func:`~tensorkrowch.decompositions.as_tensor_source`. Existing sources
+    are retained unchanged. Quantics formats require an explicit
+    ``CallableQuanticsSource``.
 
     To declare matrix inputs, use
     :meth:`~tensorkrowch.decompositions.DenseTensorSource.matrix` or the
@@ -61,9 +65,10 @@ class TTMSVD(TTSVD):  # MARK: TTMSVD
 
     Parameters
     ----------
-    source : BaseSource or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor
         Finite matrix source declaring paired dimensions, or a tensor with
-        grouped input/output axes. Wrap matrix formats in ``FormatSource``.
+        grouped input/output axes. Matrix formats and MPOs are adapted
+        automatically.
     out_device : str or torch.device, optional
         Device for finalized cores. ``None`` retains the evaluation device.
 
@@ -79,19 +84,19 @@ class TTMSVD(TTSVD):  # MARK: TTMSVD
     def __init__(self,
                  source: 'SourceLike',
                  *,
-                 out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
+                 out_device: Optional[Union[str, torch.device]] = 'cpu'
+                 ) -> None:
         if isinstance(source, torch.Tensor):
             source = DenseTensorSource.matrix(source)
-        if not callable(getattr(source, 'contract_dense', None)):
-            raise TypeError('`source` should provide `contract_dense`')
-        if not getattr(source, 'is_matrix', False):
+        source = as_tensor_source(source)
+        if not source.is_matrix:
             raise ValueError('`source` should describe paired matrix axes')
         super().__init__(source, out_device=out_device)
 
 
 def ttm_svd(source: 'SourceLike',
             *,
-            rank: Optional[int] = None,
+            rank: _Rank = None,
             cutoff: Optional[float] = None,
             atol: Optional[float] = None,
             rtol: Optional[float] = None,
@@ -111,9 +116,12 @@ def ttm_svd(source: 'SourceLike',
     :class:`~tensorkrowch.decompositions.CallableTensorSource` and
     :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
     SVD materializes their complete tensor once.
-    A ``torch.Tensor`` is accepted directly, as is a non-Quantics TT/TR format
-    or its matrix version. Wrap an :class:`~tensorkrowch.models.MPS`
-    in ``FormatSource`` first.
+    A ``torch.Tensor``, non-Quantics tensor format,
+    :class:`~tensorkrowch.models.MPS`
+    or :class:`~tensorkrowch.models.MPO` is adapted automatically through
+    :func:`~tensorkrowch.decompositions.as_tensor_source`. Existing sources
+    are retained unchanged. Quantics formats require an explicit
+    ``CallableQuanticsSource``.
 
     To declare matrix inputs, use
     :meth:`~tensorkrowch.decompositions.DenseTensorSource.matrix` or the
@@ -130,12 +138,17 @@ def ttm_svd(source: 'SourceLike',
 
     Parameters
     ----------
-    source : BaseSource or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor
         Finite matrix source declaring paired dimensions, or a tensor with
-        grouped input/output axes. Wrap matrix formats in ``FormatSource``.
-    rank : int, optional
-        Maximum ``rank`` allowed at every link. At each SVD cut, at most this
-        many singular values are retained.
+        grouped input/output axes. Matrix formats and MPOs are adapted
+        automatically.
+    rank : int or sequence[int], optional
+        Shared maximum rank or one maximum per internal link, with ``n_sites -
+        1`` entries in site order. Each SVD retains at most its local bound;
+        other truncation criteria may select a smaller rank. ``None`` imposes
+        no rank cap. Without any truncation criterion, all singular values from
+        the reduced SVD are retained. Matrix sites are input/output pairs;
+        Quantics sites are digits.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
         Singular values ``<= cutoff`` are removed.
@@ -156,8 +169,9 @@ def ttm_svd(source: 'SourceLike',
 
         .. math::
 
-        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
-            cum\_percentage
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}
+                 {\sum_{i \in \{all\}}{s_i^2}}
+            \ge cum\_percentage
 
     renormalize : bool
         If ``True``, normalizes the residual before every SVD, accumulates its
@@ -185,7 +199,8 @@ def ttm_svd(source: 'SourceLike',
     -------
     TTMDecomposition
         Decomposition with cores and metadata. Access ``cores`` for the
-        tensors and :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info`
+        tensors and
+        :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info`
         for structured information.
 
     Examples
@@ -212,7 +227,7 @@ def ttm_svd(source: 'SourceLike',
 
 def qttm_svd(source: CallableQuanticsSource,
              *,
-             rank: Optional[int] = None,
+             rank: _Rank = None,
              cutoff: Optional[float] = None,
              atol: Optional[float] = None,
              rtol: Optional[float] = None,
@@ -237,9 +252,13 @@ def qttm_svd(source: CallableQuanticsSource,
     ----------
     source : CallableQuanticsSource
         Callable with its digit layout and coordinate maps.
-    rank : int, optional
-        Maximum ``rank`` allowed at every link. At each SVD cut, at most this
-        many singular values are retained.
+    rank : int or sequence[int], optional
+        Shared maximum rank or one maximum per internal link, with ``n_sites -
+        1`` entries in site order. Each SVD retains at most its local bound;
+        other truncation criteria may select a smaller rank. ``None`` imposes
+        no rank cap. Without any truncation criterion, all singular values from
+        the reduced SVD are retained. Matrix sites are input/output pairs;
+        Quantics sites are digits.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
         Singular values ``<= cutoff`` are removed.
@@ -315,7 +334,7 @@ def qttm_svd(source: CallableQuanticsSource,
 
 
 def mat_to_mpo(mat: torch.Tensor,
-               rank: Optional[int] = None,
+               rank: _Rank = None,
                cutoff: Optional[float] = None,
                atol: Optional[float] = None,
                rtol: Optional[float] = None,
@@ -340,9 +359,13 @@ def mat_to_mpo(mat: torch.Tensor,
     ----------
     mat : torch.Tensor
         Dense tensor with interleaved input/output dimensions.
-    rank : int, optional
-        Maximum ``rank`` allowed at every link. At each SVD cut, at most this
-        many singular values are retained.
+    rank : int or sequence[int], optional
+        Shared maximum rank or one maximum per internal link, with ``n_sites -
+        1`` entries in site order. Each SVD retains at most its local bound;
+        other truncation criteria may select a smaller rank. ``None`` imposes
+        no rank cap. Without any truncation criterion, all singular values from
+        the reduced SVD are retained. Matrix sites are input/output pairs;
+        Quantics sites are digits.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
         Singular values ``<= cutoff`` are removed.
@@ -363,8 +386,9 @@ def mat_to_mpo(mat: torch.Tensor,
 
         .. math::
 
-        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
-            cum\_percentage
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}
+                 {\sum_{i \in \{all\}}{s_i^2}}
+            \ge cum\_percentage
 
     renormalize : bool
         If ``True``, normalizes each residual and accumulates its scale

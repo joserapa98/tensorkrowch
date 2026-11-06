@@ -156,8 +156,12 @@ the discarded **squared** singular-value mass relative to the total squared
 mass; it is not a relative residual stopping criterion. Multiple criteria
 use the most restrictive retained rank.
 
-TT-SVD accepts a shared integer rank cap. It supports leading structural
-batches declared through ``DenseTensorSource(..., n_batches=...)``.
+TT-SVD accepts a shared integer rank cap or one cap per internal bond, with
+``n_sites - 1`` entries. For example, ``rank=[2, 3, 2]`` bounds the three
+internal bonds of a four-site TT. ``rank=None`` imposes no cap; without other
+truncation criteria, all reduced-SVD dimensions are retained, including
+numerical zeros. It supports leading structural batches declared through
+``DenseTensorSource(..., n_batches=...)``.
 
 TR-SVD
 ^^^^^^
@@ -176,15 +180,29 @@ the original one-direction construction.
    result = engine.fit(rank=2, collect_metrics=True)
    approximation = result.contract_dense()
 
-Here ``center`` specifies the cut between sites ``center - 1`` and ``center``.
+Here ``center`` identifies the first site of the right subchain: the initial
+SVD acts at the cut immediately to its left. It must satisfy
+``1 <= center < n_sites``. ``TRSVD(source).fit(rank, center=...)`` places
+``rank`` first, like TT-SVD. Omitting ``center`` uses the cut configured in
+the constructor, whose default is the middle cut.
+
 An integer ``rank`` caps every TR bond, including the cyclic bond; its square
-caps the initial matrix rank. The initial retained dimension is factored
-into two TR dimensions. Any structural zero padding needed for that
-factorization is recorded in ``metadata``.
+caps the initial matrix rank. A sequence supplies one cap per right bond,
+with the cyclic bond last. The initial matrix cap is then
+``rank[-1] * rank[center - 1]``. The retained dimension is factored into
+cyclic and central dimensions within those caps, and each subsequent cut
+uses its own bound. Any structural zero padding needed for the initial
+factorization is recorded in ``metadata``. These are caps, so returned ranks
+can be smaller.
 
 The singular-value criteria are the same as in TT-SVD. TR-SVD does not support
 structural batches, and its local truncation diagnostics are not a global
 reconstruction bound.
+
+For matrix sources, each input/output pair counts as one site and gets one
+rank bound per bond. For Quantics sources, ranks and centers refer to digit
+sites. Tensor formats, MPS and MPO inputs are adapted automatically through
+``as_tensor_source``; an explicit source is retained unchanged.
 
 Repeated fits and numerical options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1092,9 +1092,11 @@ def tt_als(source: 'SourceLike',
     max_sweeps : int
         Positive maximum number of directional sweeps. Default is ``10``.
     atol : float, optional
-        Stop when the absolute objective error is at most this value.
+        Stop when the objective residual norm is at most this value.
+        This is a norm tolerance, not a squared-error tolerance.
     rtol : float, optional
-        Stop when the relative objective error is at most this value.
+        Stop when the objective residual norm divided by the target norm
+        is at most this value. Both norms use the objective's weights.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``;
         ``None`` keeps them on the computation device.

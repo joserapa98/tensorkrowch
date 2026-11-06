@@ -14,9 +14,10 @@ import torch
 from tensorkrowch.decompositions.results import (TRMDecomposition,
                                                  QTRMDecomposition)
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
-from tensorkrowch.decompositions.sources.factory import SourceLike
+from tensorkrowch.decompositions.sources.factory import (SourceLike,
+                                                        as_tensor_source)
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
-from tensorkrowch.decompositions.svd.tr import TRSVD
+from tensorkrowch.decompositions.svd.tr import TRSVD, _Rank
 
 
 class TRMSVD(TRSVD):  # MARK: TRMSVD
@@ -35,9 +36,12 @@ class TRMSVD(TRSVD):  # MARK: TRMSVD
     :class:`~tensorkrowch.decompositions.CallableTensorSource` and
     :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
     SVD materializes their complete tensor once.
-    A ``torch.Tensor`` is accepted directly, as is a non-Quantics TT/TR format
-    or its matrix version. Wrap an :class:`~tensorkrowch.models.MPS`
-    in ``FormatSource`` first.
+    A ``torch.Tensor``, non-Quantics tensor format,
+    :class:`~tensorkrowch.models.MPS`
+    or :class:`~tensorkrowch.models.MPO` is adapted automatically through
+    :func:`~tensorkrowch.decompositions.as_tensor_source`. Existing sources
+    are retained unchanged. Quantics formats require an explicit
+    ``CallableQuanticsSource``.
 
     To declare matrix inputs, use
     :meth:`~tensorkrowch.decompositions.DenseTensorSource.matrix` or the
@@ -54,11 +58,15 @@ class TRMSVD(TRSVD):  # MARK: TRMSVD
 
     Parameters
     ----------
-    source : BaseSource or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor
         Finite matrix source declaring paired dimensions, or a tensor with
-        grouped input/output axes. Wrap matrix formats in ``FormatSource``.
+        grouped input/output axes. Matrix formats and MPOs are adapted
+        automatically.
     center : int, optional
-        Preferred interior cut, passed to ``TRSVD``.
+        First site of the right subchain: the initial SVD acts on the cut
+        immediately to its left. It must satisfy ``1 <= center < n_sites``.
+        Defaults to the middle cut. Matrix sites are input/output pairs;
+        Quantics sites are digits.
     out_device : str or torch.device, optional
         Device for finalized cores. ``None`` retains the evaluation device.
 
@@ -75,20 +83,20 @@ class TRMSVD(TRSVD):  # MARK: TRMSVD
                  source: 'SourceLike',
                  center: Optional[int] = None,
                  *,
-                 out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
+                 out_device: Optional[Union[str, torch.device]] = 'cpu'
+                 ) -> None:
         if isinstance(source, torch.Tensor):
             source = DenseTensorSource.matrix(source)
-        if not callable(getattr(source, 'contract_dense', None)):
-            raise TypeError('`source` should provide `contract_dense`')
-        if not getattr(source, 'is_matrix', False):
+        source = as_tensor_source(source)
+        if not source.is_matrix:
             raise ValueError('`source` should describe paired matrix axes')
         super().__init__(source, center=center, out_device=out_device)
 
 
 def trm_svd(source: 'SourceLike',
-            center: Optional[int] = None,
             *,
-            rank: Optional[int] = None,
+            rank: _Rank = None,
+            center: Optional[int] = None,
             cutoff: Optional[float] = None,
             atol: Optional[float] = None,
             rtol: Optional[float] = None,
@@ -108,9 +116,12 @@ def trm_svd(source: 'SourceLike',
     :class:`~tensorkrowch.decompositions.CallableTensorSource` and
     :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
     SVD materializes their complete tensor once.
-    A ``torch.Tensor`` is accepted directly, as is a non-Quantics TT/TR format
-    or its matrix version. Wrap an :class:`~tensorkrowch.models.MPS`
-    in ``FormatSource`` first.
+    A ``torch.Tensor``, non-Quantics tensor format,
+    :class:`~tensorkrowch.models.MPS`
+    or :class:`~tensorkrowch.models.MPO` is adapted automatically through
+    :func:`~tensorkrowch.decompositions.as_tensor_source`. Existing sources
+    are retained unchanged. Quantics formats require an explicit
+    ``CallableQuanticsSource``.
 
     To declare matrix inputs, use
     :meth:`~tensorkrowch.decompositions.DenseTensorSource.matrix` or the
@@ -127,17 +138,25 @@ def trm_svd(source: 'SourceLike',
 
     Parameters
     ----------
-    source : BaseSource or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor
         Finite matrix source declaring paired dimensions, or a tensor with
-        grouped input/output axes. Wrap matrix formats in ``FormatSource``.
+        grouped input/output axes. Matrix formats and MPOs are adapted
+        automatically.
+    rank : int or sequence[int], optional
+        Shared maximum rank or one maximum per right link, with ``n_sites``
+        entries in site order. The last entry bounds the cyclic link. The
+        initial SVD retains at most ``rank[-1] * rank[center - 1]`` singular
+        values for a sequence, or ``rank ** 2`` for an integer. Its rank is
+        split into cyclic and central ranks within those bounds. Each remaining
+        SVD uses the bound for its link; tolerances may select smaller ranks.
+        ``None`` imposes no rank cap. Without any truncation criterion, reduced
+        SVD dimensions are retained. Matrix sites are input/output pairs;
+        Quantics sites are digits.
     center : int, optional
-        Interior cut satisfying ``1 <= center < n_sites``. The default is the
-        middle cut.
-    rank : int, optional
-        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at
-        most this many singular values are retained. The initial bipartition
-        retains at most ``rank ** 2`` singular values before its selected
-        ``rank`` is factorized into two TRM ranks.
+        First site of the right subchain: the initial SVD acts on the cut
+        immediately to its left. It must satisfy ``1 <= center < n_sites``.
+        Defaults to the middle cut. Matrix sites are input/output pairs;
+        Quantics sites are digits.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
         Singular values ``<= cutoff`` are removed.
@@ -158,8 +177,9 @@ def trm_svd(source: 'SourceLike',
 
         .. math::
 
-        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
-            cum\_percentage
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}
+                 {\sum_{i \in \{all\}}{s_i^2}}
+            \ge cum\_percentage
 
     renormalize : bool
         If ``True``, normalizes residuals before SVDs and accumulates their
@@ -185,7 +205,8 @@ def trm_svd(source: 'SourceLike',
     -------
     TRMDecomposition
         Decomposition with cores and metadata. Access ``cores`` for the
-        tensors and :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info`
+        tensors and
+        :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info`
         for structured information.
 
     Examples
@@ -212,9 +233,9 @@ def trm_svd(source: 'SourceLike',
 
 
 def qtrm_svd(source: CallableQuanticsSource,
-             center: Optional[int] = None,
              *,
-             rank: Optional[int] = None,
+             rank: _Rank = None,
+             center: Optional[int] = None,
              cutoff: Optional[float] = None,
              atol: Optional[float] = None,
              rtol: Optional[float] = None,
@@ -239,14 +260,21 @@ def qtrm_svd(source: CallableQuanticsSource,
     ----------
     source : CallableQuanticsSource
         Callable with its digit layout and coordinate maps.
+    rank : int or sequence[int], optional
+        Shared maximum rank or one maximum per right link, with ``n_sites``
+        entries in site order. The last entry bounds the cyclic link. The
+        initial SVD retains at most ``rank[-1] * rank[center - 1]`` singular
+        values for a sequence, or ``rank ** 2`` for an integer. Its rank is
+        split into cyclic and central ranks within those bounds. Each remaining
+        SVD uses the bound for its link; tolerances may select smaller ranks.
+        ``None`` imposes no rank cap. Without any truncation criterion, reduced
+        SVD dimensions are retained. Matrix sites are input/output pairs;
+        Quantics sites are digits.
     center : int, optional
-        Interior cut from which the cyclic decomposition starts. If omitted,
-        uses the middle of the digit chain.
-    rank : int, optional
-        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at
-        most this many singular values are retained. The initial bipartition
-        retains at most ``rank ** 2`` singular values before its selected
-        ``rank`` is factorized into two TRM ranks.
+        First site of the right subchain: the initial SVD acts on the cut
+        immediately to its left. It must satisfy ``1 <= center < n_sites``.
+        Defaults to the middle cut. Matrix sites are input/output pairs;
+        Quantics sites are digits.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
         Singular values ``<= cutoff`` are removed.

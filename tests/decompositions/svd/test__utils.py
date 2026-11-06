@@ -74,8 +74,10 @@ def test_svd_rejects_continuous_and_integral_sources(matrix, cyclic):
     (torch.empty(2, 0), 0, ValueError),
 ])
 def test_invalid_dense_contraction_capabilities(returned, batches, error):
-    class Source:
-        n_batches = batches
+    class Source(tk.decompositions.DenseTensorSource):
+        def __init__(self):
+            super().__init__(torch.ones(2, 3))
+            self.n_batches = batches
 
         def contract_dense(self):
             return returned

@@ -552,8 +552,9 @@ class TT2TR:  # MARK: TT2TR
             when ranks are supplied. A tolerance can reduce SVD ranks below
             these bounds. With no ranks, omitted ``rtol`` uses 1e-12 for
             discovery, bounded below by machine precision. Spectral conversion
-            also uses the tolerance for
-            reconstruction checks. It does not define ALS convergence.
+            also checks relative reconstruction norms against ``sqrt(rtol)``,
+            with a machine-precision floor. Local ALS convergence is configured
+            independently through the loop opener's convergence policy.
         collect_metrics : bool
             Retain local solver and decomposition diagnostics. Final fidelity
             and reconstruction error are always measured.
@@ -821,7 +822,10 @@ def tt2tr(tt: Any, rank: Optional[Union[int, Sequence[int]]] = None,
     rtol : float, optional
         Relative SVD tail-energy tolerance for discovery and block splits.
         Default ``None`` truncates only to ``rank`` when ranks are supplied;
-        discovery without ranks uses 1e-12.
+        discovery without ranks uses 1e-12. The spectral route also checks
+        relative reconstruction norms against ``sqrt(rtol)``, with a
+        machine-precision floor. Local ALS convergence is configured
+        independently through the loop opener's convergence policy.
     out_device : str or torch.device, optional
         Final core device. Default is ``"cpu"``; ``None`` keeps the input
         device.

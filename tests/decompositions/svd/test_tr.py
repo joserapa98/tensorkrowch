@@ -68,13 +68,13 @@ def _near_exact_tensor():
 
 class TestTRSVD:  # MARK: TestTRSVD
 
-    def test_public_signature_uses_shared_rank_and_internal_observer(self):
+    def test_public_signature_uses_rank_first_and_internal_observer(self):
         fit_parameters = list(inspect.signature(
             tk.decompositions.TRSVD.fit).parameters)
         function_parameters = inspect.signature(
             tk.decompositions.tr_svd).parameters
 
-        assert fit_parameters.index('center') < fit_parameters.index('rank')
+        assert fit_parameters.index('rank') < fit_parameters.index('center')
         assert 'observer' not in fit_parameters
         assert 'out_device' in inspect.signature(
             tk.decompositions.TRSVD).parameters
@@ -477,7 +477,7 @@ class TestTRSVD:  # MARK: TestTRSVD
         'constructor, kwargs, error_type, match',
         [
             (([1, 2],), {}, TypeError,
-             '`source` should provide'),
+             '`source` should be'),
             ((torch.ones(2),), {}, ValueError,
              'at least two TR sites'),
             ((torch.ones(2, 3),), {'center': 0}, ValueError,
@@ -499,9 +499,9 @@ class TestTRSVD:  # MARK: TestTRSVD
     @pytest.mark.parametrize(
         'kwargs, error_type, match',
         [
-            ({'rank': 0}, ValueError, '`rank` should be a positive integer'),
+            ({'rank': 0}, ValueError, '`rank` should be positive'),
             ({'rank': True}, TypeError, '`rank` should be int type'),
-            ({'rank': (1, 2, 3)}, TypeError, '`rank` should be int type'),
+            ({'rank': (1, 2)}, ValueError, '`rank` should contain 3 values'),
             ({'cutoff': True}, TypeError,
              '`cutoff` should be a real number'),
             ({'atol': float('nan')}, ValueError,

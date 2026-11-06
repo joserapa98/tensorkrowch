@@ -206,9 +206,10 @@ def _split_block(block: torch.Tensor,
         raise ValueError('`block` should have shape (left, *in_dim, right)')
     if (block.shape[0] < 1) or (block.shape[-1] < 1):
         raise ValueError('External dimensions of `block` should be positive')
-    ranks = None if rank is None else _normalize_rank(rank, len(in_dim) - 1)
     truncation = _TruncationSpec(
-        cutoff=cutoff, atol=atol, rtol=rtol, cum_percentage=cum_percentage)
+        rank=rank, cutoff=cutoff, atol=atol, rtol=rtol,
+        cum_percentage=cum_percentage)
+    truncation.validate_rank(len(in_dim) - 1)
     if not isinstance(renormalize, bool):
         raise TypeError('`renormalize` should be bool type')
     if (metrics is not None) and not isinstance(metrics, DecompositionMetrics):
@@ -224,13 +225,13 @@ def _split_block(block: torch.Tensor,
             info, site=site + offset, log_scale=log_scale, global_norm=norm,
             singular_values=singular_values))
 
-    options = truncation.as_kwargs()
-    options.update(mode='right', renormalize=renormalize,
+    options = dict(mode='right', renormalize=renormalize,
                    _svd_callback=record_cut if metrics is not None else None)
 
     # Uniform bounds need one split; profiles apply a different cap per cut.
-    if (rank is None) or isinstance(rank, int):
-        cores = split_block(block, in_dim, **{**options, 'rank': rank}).cores
+    if not isinstance(truncation.rank, tuple):
+        cores = split_block(block, in_dim,
+                            **truncation.as_kwargs(), **options).cores
     else:
         state = block
         cores = []
@@ -240,7 +241,7 @@ def _split_block(block: torch.Tensor,
                 state.shape[0], dimension, prod(remaining), block.shape[-1])
             split = split_block(
                 pair, (dimension, prod(remaining)),
-                **{**options, 'rank': ranks[offset]})
+                **truncation.as_kwargs(site=offset), **options)
             cores.append(split.cores[0])
             state = split.cores[1].reshape(
                 split.cores[1].shape[0], *remaining, block.shape[-1])

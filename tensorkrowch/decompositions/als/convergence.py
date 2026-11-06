@@ -27,11 +27,14 @@ class ConvergencePolicy:  # MARK: ConvergencePolicy
     max_sweeps : int
         Positive maximum number of directional sweeps. Default is ``10``.
     atol : float, optional
-        Stop when the absolute objective error is at most this value. For
-        sampled evaluation, its norm is scaled to the complete tensor size.
+        Stop when the objective residual norm is at most this value, without
+        squaring it. For sampled evaluation, its norm is scaled to the
+        complete tensor size.
     rtol : float, optional
-        Stop when the relative objective error is at most this value. Sampled
-        evaluation estimates both residual and target norms on the fixed set.
+        Stop when the objective residual norm divided by the target norm is at
+        most this value. Both norms use the objective's weights. Sampled
+        evaluation estimates both norms on the fixed set. This is a norm
+        ratio, not a squared singular-value truncation criterion.
     stagnation_rtol : float, optional
         Maximum relative change between consecutive complete-sweep errors for a
         sweep to count as stable. These tolerances are objective tolerances,

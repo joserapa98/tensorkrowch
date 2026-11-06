@@ -688,11 +688,11 @@ class BLOSTRSVD(BLOSTR):  # MARK: BLOSTRSVD
             n_attempts: int = 8,
             n_iters: int = 50,
             n_restarts: int = 10,
-            generator: Optional[torch.Generator] = None,
             cutoff: Optional[float] = None,
             atol: Optional[float] = None,
             rtol: Optional[float] = None,
             cum_percentage: Optional[float] = None,
+            generator: Optional[torch.Generator] = None,
             collect_metrics: bool = False,
             verbose: Union[bool, int] = 0) -> TensorDecomposition:
         r"""
@@ -725,9 +725,6 @@ class BLOSTRSVD(BLOSTR):  # MARK: BLOSTRSVD
         n_iters, n_restarts : int
             Balanced k-means iteration and restart budgets. Defaults are 50 and
             10.
-        generator : torch.Generator, optional
-            Controls spectral projections, balanced clustering and recovery
-            projections.
         cutoff : float, optional
             Singular values at or below this value are discarded in tail
             TT-SVD.
@@ -738,6 +735,9 @@ class BLOSTRSVD(BLOSTR):  # MARK: BLOSTRSVD
             conditioning of the recovered first core. A supplied rank is an
             upper bound; smaller retained ranks are returned without zero
             padding.
+        generator : torch.Generator, optional
+            Controls spectral projections, balanced clustering and recovery
+            projections.
         collect_metrics : bool
             Whether to retain reconstruction, truncation and timing
             diagnostics.
@@ -854,12 +854,12 @@ def tr_blostr_svd(source: SourceLike,
                   n_attempts: int = 8,
                   n_iters: int = 50,
                   n_restarts: int = 10,
-                  generator: Optional[torch.Generator] = None,
                   cutoff: Optional[float] = None,
                   atol: Optional[float] = None,
                   rtol: Optional[float] = None,
                   cum_percentage: Optional[float] = None,
                   out_device: _Device = 'cpu',
+                  generator: Optional[torch.Generator] = None,
                   collect_metrics: bool = False,
                   verbose: Union[bool, int] = 0) -> TensorDecomposition:
     r"""
@@ -895,9 +895,6 @@ def tr_blostr_svd(source: SourceLike,
         ``slices`` use one attempt. The smallest reconstruction error is kept.
     n_iters, n_restarts : int
         Balanced k-means iteration and restart budgets. Defaults are 50 and 10.
-    generator : torch.Generator, optional
-        Controls spectral projections, balanced clustering and recovery
-        projections.
     cutoff : float, optional
         Singular values at or below this value are discarded in tail TT-SVD.
     atol, rtol, cum_percentage : float, optional
@@ -908,6 +905,9 @@ def tr_blostr_svd(source: SourceLike,
         retained ranks are returned without zero padding.
     out_device : str or torch.device, optional
         Final core storage device. ``None`` keeps the input device.
+    generator : torch.Generator, optional
+        Controls spectral projections, balanced clustering and recovery
+        projections.
     collect_metrics : bool
         Whether to retain reconstruction, truncation and timing diagnostics.
     verbose : bool or int

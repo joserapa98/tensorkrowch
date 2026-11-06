@@ -1938,18 +1938,48 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             cores, self._in_dim, self._out_dim,
             len(batch_shape), cyclic, other=other)
 
-    def __add__(self, other: 'TensorFormat1D') -> 'TensorFormat1D':
-        """Returns the exact sum with another format."""
-        return self.add(other)
+    def mul(self,
+            other: Union['TensorFormat1D', torch.Tensor, Number]
+            ) -> 'TensorFormat1D':
+        r"""
+        Returns a Hadamard product or a format scaled uniformly in magnitude.
 
-    def __sub__(self, other: 'TensorFormat1D') -> 'TensorFormat1D':
-        """Returns the exact difference with another format."""
-        return self.sub(other)
+        A format operand delegates to :meth:`hadamard`. For a nonzero scalar
+        :math:`s`, every effective core receives the factor
+        :math:`|s|^{1/N}`, where :math:`N` is the number of cores. Its sign or
+        complex phase multiplies only the first core. Real scalars therefore
+        keep real formats real. Bond factors are absorbed into the cores.
 
-    def __mul__(self,
-                other: Union['TensorFormat1D', torch.Tensor, Number]
-                ) -> 'TensorFormat1D':
-        """Returns a Hadamard product or scalar-scaled format."""
+        Zero and nonfinite magnitudes are applied only to the first core.
+        The zero case preserves derivatives with respect to a scalar tensor
+        without differentiating a fractional power at zero. Inputs remain
+        unchanged.
+
+        Parameters
+        ----------
+        other : TensorFormat1D, torch.Tensor or number
+            Format with compatible dimensions, batches and device, or a scalar
+            multiplier. A tensor multiplier must have zero axes and share the
+            format's device. Dtypes follow PyTorch multiplication promotion.
+
+        Returns
+        -------
+        TensorFormat1D
+            New format representing the element-wise product, retaining the
+            input/output selections and coordinate metadata.
+
+        Examples
+        --------
+        >>> format = tk.formats.TT([torch.ones(2, 1), torch.ones(1, 2)])
+        >>> scaled = format.mul(-4)
+        >>> torch.allclose(scaled.cores[0], -2 * format.cores[0])
+        True
+        >>> torch.allclose(scaled.cores[1], 2 * format.cores[1])
+        True
+        >>> expected = -4 * format.contract_dense()
+        >>> torch.allclose(scaled.contract_dense(), expected)
+        True
+        """
         if isinstance(other, TensorFormat1D):
             return self.hadamard(other)
 
@@ -1964,18 +1994,37 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
                 'The scaling `other` should be a number or scalar tensor')
 
         cores = self._effective_cores()
-        cores[0] = cores[0] * other
-        dtype = cores[0].dtype
-        cores = [core.to(dtype=dtype) for core in cores]
+        dtype = torch.result_type(cores[0], other)
+        scalar = torch.as_tensor(other, dtype=dtype, device=self.device)
+        magnitude = scalar.abs()
+        magnitude = torch.where((magnitude > 0) & torch.isfinite(magnitude),
+                                magnitude, torch.ones_like(magnitude))
+        scale = magnitude.pow(1 / self.n_sites)
+        cores = [core.to(dtype=dtype) * scale for core in cores]
+        cores[0] = cores[0] * (scalar / magnitude)
 
         return self._new_from_standard_cores(
             cores, self._in_dim, self._out_dim, self._n_batches, self._cyclic)
+
+    def __add__(self, other: 'TensorFormat1D') -> 'TensorFormat1D':
+        """Returns the exact sum with another format."""
+        return self.add(other)
+
+    def __sub__(self, other: 'TensorFormat1D') -> 'TensorFormat1D':
+        """Returns the exact difference with another format."""
+        return self.sub(other)
+
+    def __mul__(self,
+                other: Union['TensorFormat1D', torch.Tensor, Number]
+                ) -> 'TensorFormat1D':
+        """Returns :meth:`mul` with another format or a scalar."""
+        return self.mul(other)
 
     def __rmul__(self,
                  other: Union['TensorFormat1D', torch.Tensor, Number]
                  ) -> 'TensorFormat1D':
         """Returns a scalar-scaled format or Hadamard product."""
-        return self * other
+        return self.mul(other)
 
     def __neg__(self) -> 'TensorFormat1D':
         """Returns the format with its represented tensor negated."""

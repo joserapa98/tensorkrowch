@@ -164,6 +164,13 @@ products, and ``norm`` for the Frobenius norm. ``@`` performs vector/operator
 products according to row/column orientation. ``T`` transposes without
 conjugation; ``H`` takes the adjoint.
 
+For scalar multiplication, ``format.mul(s)`` and ``format * s`` distribute
+:math:`|s|^{1/N}` across the :math:`N` cores. The sign or complex phase is
+applied only to the first core, preserving real dtypes for real factors.
+Zero is kept in the first core so scalar derivatives remain well-defined.
+Multiplying two formats with ``mul`` or ``*`` instead gives their Hadamard
+product.
+
 .. code-block:: python
 
    tt = f.TT([torch.eye(3, dtype=torch.float64),

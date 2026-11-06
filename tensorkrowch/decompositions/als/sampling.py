@@ -14,6 +14,8 @@ This script contains:
 
     Functions:
         * _sample_batch
+        * _expand_fibers
+        * _evaluate_fibers
         * _region_metrics
         * _sample_region
         * _region_row_probability
@@ -40,23 +42,26 @@ class SamplingPolicy:  # MARK: SamplingPolicy
     Configures row sampling for :class:`TTALS` and :class:`TRALS`.
 
     Omit the engine's ``sampler`` argument to fit the complete tensor or its
-    fixed observations. Uniform sampling reuses configurations across sites;
-    leverage sampling rebuilds its distribution at each active site.
+    fixed observations. Sampled fits select external configurations and retain
+    the complete active input fiber. Leverage distributions are rebuilt at
+    each active site.
 
     Parameters
     ----------
     n_samples : int
-        Positive number of sampled configurations. TR leverage methods count
-        environment configurations and retain the complete active input fiber,
-        giving ``n_samples * in_dim[site]`` scalar rows per local system.
-    method : {``"uniform"``, ``"leverage"``, ``"exact_leverage"``}, optional
+        Positive number of sampled external configurations. Each local system
+        contains ``n_samples * in_dim[site]`` scalar rows.
+    method : {``"uniform"``, ``"leverage"``, ``"product_leverage"``}, optional
         Uniform sampling is the default. ``"leverage"`` uses exact leverage
-        in mixed-canonical TT form and a product-leverage proposal for TR.
-        ``"exact_leverage"`` uses the cyclic Gram construction and is TR-only.
-    reuse_sweeps : int, optional
+        in mixed-canonical TT form or the cyclic Gram construction for TR.
+        ``"product_leverage"`` uses a product-leverage proposal for TR only.
+    n_reuse_sweeps : int, optional
         Number of directional sweeps sharing a uniform sample generation.
-        Defaults to ``1``. Leverage methods require ``1`` because their
-        distributions depend on the current cores.
+        Defaults to ``0``, drawing new external configurations at every site.
+        A positive value draws complete base configurations, opens the active
+        fiber at each site and caches its target values for that generation.
+        ``1`` shares the base configurations within one sweep; larger values
+        also reuse targets across consecutive sweeps. Leverage requires ``0``.
     uniform_mix : float, optional
         Uniform component mixed into a leverage proposal, in ``[0, 1]``.
         Defaults to ``0``. Uniform sampling requires ``0``.
@@ -64,27 +69,29 @@ class SamplingPolicy:  # MARK: SamplingPolicy
     Examples
     --------
     >>> sampler = tk.decompositions.SamplingPolicy(64, method='leverage')
-    >>> sampler.n_samples, sampler.reuse_sweeps
-    (64, 1)
+    >>> sampler.n_samples, sampler.n_reuse_sweeps
+    (64, 0)
     """
 
-    n_samples: int  # Number of configurations drawn per proposal
+    n_samples: int  # Number of external configurations per proposal
     method: str = 'uniform'  # Uniform or topology-specific leverage proposal
-    reuse_sweeps: int = 1  # Directional sweeps sharing one uniform batch
+    n_reuse_sweeps: int = 0  # Zero draws at each site; positive shares a base
     uniform_mix: float = 0.0  # Uniform fraction in a leverage proposal
 
     def __post_init__(self) -> None:
-        for name in ('n_samples', 'reuse_sweeps'):
+        for name in ('n_samples', 'n_reuse_sweeps'):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int):
                 raise TypeError(f'`{name}` should be int type')
-            if value < 1:
-                raise ValueError(f'`{name}` should be positive')
+            minimum = 1 if name == 'n_samples' else 0
+            if value < minimum:
+                raise ValueError(f'`{name}` should be at least {minimum}')
         if not isinstance(self.method, str):
             raise TypeError('`method` should be str type')
-        if self.method not in ('uniform', 'leverage', 'exact_leverage'):
+        if self.method not in ('uniform', 'leverage', 'product_leverage'):
             raise ValueError(
-                "`method` should be 'uniform', 'leverage' or 'exact_leverage'")
+                "`method` should be 'uniform', 'leverage' or "
+                "'product_leverage'")
         if isinstance(self.uniform_mix, bool) or \
                 not isinstance(self.uniform_mix, (int, float)):
             raise TypeError('`uniform_mix` should be a number in [0, 1]')
@@ -93,8 +100,8 @@ class SamplingPolicy:  # MARK: SamplingPolicy
         object.__setattr__(self, 'uniform_mix', float(self.uniform_mix))
         if (self.method == 'uniform') and (self.uniform_mix != 0):
             raise ValueError('Uniform sampling requires `uniform_mix=0`')
-        if (self.method != 'uniform') and (self.reuse_sweeps != 1):
-            raise ValueError('Leverage sampling requires `reuse_sweeps=1`')
+        if (self.method != 'uniform') and (self.n_reuse_sweeps != 0):
+            raise ValueError('Leverage sampling requires `n_reuse_sweeps=0`')
 
     def validate(self, topology: str) -> None:
         """
@@ -107,15 +114,16 @@ class SamplingPolicy:  # MARK: SamplingPolicy
         """
         if topology not in ('tt', 'tr'):
             raise ValueError("`topology` should be 'tt' or 'tr'")
-        if (topology == 'tt') and (self.method == 'exact_leverage'):
-            raise ValueError('`method="exact_leverage"` requires TR topology')
+        if (topology == 'tt') and (self.method == 'product_leverage'):
+            raise ValueError(
+                '`method="product_leverage"` requires TR topology')
 
     def generation(self, sweep: int) -> int:
         """Returns the draw generation for a non-negative sweep index."""
         if isinstance(sweep, bool) or not isinstance(sweep, int) or \
                 (sweep < 0):
             raise ValueError('`sweep` should be a non-negative integer')
-        return sweep // self.reuse_sweeps
+        return sweep // max(self.n_reuse_sweeps, 1)
 
     def sample(self, sampler: 'RowSampler', owner: Any, site: int,
                n_samples: Optional[int], generator: Optional[torch.Generator],
@@ -123,9 +131,15 @@ class SamplingPolicy:  # MARK: SamplingPolicy
                ) -> Tuple['SampleBatch', bool]:
         """Reuses a frozen draw or starts the next generation."""
         generation = self.generation(sweep)
+        if isinstance(sampler, UniformRows):
+            return sampler.sample(
+                owner, site, n_samples, generator, generation,
+                reuse=self.n_reuse_sweeps > 0)
         if (current is not None) and (
-                (not sampler.refreshable) or
-                (current.generation == generation)):
+                (not sampler.refreshable) or (
+                    (self.n_reuse_sweeps > 0) and
+                    (current.site == site) and
+                    (current.generation == generation))):
             return current, False
         sampler.generation = generation
         return sampler.draw(owner, site, n_samples, generator), True
@@ -339,6 +353,29 @@ def _sample_batch(ids: torch.Tensor,
         site=site)
 
 
+def _expand_fibers(indices: torch.Tensor, site: int,
+                    in_dim: Sequence[int]) -> torch.Tensor:
+    """Expands external configurations in environment-major physical order."""
+    indices = indices.unsqueeze(1).expand(
+        -1, in_dim[site], len(in_dim)).clone()
+    indices[:, :, site] = torch.arange(
+        in_dim[site], device=indices.device).unsqueeze(0)
+    return indices.reshape(-1, len(in_dim))
+
+
+def _evaluate_fibers(source: Any, batch: SampleBatch) -> torch.Tensor:
+    """Evaluates complete fibers through the source's specialized access."""
+    site = batch.site
+    in_dim = source.in_dim
+    indices = _unravel_indices(batch.ids, in_dim)[::in_dim[site]]
+    target = source.fiber(ConfigurationBatch(indices, kind='indices'), site)
+    if target.shape != (indices.shape[0], in_dim[site]):
+        raise ValueError('`source` should return one scalar per configuration')
+    if not torch.isfinite(target).all():
+        raise ValueError('`source` should return only finite values')
+    return target.reshape(-1)
+
+
 class ExactRows(RowSampler):  # MARK: ExactRows
     """Deterministic sampler containing every row exactly once."""
 
@@ -360,8 +397,8 @@ class ExactRows(RowSampler):  # MARK: ExactRows
         site : int
             Active site whose local system defines the proposal.
         n_samples : int, optional
-            Number of draws; TR leverage methods count environments before
-            expanding active input fibers. Deterministic selectors enumerate
+            Number of external configurations before expanding active input
+            fibers. Deterministic selectors enumerate
             their complete fixed rows and allow this argument to be omitted.
         generator : torch.Generator, optional
             Generator on the sampling device; unused for deterministic rows.
@@ -429,8 +466,8 @@ class ObservedRows(RowSampler):  # MARK: ObservedRows
         site : int
             Active site whose local system defines the proposal.
         n_samples : int, optional
-            Number of draws; TR leverage methods count environments before
-            expanding active input fibers. Deterministic selectors enumerate
+            Number of external configurations before expanding active input
+            fibers. Deterministic selectors enumerate
             their complete fixed rows and allow this argument to be omitted.
         generator : torch.Generator, optional
             Generator on the sampling device; unused for deterministic rows.
@@ -460,18 +497,26 @@ class ObservedRows(RowSampler):  # MARK: ObservedRows
 
 
 class UniformRows(RowSampler):  # MARK: UniformRows
-    """Uniform row sampling with replacement."""
+    """
+    Samples uniform external configurations and opens the active input fiber.
+
+    Independent draws select only the other input indices. Reusable draws
+    share complete base configurations and cache each site's expanded batch
+    and target values until the sample generation changes.
+    """
 
     proposal_exact = True
     refreshable = True
 
-    def draw(self,
-             owner: Any,
-             site: int,
-             n_samples: Optional[int],
+    def __init__(self) -> None:
+        self._base_indices = None
+        self._batches = {}
+        self._targets = {}
+
+    def draw(self, owner: Any, site: int, n_samples: Optional[int],
              generator: Optional[torch.Generator] = None) -> SampleBatch:
         """
-        Draws uniform ids and stores their original probabilities.
+        Draws external indices and expands the complete active input fiber.
 
         Parameters
         ----------
@@ -479,17 +524,15 @@ class UniformRows(RowSampler):  # MARK: UniformRows
             Current cores and their versions, supplied by the ALS backend.
         site : int
             Active site whose local system defines the proposal.
-        n_samples : int, optional
-            Number of draws; TR leverage methods count environments before
-            expanding active input fibers. Deterministic selectors enumerate
-            their complete fixed rows and allow this argument to be omitted.
+        n_samples : int
+            Number of external configurations drawn with replacement.
         generator : torch.Generator, optional
-            Generator on the sampling device; unused for deterministic rows.
+            Generator on the sampling device.
 
         Returns
         -------
         SampleBatch
-            Selected rows with their original probabilities and weights.
+            Expanded rows with their probabilities and importance weights.
         """
         self._prepare_draw(owner, site, n_samples)
         if n_samples is None:
@@ -498,22 +541,60 @@ class UniformRows(RowSampler):  # MARK: UniformRows
             if not isinstance(generator, torch.Generator):
                 raise TypeError(
                     '`generator` should be torch.Generator or None')
-            generator_device = torch.device(generator.device)
-            if generator_device.type != self.device.type:
+            if torch.device(generator.device).type != self.device.type:
                 raise ValueError(
                     '`generator` device should match the sampling state '
                     'device')
-        ids = torch.randint(
-            self.n_rows,
-            (n_samples,),
-            device=self.device,
-            generator=generator)
+
+        in_dim = tuple(core.shape[1] for core in owner.cores)
+        if self._base_indices is None:
+            indices = torch.zeros(n_samples, len(in_dim), dtype=torch.long,
+                                  device=self.device)
+            for current, dimension in enumerate(in_dim):
+                if current != site:
+                    indices[:, current] = torch.randint(
+                        dimension, (n_samples,), device=self.device,
+                        generator=generator)
+        else:
+            indices = self._base_indices
+        indices = _expand_fibers(indices, site, in_dim)
+        ids = _ravel_indices(indices, in_dim)
         probabilities = torch.full(
-            (n_samples,),
-            1 / self.n_rows,
-            device=self.device,
+            (ids.numel(),), 1 / self.n_rows, device=self.device,
             dtype=torch.get_default_dtype())
         return _sample_batch(ids, probabilities, self, site)
+
+    def sample(self, owner: Any, site: int, n_samples: int,
+               generator: Optional[torch.Generator], generation: int,
+               reuse: bool) -> Tuple[SampleBatch, bool]:
+        """Reuses shared-base fibers or draws fresh environments."""
+        if (self.generation != generation) or not reuse:
+            self._base_indices = None
+            self._batches.clear()
+            self._targets.clear()
+        self.generation = generation
+        if reuse:
+            if site in self._batches:
+                return self._batches[site], False
+            if self._base_indices is None:
+                self._prepare_draw(owner, site, n_samples)
+                ids = torch.randint(self.n_rows, (n_samples,),
+                                    device=self.device, generator=generator)
+                self._base_indices = _unravel_indices(
+                    ids, tuple(core.shape[1] for core in owner.cores))
+        batch = self.draw(owner, site, n_samples, generator)
+        if reuse:
+            self._batches[site] = batch
+        return batch, True
+
+    def evaluate(self, source: Any, batch: SampleBatch) -> torch.Tensor:
+        """Caches target fibers only while a shared base remains active."""
+        if batch.site not in self._targets:
+            target = _evaluate_fibers(source, batch)
+            if self._base_indices is None:
+                return target
+            self._targets[batch.site] = target
+        return self._targets[batch.site]
 
 
 def _region_metrics(cores: Sequence[torch.Tensor]) -> Sequence[torch.Tensor]:
@@ -624,8 +705,9 @@ class TTLeverageRows(RowSampler):  # MARK: TTLeverageRows
     The current cores are obtained from ``cores`` at every draw. Cores to the
     left of the selected site must be left-isometric, and cores to its right
     right-isometric. Under this invariant, the leverage distribution factors
-    into left row norms, a uniform current input and right row norms, so rows
-    are sampled recursively without materializing the full local design.
+    into left and right row norms. External indices are sampled recursively
+    without materializing the full local design; every selected environment
+    retains the complete active input fiber.
 
     ``uniform_mix`` mixes the normalized leverage distribution with a global
     uniform distribution. A positive value gives every row non-zero support.
@@ -765,8 +847,8 @@ class TTLeverageRows(RowSampler):  # MARK: TTLeverageRows
         site : int
             Active site whose local system defines the proposal.
         n_samples : int, optional
-            Number of draws; TR leverage methods count environments before
-            expanding active input fibers. Deterministic selectors enumerate
+            Number of external configurations before expanding active input
+            fibers. Deterministic selectors enumerate
             their complete fixed rows and allow this argument to be omitted.
         generator : torch.Generator, optional
             Generator on the sampling device; unused for deterministic rows.
@@ -799,11 +881,8 @@ class TTLeverageRows(RowSampler):  # MARK: TTLeverageRows
 
         left_ids, left_probability = _sample_region(
             cores[:site], n_samples, generator)
-        current_ids = torch.randint(
-            cores[site].shape[1],
-            (n_samples, 1),
-            device=self.device,
-            generator=generator)
+        current_ids = torch.zeros(
+            (n_samples, 1), device=self.device, dtype=torch.long)
         right_sampling_cores = self._right_sampling_cores(
             cores[site + 1:])
         reversed_right_ids, right_probability = _sample_region(
@@ -813,28 +892,30 @@ class TTLeverageRows(RowSampler):  # MARK: TTLeverageRows
             (left_ids.to(self.device), current_ids,
              right_ids.to(self.device)), dim=1)
 
+        in_dim = tuple(core.shape[1] for core in cores)
         if self.uniform_mix > 0:
+            external_dim = in_dim[:site] + in_dim[site + 1:]
             uniform_ids = torch.randint(
-                self.n_rows,
-                (n_samples,),
-                device=self.device,
+                prod(external_dim), (n_samples,), device=self.device,
                 generator=generator)
-            uniform_indices = _unravel_indices(
-                uniform_ids, tuple(core.shape[1] for core in cores))
+            external_indices = _unravel_indices(uniform_ids, external_dim)
+            uniform_indices = leverage_indices.clone()
+            uniform_indices[:, :site] = external_indices[:, :site]
+            uniform_indices[:, site + 1:] = external_indices[:, site:]
             use_uniform = torch.rand(
-                n_samples,
-                device=self.device,
+                n_samples, device=self.device,
                 generator=generator) < self.uniform_mix
             indices = torch.where(
                 use_uniform.unsqueeze(1), uniform_indices, leverage_indices)
         else:
             indices = leverage_indices
-
-        in_dim = tuple(core.shape[1] for core in cores)
+        indices = _expand_fibers(indices, site, in_dim)
         ids = _ravel_indices(indices, in_dim)
         if self.uniform_mix == 0:
-            probabilities = left_probability.to(cores[0].real) * \
-                right_probability.to(cores[0].real) / in_dim[site]
+            environment_probability = (left_probability.to(cores[0].real) *
+                                       right_probability.to(cores[0].real))
+            probabilities = environment_probability.repeat_interleave(
+                in_dim[site]) / in_dim[site]
         else:
             probabilities = self._probabilities_from_indices(
                 cores, site, indices)
@@ -866,7 +947,7 @@ class TRProductLeverageRows(RowSampler):  # MARK: TRProductLeverageRows
     The published algorithm samples environment configurations and retains the
     full active input fiber. Accordingly, ``n_samples`` counts environments;
     the returned batch contains ``n_samples * in_dim[site]`` scalar rows.
-    Expanding fibers is a TensorKrowch row-interface adaptation and preserves
+    The scalar row interface expands these fibers explicitly and preserves
     the paper's sampling weights.
 
     ``uniform_mix`` adds global uniform support. Importance weights always use
@@ -1015,8 +1096,8 @@ class TRProductLeverageRows(RowSampler):  # MARK: TRProductLeverageRows
         site : int
             Active site whose local system defines the proposal.
         n_samples : int, optional
-            Number of draws; TR leverage methods count environments before
-            expanding active input fibers. Deterministic selectors enumerate
+            Number of external configurations before expanding active input
+            fibers. Deterministic selectors enumerate
             their complete fixed rows and allow this argument to be omitted.
         generator : torch.Generator, optional
             Generator on the sampling device; unused for deterministic rows.
@@ -1084,12 +1165,7 @@ class TRProductLeverageRows(RowSampler):  # MARK: TRProductLeverageRows
             indices = product_indices
 
         in_dim = tuple(core.shape[1] for core in cores)
-        active_values = torch.arange(
-            in_dim[site], device=self.device, dtype=torch.long)
-        indices = indices.unsqueeze(1).expand(
-            n_samples, in_dim[site], len(cores)).clone()
-        indices[:, :, site] = active_values.unsqueeze(0)
-        indices = indices.reshape(-1, len(cores))
+        indices = _expand_fibers(indices, site, in_dim)
         ids = _ravel_indices(indices, in_dim)
         probabilities = self._mixed_probabilities(
             marginals, indices, self.n_rows)
@@ -1318,8 +1394,8 @@ class TRExactLeverageRows(RowSampler):  # MARK: TRExactLeverageRows
         site : int
             Active site whose local system defines the proposal.
         n_samples : int, optional
-            Number of draws; TR leverage methods count environments before
-            expanding active input fibers. Deterministic selectors enumerate
+            Number of external configurations before expanding active input
+            fibers. Deterministic selectors enumerate
             their complete fixed rows and allow this argument to be omitted.
         generator : torch.Generator, optional
             Generator on the sampling device; unused for deterministic rows.
@@ -1400,12 +1476,7 @@ class TRExactLeverageRows(RowSampler):  # MARK: TRExactLeverageRows
             (1 - self.uniform_mix) * environment_probability +
             self.uniform_mix / environment_rows)
 
-        active_values = torch.arange(
-            in_dim[site], device=self.device, dtype=torch.long)
-        indices = indices.unsqueeze(1).expand(
-            n_samples, in_dim[site], len(cores)).clone()
-        indices[:, :, site] = active_values.unsqueeze(0)
-        indices = indices.reshape(-1, len(cores))
+        indices = _expand_fibers(indices, site, in_dim)
         ids = _ravel_indices(indices, in_dim)
         probabilities = mixed_environment.repeat_interleave(
             in_dim[site]) / in_dim[site]

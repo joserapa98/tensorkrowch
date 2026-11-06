@@ -322,11 +322,11 @@ of rows. The policy selects topology-specific samplers internally:
      - :class:`UniformRows`
    * - ``"leverage"``
      - :class:`TTLeverageRows`, using mixed-canonical cores [ttleverage]_.
-     - :class:`TRProductLeverageRows`, using a product proposal [trproduct]_.
-   * - ``"exact_leverage"``
-     - Not available.
      - :class:`TRExactLeverageRows`, using cyclic Gram contractions
        [trexact]_.
+   * - ``"product_leverage"``
+     - Not available.
+     - :class:`TRProductLeverageRows`, using a product proposal [trproduct]_.
 
 .. code-block:: python
 
@@ -340,10 +340,15 @@ of rows. The policy selects topology-specific samplers internally:
        collect_metrics=True)
 
 Sampled least-squares rows are corrected using their proposal probabilities.
-``reuse_sweeps`` controls reuse of uniform samples; leverage proposals depend
-on the current site and cores. TR leverage methods retain complete active
-physical fibers, so ``n_samples`` counts exterior configurations rather
-than scalar rows.
+All sampled methods retain complete active input fibers: ``n_samples``
+counts external configurations, giving ``n_samples * in_dim[site]`` scalar
+rows per local system. ``n_reuse_sweeps=0`` draws fresh environments at each
+site and is required for leverage proposals, which depend on the current
+cores. For uniform sampling, ``n_reuse_sweeps>=1`` shares complete base
+configurations within each sweep and caches the expanded fibers and their
+target values. Values greater than one also reuse those targets across that
+many directional sweeps. Fixed observations remain restricted to their
+known entries and never expand unknown fibers.
 
 Stopping errors are measured on a separate fixed uniform evaluation set,
 not on each changing training sample. ``ConvergencePolicy.error_samples``

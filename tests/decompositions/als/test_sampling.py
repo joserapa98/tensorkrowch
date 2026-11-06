@@ -39,46 +39,50 @@ def _owner(n_rows, core_versions, device='cpu'):
 class TestSamplingPolicy:  # MARK: TestSamplingPolicy
 
     @pytest.mark.parametrize(
-        'method', ['uniform', 'leverage', 'exact_leverage']
+        'method', ['uniform', 'leverage', 'product_leverage']
     )
     def test_policy_selects_supported_topologies(self, method):
         policy = tk.decompositions.SamplingPolicy(12, method=method)
         policy.validate('tr')
-        if method == 'exact_leverage':
+        if method == 'product_leverage':
             with pytest.raises(ValueError, match='TR topology'):
                 policy.validate('tt')
         else:
             policy.validate('tt')
         assert policy.n_samples == 12
-        assert policy.reuse_sweeps == 1
+        assert policy.n_reuse_sweeps == 0
         assert policy.uniform_mix == 0
 
     @pytest.mark.parametrize('kwargs,error', [
         ({'n_samples': True}, TypeError),
         ({'n_samples': 2.5}, TypeError),
         ({'n_samples': 0}, ValueError),
-        ({'reuse_sweeps': False}, TypeError),
-        ({'reuse_sweeps': 0}, ValueError),
+        ({'n_reuse_sweeps': False}, TypeError),
+        ({'n_reuse_sweeps': 1.5}, TypeError),
+        ({'n_reuse_sweeps': -1}, ValueError),
         ({'method': None}, TypeError),
         ({'method': 'frozen'}, ValueError),
+        ({'method': 'exact_leverage'}, ValueError),
         ({'uniform_mix': True}, TypeError),
         ({'uniform_mix': float('nan')}, ValueError),
         ({'uniform_mix': float('inf')}, ValueError),
         ({'uniform_mix': -0.1}, ValueError),
         ({'uniform_mix': 1.1}, ValueError),
         ({'uniform_mix': 0.1}, ValueError),
-        ({'method': 'leverage', 'reuse_sweeps': 2}, ValueError),
-        ({'method': 'exact_leverage', 'reuse_sweeps': 2}, ValueError),
+        ({'method': 'product_leverage', 'n_reuse_sweeps': 2}, ValueError),
+        ({'method': 'leverage', 'n_reuse_sweeps': 2}, ValueError),
+        ({'method': 'leverage', 'n_reuse_sweeps': 1}, ValueError),
+        ({'method': 'product_leverage', 'n_reuse_sweeps': 1}, ValueError),
     ])
     def test_invalid_policy_arguments(self, kwargs, error):
         with pytest.raises(error):
             tk.decompositions.SamplingPolicy(**{'n_samples': 4, **kwargs})
 
     def test_reuse_and_mixture_belong_to_the_appropriate_methods(self):
-        uniform = tk.decompositions.SamplingPolicy(20, reuse_sweeps=3)
+        uniform = tk.decompositions.SamplingPolicy(20, n_reuse_sweeps=3)
         leverage = tk.decompositions.SamplingPolicy(
             20, method='leverage', uniform_mix=1)
-        assert uniform.reuse_sweeps == 3
+        assert uniform.n_reuse_sweeps == 3
         assert leverage.uniform_mix == 1
         with pytest.raises(ValueError, match='topology'):
             uniform.validate('peps')
@@ -187,7 +191,7 @@ class TestRowSamplers:  # MARK: TestRowSamplers
         assert torch.equal(first.weights, second.weights)
         assert torch.equal(
             first.probabilities,
-            torch.full((20,), 1 / 11))
+            torch.full((20 * 11,), 1 / 11))
 
     def test_uniform_reweighted_gram_and_rhs_are_unbiased(self):
         generator = torch.Generator().manual_seed(31)
@@ -264,7 +268,7 @@ class TestSampleReuse:  # MARK: TestSampleReuse
 
     def test_uniform_samples_and_probabilities_are_reused_by_generation(self):
         sampler = tk.decompositions.UniformRows()
-        policy = tk.decompositions.SamplingPolicy(10, reuse_sweeps=2)
+        policy = tk.decompositions.SamplingPolicy(10, n_reuse_sweeps=2)
         owner = _owner(13, (0, 0))
         generator = torch.Generator().manual_seed(9)
         first, refreshed = policy.sample(
@@ -279,13 +283,89 @@ class TestSampleReuse:  # MARK: TestSampleReuse
         assert torch.equal(reused.probabilities, first.probabilities)
         assert second.generation == 1
 
+    @pytest.mark.parametrize('n_reuse_sweeps', [0, 1, 2])
+    def test_external_fibers_and_target_caching(self, n_reuse_sweeps):
+        dimensions = (3, 4, 2, 3)
+        owner = SimpleNamespace(
+            cores=tuple(torch.ones(1, dim, 1) for dim in dimensions),
+            core_versions=(0,) * len(dimensions))
+        calls = []
+
+        def function(indices):
+            calls.append(indices.clone())
+            return indices.sum(-1).double()
+
+        source = tk.decompositions.CallableTensorSource(
+            function, dimensions, out_shape=(), dtype=torch.float64)
+        policy = tk.decompositions.SamplingPolicy(
+            7, n_reuse_sweeps=n_reuse_sweeps)
+        sampler = tk.decompositions.UniformRows()
+        generator = torch.Generator().manual_seed(117)
+        history = []
+        targets = []
+        for sweep in range(3):
+            batches = []
+            for site, dimension in enumerate(dimensions):
+                batch, refreshed = policy.sample(
+                    sampler, owner, site, 7, generator, sweep=sweep)
+                indices = torch.stack(torch.unravel_index(
+                    batch.ids, dimensions), dim=1).reshape(7, dimension, -1)
+                assert torch.equal(indices[:, :, site],
+                                   torch.arange(dimension).expand(7, -1))
+                external = [i for i in range(len(dimensions)) if i != site]
+                assert torch.equal(
+                    indices[:, :, external],
+                    indices[:, :1, external].expand(-1, dimension, -1))
+                assert torch.allclose(
+                    batch.weights, torch.full_like(batch.weights,
+                        (prod(dimensions) / (7 * dimension)) ** .5))
+                target = sampler.evaluate(source, batch)
+                torch.testing.assert_close(target, indices.sum(-1).flatten()
+                                           .double())
+                batches.append(indices[:, 0])
+                targets.append(target)
+                if (n_reuse_sweeps == 2) and (sweep == 1):
+                    assert not refreshed
+                    assert target is targets[site]
+            history.append(batches)
+        generations = 2 if n_reuse_sweeps == 2 else 3
+        assert len(calls) == generations * len(dimensions)
+        if n_reuse_sweeps:
+            for batches in history:
+                base = batches[0].clone()
+                base[:, 0] = batches[1][:, 0]
+                for site, indices in enumerate(batches):
+                    external = [i for i in range(len(dimensions))
+                                if i != site]
+                    assert torch.equal(indices[:, external], base[:, external])
+        else:
+            assert not torch.equal(history[0][0][:, 2:],
+                                   history[0][1][:, 2:])
+
+
+    def test_leverage_never_reuses_a_draw_within_a_sweep(self):
+        cores = _mixed_canonical_cores(torch.ones(2, 3, 2), site=1)
+        owner = SimpleNamespace(cores=cores, core_versions=(0, 0, 0))
+        sampler = tk.decompositions.TTLeverageRows(lambda: owner.cores)
+        policy = tk.decompositions.SamplingPolicy(5, method='leverage')
+        generator = torch.Generator().manual_seed(118)
+        first, _ = policy.sample(sampler, owner, 1, 5, generator, sweep=0)
+        owner.core_versions = (0, 1, 0)
+        second, refreshed = policy.sample(
+            sampler, owner, 1, 5, generator, sweep=0, current=first)
+        assert refreshed
+        assert second is not first
+        assert first.proposal_core_versions == (0, 0, 0)
+        assert second.proposal_core_versions == (0, 1, 0)
+
+
     def test_completion_never_refreshes_observed_rows(self):
         observations = tk.decompositions.SparseTensorSource(
             indices=torch.tensor([[0, 0], [1, 1]]),
             values=torch.tensor([1., 2.]),
             in_dim=(2, 2))
         sampler = tk.decompositions.ObservedRows(observations)
-        policy = tk.decompositions.SamplingPolicy(1, reuse_sweeps=1)
+        policy = tk.decompositions.SamplingPolicy(1, n_reuse_sweeps=1)
         state = _owner(n_rows=4, core_versions=(0, 0))
 
         first, refreshed = policy.sample(
@@ -299,7 +379,7 @@ class TestSampleReuse:  # MARK: TestSampleReuse
         assert later.generation == 0
 
     def test_generation_is_incremental_and_deterministic(self):
-        policy = tk.decompositions.SamplingPolicy(1, reuse_sweeps=3)
+        policy = tk.decompositions.SamplingPolicy(1, n_reuse_sweeps=3)
 
         assert [policy.generation(sweep) for sweep in range(8)] == [
             0, 0, 0, 1, 1, 1, 2, 2]
@@ -739,8 +819,10 @@ class TestLeverageContracts:  # MARK: TestLeverageContracts
         expected = sampler.probabilities(
             site, tk.decompositions.ConfigurationBatch(drawn))
         assert torch.allclose(batch.probabilities, expected)
-        assert batch.ids.numel() == (
-            8 if method == 'tt' else 8 * dimensions[site])
+        assert batch.ids.numel() == 8 * dimensions[site]
+        fibers = drawn.reshape(8, dimensions[site], n_sites)
+        assert torch.equal(fibers[:, :, site],
+                           torch.arange(dimensions[site]).expand(8, -1))
         with pytest.raises(ValueError, match='n_rows'):
             sampler.draw(_owner(1, (0,) * n_sites), site, 8)
 

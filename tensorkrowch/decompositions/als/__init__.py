@@ -50,8 +50,11 @@ Advanced fitting controls:
         └─ convergence             ConvergencePolicy
 
 :class:`SamplingPolicy` groups sample count, method, reuse and optional uniform
-mixing. TT leverage sampling uses mixed-canonical cores; TR offers product or
-exact cyclic leverage sampling and retains complete active input fibers.
+mixing. Every sampled method retains complete active input fibers.
+``method="leverage"`` uses exact mixed-canonical TT or cyclic TR leverage;
+``"product_leverage"`` is TR-only. ``n_reuse_sweeps=0`` draws new environments
+at each site. Uniform sampling can share base configurations and cache target
+fibers across one or more directional sweeps with ``n_reuse_sweeps>=1``.
 :class:`LeastSquaresSolver` wraps PyTorch least squares with scaling and
 optional Tikhonov regularization. :class:`ConvergencePolicy` controls the sweep
 budget, ``atol``, ``rtol``, stability and optional best-state retention.
@@ -73,11 +76,11 @@ Shared execution and topology-specific contractions:
 
     TT backends
         +-- TTEnvironmentCache owns contractions, matrix and removed scale
-        +-- mixed-canonical site-dependent leverage rows
+        +-- site-dependent uniform or mixed-canonical leverage fibers
 
     TR backends
         +-- TRSegmentEnvironmentCache owns segmented cyclic contractions
-        +-- DirectTREnvironment supplies cyclic leverage matrices
+        +-- DirectTREnvironment supplies site-dependent sampled matrices
 
 ``SamplingPolicy`` controls proposal choice and reusable generations.
 ``RowSampler`` reads the current core owner when drawing rows; ``SampleBatch``

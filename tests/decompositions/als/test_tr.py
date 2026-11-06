@@ -183,7 +183,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
         ).fit(
             rank=2,
             sampler=tk.decompositions.SamplingPolicy(
-                12, method='uniform', reuse_sweeps=2
+                12, method='uniform', n_reuse_sweeps=2
             ),
             generator=torch.Generator().manual_seed(103),
             convergence=tk.decompositions.ConvergencePolicy(max_sweeps=3),
@@ -191,7 +191,8 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
             verbose=1,
         )
 
-        assert len(evaluations) == 3  # Fixed evaluation plus training draws
+        # Fixed evaluation plus four site fibers per generation.
+        assert len(evaluations) == 9
         assert [event.sweep for event in history.events
                 if event.name == 'sample_refresh'] == [0, 2]
         assert [record.sample_generation
@@ -258,7 +259,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
             rank=2,
             gauge='none',
             sampler=tk.decompositions.SamplingPolicy(
-                10, method='leverage', uniform_mix=0.2
+                10, method='product_leverage', uniform_mix=0.2
             ),
             generator=torch.Generator().manual_seed(106),
             convergence=tk.decompositions.ConvergencePolicy(max_sweeps=2),
@@ -284,13 +285,13 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
     def test_product_leverage_requires_sitewise_refresh(self):
         decomposition = tk.decompositions.TRALS(torch.ones(2, 2, 2))
 
-        with pytest.raises(ValueError, match='reuse_sweeps'):
+        with pytest.raises(ValueError, match='n_reuse_sweeps'):
             decomposition.fit(
                 rank=2,
                 sampler=tk.decompositions.SamplingPolicy(
-                    5, method='leverage', reuse_sweeps=2))
+                    5, method='product_leverage', n_reuse_sweeps=2))
 
-    def test_exact_leverage_uses_fibers_and_current_conditional_design(self):
+    def test_leverage_uses_fibers_and_current_conditional_design(self):
         tensor = torch.arange(16., dtype=torch.float64).reshape(2, 2, 2, 2)
         evaluations = []
 
@@ -311,7 +312,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
             rank=2,
             gauge='none',
             sampler=tk.decompositions.SamplingPolicy(
-                6, method='exact_leverage'
+                6, method='leverage'
             ),
             generator=torch.Generator().manual_seed(108),
             convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1),
@@ -327,7 +328,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
                 torch.arange(tensor.shape[site]).expand(6, -1))
         assert all(record.sampling_exact is True
                    for record in result.metrics.local_solves)
-        assert result.metadata['sampler']['method'] == 'exact_leverage'
+        assert result.metadata['sampler']['method'] == 'leverage'
         assert result.metadata['n_samples'] == 6
 
 
@@ -567,7 +568,7 @@ def test_perturbed_nontrivial_ring_initialization_recovers_dense_target(
         relative.item())
 
 
-@pytest.mark.parametrize('method', ['uniform', 'leverage', 'exact_leverage'])
+@pytest.mark.parametrize('method', ['uniform', 'product_leverage', 'leverage'])
 @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
 def test_sampled_random_initialization_recovers_separable_ring(method, dtype):
     factors = [torch.tensor([1., 2., -1.], dtype=dtype),

@@ -323,11 +323,11 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
                                          out_shape=(), dtype=torch.float64)
         result = d.TTALS(source).fit(
             rank=2,
-            sampler=d.SamplingPolicy(10, reuse_sweeps=2),
+            sampler=d.SamplingPolicy(10, n_reuse_sweeps=2),
             convergence=d.ConvergencePolicy(max_sweeps=3),
             collect_metrics=True,
         )
-        assert len(calls) == 3  # One evaluation set and two training batches
+        assert len(calls) == 9  # Evaluation plus four fibers per generation
         assert [r.sample_generation for r in result.metrics.sweeps] == [
             0,
             0,
@@ -351,7 +351,8 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
         )
         assert len(calls) == 7
         assert calls[0].shape == (12, 3)
-        assert all(query.shape == (15, 3) for query in calls[1:])
+        assert [query.shape for query in calls[1:]] == [
+            (30, 3), (45, 3), (30, 3), (30, 3), (45, 3), (30, 3)]
         assert all(r.sampling_exact for r in result.metrics.local_solves)
 
 
@@ -551,7 +552,7 @@ def test_exact_and_leverage_use_shared_qr_preparation(monkeypatch, method):
 _SAMPLED_ENGINES = [
     (d.TTALS, 'uniform'), (d.TTALS, 'leverage'),
     (d.TRALS, 'uniform'), (d.TRALS, 'leverage'),
-    (d.TRALS, 'exact_leverage'),
+    (d.TRALS, 'product_leverage'),
 ]
 
 
@@ -674,3 +675,168 @@ def test_minimal_sampled_fit_records_errors_without_collecting_metrics(
     assert seen[0].rel_error is not None
     assert not result.metrics.sweeps
     torch.testing.assert_close(result.contract_dense(), target)
+
+
+@pytest.mark.parametrize('engine', [d.TTALS, d.TRALS])
+@pytest.mark.parametrize('n_reuse_sweeps', [0, 1, 2, 3])
+def test_uniform_fiber_evaluations_follow_the_reuse_budget(
+        engine, n_reuse_sweeps):
+    calls = []
+    dimensions = (2, 3, 2, 3)
+
+    def function(indices):
+        calls.append(indices.clone())
+        return (indices.double() + 1).prod(-1)
+
+    source = d.CallableTensorSource(
+        function, dimensions, out_shape=(), dtype=torch.float64)
+    result = engine(source, out_device=None).fit(
+        rank=1, sampler=d.SamplingPolicy(9, n_reuse_sweeps=n_reuse_sweeps),
+        convergence=d.ConvergencePolicy(max_sweeps=3), collect_metrics=True,
+        generator=torch.Generator().manual_seed(183))
+    generations = 3 if n_reuse_sweeps < 2 else 2 if n_reuse_sweeps == 2 else 1
+    assert len(calls) == 1 + generations * len(dimensions)
+    expected = [sweep // max(n_reuse_sweeps, 1) for sweep in range(3)]
+    assert [record.sample_generation for record in result.metrics.sweeps] \
+        == expected
+    for query in calls[1:]:
+        assert query.shape[0] in (18, 27)
+    for record in result.metrics.local_solves:
+        assert record.sampling_exact
+    tensor = torch.ones(dimensions, dtype=torch.float64)
+    for site, size in enumerate(dimensions):
+        shape = [1] * len(dimensions)
+        shape[site] = size
+        tensor *= torch.arange(1., size + 1).reshape(shape)
+    torch.testing.assert_close(result.contract_dense(), tensor)
+
+
+@pytest.mark.parametrize('engine, method', _SAMPLED_ENGINES)
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_one_site_sampled_fit_resolves_the_entire_physical_fiber(
+        engine, method, dtype):
+    tensor = torch.tensor([1., -2., 0., 4.], dtype=dtype)
+    if tensor.is_complex():
+        tensor = tensor * (1 + .7j)
+    result = engine(tensor, out_device=None).fit(
+        rank=1, sampler=d.SamplingPolicy(1, method, uniform_mix=(
+            0 if method == 'uniform' else .2)),
+        convergence=d.ConvergencePolicy(max_sweeps=1), collect_metrics=True,
+        generator=torch.Generator().manual_seed(184))
+    torch.testing.assert_close(result.contract_dense(), tensor)
+    assert result.metrics.sweeps[0].rel_error < 1e-12
+
+
+@pytest.mark.parametrize('engine', [d.TTALS, d.TRALS])
+@pytest.mark.parametrize('site', [0, 2, 4])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_uniform_fibers_recover_a_core_with_frozen_neighbors(
+        engine, site, dtype):
+    generator = torch.Generator().manual_seed(185)
+    dimensions = (3, 3, 3, 3, 3)
+    if engine is d.TTALS:
+        cores = make_tt_cores(dimensions, (2,) * 4, dtype, generator)
+        tensor = contract_tt_dense(cores)
+    else:
+        cores = [torch.randn(2, size, 2, dtype=dtype, generator=generator)
+                 for size in dimensions]
+        tensor = tk.formats.TR(cores).contract_dense()
+    initial = [core.clone() for core in cores]
+    initial[site] *= .5
+    fixed = [None if i == site else core for i, core in enumerate(cores)]
+    result = engine(tensor, out_device=None).fit(
+        initial_cores=initial, fixed_cores=fixed,
+        sampler=d.SamplingPolicy(100),
+        convergence=d.ConvergencePolicy(max_sweeps=1),
+        generator=generator)
+    torch.testing.assert_close(result.contract_dense(), tensor,
+                               atol=1e-10, rtol=1e-10)
+    for i in range(len(cores)):
+        if i != site:
+            expected = cores[i]
+            if engine is d.TTALS:
+                expected = expected.squeeze(0) if i == 0 else (
+                    expected.squeeze(-1) if i == 4 else expected)
+            assert torch.equal(result.cores[i], expected)
+
+
+@pytest.mark.parametrize('engine, method, n_reuse_sweeps', [
+    (engine, method, reuse) for engine, method in _SAMPLED_ENGINES
+    for reuse in ([0, 2] if method == 'uniform' else [0])])
+def test_sparse_known_zeros_match_dense_sampled_fits(
+        engine, method, n_reuse_sweeps):
+    tensor = torch.zeros(2, 3, 2, 3, dtype=torch.complex128)
+    tensor[:, 1, :, 2] = torch.tensor([[1., 2.], [3., 6.]]) * (1 + .5j)
+    indices = tensor.nonzero()
+    sparse = d.SparseTensorSource(
+        indices, tensor[tuple(indices.T)], tensor.shape)
+    options = dict(
+        rank=1,
+        sampler=d.SamplingPolicy(50, method,
+                                  n_reuse_sweeps=n_reuse_sweeps),
+        convergence=d.ConvergencePolicy(max_sweeps=4), collect_metrics=True)
+    dense_result = engine(tensor, out_device=None).fit(
+        generator=torch.Generator().manual_seed(186), **options)
+    sparse_result = engine(sparse, out_device=None).fit(
+        generator=torch.Generator().manual_seed(186), **options)
+    torch.testing.assert_close(sparse_result.contract_dense(),
+                               dense_result.contract_dense())
+    torch.testing.assert_close(sparse_result.contract_dense(), tensor,
+                               atol=1e-10, rtol=1e-10)
+
+
+@pytest.mark.parametrize('engine, method', _SAMPLED_ENGINES)
+def test_nontrivial_complex_sampled_chain_recovers_from_perturbed_cores(
+        engine, method):
+    generator = torch.Generator().manual_seed(188)
+    dimensions = (3,) * 5
+    if engine is d.TTALS:
+        cores = make_tt_cores(dimensions, (2,) * 4, torch.complex128,
+                              generator)
+        tensor = contract_tt_dense(cores)
+    else:
+        cores = [torch.randn(2, size, 2, dtype=torch.complex128,
+                             generator=generator) for size in dimensions]
+        tensor = tk.formats.TR(cores).contract_dense()
+    initial = [core + 1e-3 * torch.randn(
+        core.shape, dtype=core.dtype, generator=generator) for core in cores]
+    result = engine(tensor, out_device=None).fit(
+        initial_cores=initial, sampler=d.SamplingPolicy(150, method),
+        generator=generator,
+        convergence=d.ConvergencePolicy(max_sweeps=40, rtol=1e-9),
+        collect_metrics=True)
+    relative = (result.contract_dense() - tensor).norm() / tensor.norm()
+    assert relative < 1e-8
+    assert result.metrics.sweeps[-1].rel_error < 1e-8
+
+
+@pytest.mark.parametrize('engine', [d.TTALS, d.TRALS])
+@pytest.mark.parametrize('n_reuse_sweeps', [0, 2])
+def test_uniform_fiber_solves_preserve_objective_weights_and_dense_masks(
+        engine, n_reuse_sweeps):
+    tensor = torch.arange(12., dtype=torch.float64).reshape(2, 3, 2)
+    weights = torch.linspace(.5, 2., 12).reshape(tensor.shape)
+    mask = torch.ones_like(tensor, dtype=torch.bool)
+    mask[1, :, 1] = False
+    queries = []
+
+    def function(indices):
+        queries.append(indices.clone())
+        return tensor[tuple(indices.T)]
+
+    source = d.CallableTensorSource(
+        function, tensor.shape, out_shape=(), dtype=torch.float64)
+    cores = [torch.ones(1, size, 1, dtype=torch.float64)
+             for size in tensor.shape]
+    result = engine(source, mask=mask, weights=weights, out_device=None).fit(
+        initial_cores=cores, fixed_cores=[cores[0], None, cores[2]],
+        gauge='none', sampler=d.SamplingPolicy(
+            20, n_reuse_sweeps=n_reuse_sweeps),
+        convergence=d.ConvergencePolicy(max_sweeps=1),
+        generator=torch.Generator().manual_seed(189))
+    indices = queries[-1].reshape(20, 3, 3)
+    selected = tuple(indices.unbind(-1))
+    factors = weights[selected] * mask[selected]
+    expected = (tensor[selected] * factors.square()).sum(0) / \
+        factors.square().sum(0)
+    torch.testing.assert_close(result.cores[1].reshape(-1), expected)

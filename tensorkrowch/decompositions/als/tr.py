@@ -3,7 +3,7 @@ This script contains:
 
     Classes:
         * _TRALSBackend
-        * _TRLeverageALSBackend
+        * _TRSampledALSBackend
         * TRALS
 
     Functions:
@@ -34,18 +34,19 @@ from tensorkrowch.decompositions.als.environments import (
 from tensorkrowch.decompositions.als.gauges import (_absorb_factor,
                                                     _factor_core)
 from tensorkrowch.decompositions.als.problem import ALSProblem
-from tensorkrowch.decompositions.als.sampling import (RowSampler,
+from tensorkrowch.decompositions.als.sampling import (ObservedRows,
                                                       SamplingPolicy,
                                                       TRExactLeverageRows,
                                                       TRProductLeverageRows,
+                                                      UniformRows,
+                                                      _evaluate_fibers,
                                                       )
 from tensorkrowch.decompositions.als.solvers import (LeastSquaresSolver,
                                                      _solve_local_proposal)
 from tensorkrowch.decompositions.als.tt import TTALS
 from tensorkrowch.decompositions.metrics import LocalSolveRecord
 from tensorkrowch.decompositions.results import TRDecomposition
-from tensorkrowch.decompositions.sources import (BaseSource,
-                                                 ConfigurationBatch)
+from tensorkrowch.decompositions.sources import BaseSource
 
 
 _Rank = Optional[Union[int, Sequence[int]]]
@@ -168,11 +169,7 @@ class _TRALSBackend:  # MARK: _TRALSBackend
                  fixed_sites: Sequence[int],
                  normalize: bool,
                  renormalize: bool,
-                 n_segments: Optional[int],
-                 sampler: Optional[RowSampler] = None,
-                 n_samples: Optional[int] = None,
-                 sampling_policy: Optional[SamplingPolicy] = None,
-                 generator: Optional[torch.Generator] = None) -> None:
+                 n_segments: Optional[int]) -> None:
         self.problem = problem
         self.full_target = None if target is None else target.reshape(-1)
         self.solver = solver
@@ -181,10 +178,6 @@ class _TRALSBackend:  # MARK: _TRALSBackend
         self.normalize = normalize
         self.cache = TRSegmentEnvironmentCache(
             cores, n_segments=n_segments, renormalize=renormalize)
-        self.sampler = sampler
-        self.n_samples = n_samples
-        self.sampling_policy = sampling_policy
-        self.generator = generator
         self.sample_batch = None
         self.current_target = self.full_target
         self._direction = None
@@ -213,34 +206,18 @@ class _TRALSBackend:  # MARK: _TRALSBackend
         generation.
         """
         self._direction = 'forward' if order[0] == 0 else 'reverse'
-        if self.sampler is None:
+        if self.problem.observations is None:
             self.cache.prepare_sweep(order)
             self.current_target = self.full_target
             return None, False
 
-        batch, refreshed = self.sampling_policy.sample(
-            sampler=self.sampler, owner=self.cache, site=order[0],
-            n_samples=self.n_samples, generator=self.generator,
-            sweep=sweep, current=self.sample_batch)
+        refreshed = self.sample_batch is None
         if refreshed:
-            self.cache.invalidate('sample generation changed')
-        if refreshed:
-            if self.problem.observations is not None:
-                self.current_target = self.problem.observations.support_values
-            else:
-                indices = _unravel_indices(batch.ids, self.cache.in_dim)
-                evaluated = self.problem.evaluate(
-                    ConfigurationBatch(indices, kind='indices'))
-                if evaluated.shape != (batch.ids.numel(),):
-                    raise ValueError(
-                        'TR-ALS currently requires a scalar tensor source')
-                if not torch.isfinite(evaluated).all():
-                    raise ValueError(
-                        'The tensor source should return only finite values')
-                self.current_target = evaluated
-        self.sample_batch = batch
-        self.cache.prepare_sweep(order, samples=batch)
-        return batch.generation, refreshed
+            self.sample_batch = ObservedRows(self.problem.observations).draw(
+                self.cache, order[0], None)
+            self.current_target = self.problem.observations.support_values
+        self.cache.prepare_sweep(order, samples=self.sample_batch)
+        return self.sample_batch.generation, refreshed
 
     def update_site(self,
                     site: int,
@@ -248,16 +225,12 @@ class _TRALSBackend:  # MARK: _TRALSBackend
                     return_record: bool) -> Optional[LocalSolveRecord]:
         """Builds one local proposal and its atomic gauge update."""
         environment = self.cache.design(site)
-        indices = (None if (self.sample_batch is None) or
-                   (self.problem.observations is not None) else
-                   _unravel_indices(self.sample_batch.ids,
-                                    self.problem.in_dim))
         proposal, record = _solve_local_proposal(
             solver=self.solver, environment=environment,
             target=self.current_target, current=self.cache.cores[site],
             site=site, sweep=sweep, return_record=return_record,
             problem=self.problem, log_scale=self.cache.log_scale,
-            indices=indices,
+            indices=None,
             samples=self.sample_batch, core_versions=self.cache.core_versions)
         replacements = _tr_gauge_core_update(
             cores=self.cache.cores,
@@ -314,8 +287,8 @@ class _TRALSBackend:  # MARK: _TRALSBackend
             renormalize=self.cache.renormalize)
 
 
-class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
-    """Runs product or exact TR leverage sampling by active fibers."""
+class _TRSampledALSBackend:  # MARK: _TRSampledALSBackend
+    """Runs uniform, product or exact TR sampling by active fibers."""
 
     def __init__(self,
                  problem: ALSProblem,
@@ -323,9 +296,7 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
                  solver: LeastSquaresSolver,
                  gauge: str,
                  fixed_sites: Sequence[int],
-                 n_samples: int,
-                 leverage_method: str,
-                 uniform_mix: float,
+                 sampling_policy: SamplingPolicy,
                  generator: Optional[torch.Generator],
                  normalize: bool,
                  renormalize: bool) -> None:
@@ -335,22 +306,22 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
         self.solver = solver
         self.gauge = gauge
         self.fixed_sites = frozenset(fixed_sites)
-        self.n_samples = n_samples
+        self.sampling_policy = sampling_policy
+        self.n_samples = sampling_policy.n_samples
         self.generator = generator
         self.normalize = normalize
         self.renormalize = renormalize
-        if leverage_method == 'product':
+        if sampling_policy.method == 'uniform':
+            self.sampler = UniformRows()
+        elif sampling_policy.method == 'product_leverage':
             self.sampler = TRProductLeverageRows(
-                lambda: self._cores, uniform_mix=uniform_mix)
-        elif leverage_method == 'exact':
-            self.sampler = TRExactLeverageRows(
-                lambda: self._cores, uniform_mix=uniform_mix)
+                lambda: self._cores, uniform_mix=sampling_policy.uniform_mix)
         else:
-            raise ValueError(
-                "`leverage_method` should be 'product' or 'exact'")
-        self.leverage_method = leverage_method
+            self.sampler = TRExactLeverageRows(
+                lambda: self._cores, uniform_mix=sampling_policy.uniform_mix)
         self._direction = None
         self._generation = None
+        self._sweep = None
 
     @property
     def core_versions(self) -> Tuple[int, ...]:
@@ -376,33 +347,32 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
     def prepare_sweep(self,
                       order: Sequence[int],
                       sweep: int) -> Tuple[Optional[int], bool]:
-        """
-        Prepares directional environments and the current sampling
-        generation.
-        """
+        """Prepares the current uniform or leverage sample generation."""
+        generation = self.sampling_policy.generation(sweep)
+        refreshed = (self.sampling_policy.n_reuse_sweeps == 0) or (
+            generation != self._generation)
         self._direction = 'forward' if order[0] == 0 else 'reverse'
-        self._generation = sweep
-        return sweep, True
+        self._generation = generation
+        self._sweep = sweep
+        return generation, refreshed
 
     def update_site(self,
                     site: int,
                     sweep: int,
                     return_record: bool) -> Optional[LocalSolveRecord]:
         """Builds one local proposal and its atomic gauge update."""
-        self.sampler.generation = self._generation
-        batch = self.sampler.draw(self, site, self.n_samples, self.generator)
+        if isinstance(self.sampler, UniformRows):
+            batch, _ = self.sampling_policy.sample(
+                self.sampler, self, site, self.n_samples, self.generator,
+                self._sweep)
+            target = self.sampler.evaluate(self.problem.source, batch)
+        else:
+            self.sampler.generation = self._generation
+            batch = self.sampler.draw(
+                self, site, self.n_samples, self.generator)
+            target = _evaluate_fibers(self.problem.source, batch)
         indices = _unravel_indices(
             batch.ids, tuple(core.shape[1] for core in self._cores))
-        in_dim = self._cores[site].shape[1]
-        base_indices = indices[::in_dim].clone()
-        target = self.problem.source.fiber(
-            ConfigurationBatch(base_indices, kind='indices'), site).reshape(-1)
-        if target.shape != (batch.ids.numel(),):
-            raise ValueError(
-                'TR-ALS currently requires a scalar tensor source')
-        if not torch.isfinite(target).all():
-            raise ValueError(
-                'The tensor source should return only finite values')
 
         environment = DirectTREnvironment(self._cores).design(
             site, samples=batch)
@@ -453,7 +423,7 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
             approximation = _evaluate_standard_tr(
                 self.cores, problem._evaluation_indices)
             return problem.evaluation_error(approximation)
-        raise RuntimeError('Leverage sweeps require prepared evaluation')
+        raise RuntimeError('Sampled sweeps require prepared evaluation')
 
     def snapshot(self) -> Sequence[torch.Tensor]:
         """Returns the cores forming the current approximation."""
@@ -603,22 +573,16 @@ class TRALS(TTALS):  # MARK: TRALS
                       target: Optional[torch.Tensor],
                       solver: LeastSquaresSolver, gauge: str,
                       fixed_sites: Sequence[int], renormalize: bool,
-                      row_sampler: Optional[RowSampler],
-                      n_samples: Optional[int],
-                      sampling_policy: SamplingPolicy,
                       generator: Optional[torch.Generator],
                       sampler: Optional[SamplingPolicy]) -> ALSBackend:
-        """Builds the topology-specific full-row or leverage backend."""
-        if (sampler is not None) and (sampler.method in (
-                'leverage', 'exact_leverage')):
-            return _TRLeverageALSBackend(
-                problem, cores, solver, gauge, fixed_sites, n_samples,
-                'product' if sampler.method == 'leverage' else 'exact',
-                sampler.uniform_mix, generator, True, renormalize)
+        """Builds the topology-specific full-row or sampled backend."""
+        if sampler is not None:
+            return _TRSampledALSBackend(
+                problem, cores, solver, gauge, fixed_sites, sampler,
+                generator, True, renormalize)
         return _TRALSBackend(
             problem, cores, target, solver, gauge, fixed_sites,
-            True, renormalize, None, row_sampler, n_samples,
-            sampling_policy, generator)
+            True, renormalize, None)
 
     def fit(self,
             rank: Optional[Union[int, Sequence[int]]] = None,

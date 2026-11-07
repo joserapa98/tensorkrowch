@@ -44,13 +44,14 @@ def _column_norms(environment: torch.Tensor) -> torch.Tensor:
     return torch.where(torch.isfinite(column_norms), column_norms, maxima)
 
 
-def _column_scales(environment: torch.Tensor) -> torch.Tensor:
+def _column_scales(environment: torch.Tensor, n_copies: int = 1
+                   ) -> torch.Tensor:
     """Returns safe L2 column scales for an augmented design matrix."""
     column_norms = _column_norms(environment)
     if not column_norms.numel():
         return column_norms
     maximum = column_norms.max()
-    threshold = max(environment.shape) * \
+    threshold = n_copies * max(environment.shape) * \
         torch.finfo(column_norms.dtype).eps * maximum
     return torch.where(
         column_norms > threshold,
@@ -141,7 +142,9 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
     def _effective_regularization(self,
                                   environment: torch.Tensor,
                                   regularization_scale: Optional[
-                                      torch.Tensor] = None) -> torch.Tensor:
+                                      torch.Tensor] = None,
+                                  n_parameters: Optional[int] = None
+                                  ) -> torch.Tensor:
         """Determines lambda in the unscaled problem."""
         value = environment.real.new_tensor(self.l2_reg)
         if regularization_scale is not None:
@@ -167,8 +170,9 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
             raise ValueError('Effective `l2_reg` should be finite')
         if (self.l2_reg_mode == 'absolute') or (self.l2_reg == 0):
             return value
-        rms_column_norm = stable_norm(environment) / sqrt(
-            environment.shape[1])
+        if n_parameters is None:
+            n_parameters = environment.shape[1]
+        rms_column_norm = stable_norm(environment) / sqrt(n_parameters)
         value = value * rms_column_norm.square()
         if not torch.isfinite(value):
             raise ValueError(
@@ -210,14 +214,15 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
 
     def _lstsq(self,
                environment: torch.Tensor,
-               target: torch.Tensor) -> Tuple[torch.Tensor, str]:
+               target: torch.Tensor,
+               rcond: Optional[float]) -> Tuple[torch.Tensor, str]:
         """Solves with a visible, controlled CPU fallback sequence."""
         attempted = 'default' if self.driver is None else self.driver
         try:
             result = torch.linalg.lstsq(
                 environment,
                 target,
-                rcond=self.rcond,
+                rcond=rcond,
                 driver=self.driver)
             return result.solution, attempted
         except RuntimeError as initial_error:
@@ -234,7 +239,7 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
                     result = torch.linalg.lstsq(
                         environment,
                         target,
-                        rcond=self.rcond,
+                        rcond=rcond,
                         driver=driver)
                     return result.solution, driver
                 except RuntimeError as fallback_error:
@@ -290,6 +295,16 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
             least-squares driver. CPU driver retries remain on CPU; accelerator
             errors propagate.
         """
+        return self._solve(environment, target, site, sweep, return_record,
+                           regularization_scale)
+
+    def _solve(self, environment: torch.Tensor, target: torch.Tensor,
+               site: Optional[Union[int, Tuple[int, ...]]] = None,
+               sweep: Optional[int] = None, return_record: bool = True,
+               regularization_scale: Optional[torch.Tensor] = None,
+               n_copies: int = 1) -> Tuple[
+            torch.Tensor, Optional[LocalSolveRecord]]:
+        """Solves shared physical slices with the expanded rank thresholds."""
         if not isinstance(environment, torch.Tensor):
             raise TypeError('`environment` should be torch.Tensor type')
         if not isinstance(target, torch.Tensor):
@@ -333,7 +348,7 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
         apply_column_scaling = self._should_scale_columns(
             transformed_environment)
         if apply_column_scaling:
-            column_scales = _column_scales(transformed_environment)
+            column_scales = _column_scales(transformed_environment, n_copies)
             transformed_environment = transformed_environment / \
                 column_scales.to(transformed_environment.dtype).unsqueeze(0)
         else:
@@ -352,8 +367,14 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
             else:
                 system_scale = system_scale.new_tensor(1.)
 
+        # Repeated physical blocks have the same singular values. Preserve
+        # the expanded system's automatic cutoff without constructing it.
+        rcond = self.rcond
+        if (rcond is None) and (n_copies != 1):
+            rcond = (torch.finfo(environment.real.dtype).eps * n_copies *
+                     max(transformed_environment.shape))
         scaled_solution, effective_driver = self._lstsq(
-            transformed_environment, transformed_target)
+            transformed_environment, transformed_target, rcond)
         solution = scaled_solution / \
             column_scales.to(scaled_solution.dtype).unsqueeze(1)
         if not torch.isfinite(solution).all():
@@ -382,6 +403,99 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
             sweep=sweep)
         return returned_solution, record
 
+    def _solve_blocks(self, environments: Sequence[torch.Tensor],
+                      targets: Sequence[torch.Tensor], n_rows: int,
+                      site: int, sweep: int, return_record: bool,
+                      regularization_scale: Optional[torch.Tensor] = None
+                      ) -> Tuple[torch.Tensor, Optional[LocalSolveRecord]]:
+        """Solves physical blocks with shared numerical policies."""
+        n_inputs = len(environments)
+        n_parameters = environments[0].shape[1]
+        reference = environments[0]
+        for matrix, target in zip(environments, targets):
+            if not torch.isfinite(matrix).all() or \
+                    not torch.isfinite(target).all():
+                raise NonFiniteLocalSystemError(
+                    'Local blocks should contain only finite values')
+        # Relative regularization belongs to the complete core, including
+        # slices with no observations, rather than to each slice separately.
+        norms = torch.stack([stable_norm(matrix) for matrix in environments])
+        penalty = self._effective_regularization(
+            norms, regularization_scale, n_inputs * n_parameters)
+        augmented = [self._augment(matrix, target.unsqueeze(1), penalty)
+                     for matrix, target in zip(environments, targets)]
+        column_norms = torch.stack([
+            _column_norms(matrix) if matrix.shape[0] else
+            reference.real.new_zeros(n_parameters)
+            for matrix, _ in augmented])
+        positive = column_norms[column_norms > 0]
+        apply_scaling = self.column_scaling is True
+        if (self.column_scaling == 'auto') and (positive.numel() > 1):
+            threshold = 1 / sqrt(torch.finfo(positive.dtype).eps)
+            apply_scaling = bool(positive.max() / positive.min() > threshold)
+        logical_rows = n_rows + (n_inputs * n_parameters if penalty > 0 else 0)
+        logical_size = max(logical_rows, n_inputs * n_parameters)
+        if apply_scaling:
+            threshold = (logical_size * torch.finfo(column_norms.dtype).eps *
+                         column_norms.max())
+            scales = torch.where(column_norms > threshold, column_norms,
+                                 torch.ones_like(column_norms))
+        else:
+            scales = torch.ones_like(column_norms)
+        matrices = [matrix / scale.to(matrix.dtype).unsqueeze(0)
+                    for (matrix, _), scale in zip(augmented, scales)]
+        rhs = [target for _, target in augmented]
+        if self.system_scaling:
+            magnitudes = [value.abs().amax() for value in [*matrices, *rhs]
+                          if value.numel()]
+            scale = torch.stack(magnitudes).max()
+            if scale > 0:
+                matrices = [matrix / scale for matrix in matrices]
+                rhs = [target / scale for target in rhs]
+
+        # The expanded matrix is block diagonal up to permutations. A single
+        # absolute singular-value cutoff must therefore apply to all blocks.
+        rcond = self.rcond
+        if rcond is None:
+            rcond = torch.finfo(reference.real.dtype).eps * logical_size
+        maxima = [torch.linalg.svdvals(matrix)[0] if matrix.numel() else
+                  reference.real.new_zeros(()) for matrix in matrices]
+        cutoff = rcond * torch.stack(maxima).max()
+        solutions, drivers = [], []
+        for matrix, target, maximum, scale in zip(
+                matrices, rhs, maxima, scales):
+            if (maximum == 0) or (
+                    (self.driver != 'gels') and (maximum <= cutoff)):
+                solution = reference.new_zeros((n_parameters, 1))
+            else:
+                solution, driver = self._lstsq(
+                    matrix, target, float((cutoff / maximum).detach()))
+                drivers.append(driver)
+            solutions.append(solution[:, 0] / scale.to(solution.dtype))
+        solution = torch.stack(solutions, dim=1)
+        if not torch.isfinite(solution).all():
+            raise NonFiniteSolutionError(
+                'Least-squares solution contains non-finite values')
+        if not return_record:
+            return solution, None
+        residuals = [stable_norm(matrix @ solution[:, j] - target)
+                     for j, (matrix, target) in enumerate(
+                         zip(environments, targets))]
+        absolute = stable_norm(torch.stack(residuals))
+        target_norm = stable_norm(torch.stack([
+            stable_norm(target) for target in targets]))
+        relative = safe_divide(
+            absolute, target_norm,
+            zero_value=torch.where(absolute == 0, 0, torch.inf))
+        record = LocalSolveRecord(
+            environment_shape=(n_rows, n_parameters),
+            target_shape=(n_rows,),
+            driver=','.join(dict.fromkeys(drivers)) if drivers else 'zero',
+            abs_residual=absolute, rel_residual=relative,
+            effective_l2_reg=penalty, column_scaling=apply_scaling,
+            site=site, sweep=sweep)
+        return solution, record
+
 
 def _solve_local_proposal(solver: LeastSquaresSolver,
                           environment: torch.Tensor,
@@ -395,35 +509,74 @@ def _solve_local_proposal(solver: LeastSquaresSolver,
                           log_scale: torch.Tensor,
                           indices: Optional[torch.Tensor] = None,
                           samples: Optional[SampleBatch] = None,
-                          core_versions: Sequence[int] = ()) -> Tuple[
+                          core_versions: Sequence[int] = (),
+                          compact: bool = False) -> Tuple[
         torch.Tensor, Optional[LocalSolveRecord]]:
-    """Weights and solves one normalized system, restoring the core shape."""
-    target = target * (-log_scale).exp().to(target.dtype)
-    if samples is not None:
-        weights = samples.weights.to(environment.dtype)
-        environment = environment * weights.unsqueeze(1)
-        target = target * weights
-    weights = problem._row_weights(indices)
-    if weights is not None:
-        weights = weights.to(environment.dtype)
-        environment = environment * weights.unsqueeze(1)
-        target = target * weights
-
-    # Preserve the original absolute penalty after normalizing both sides.
+    """Solves scalar rows or shared physical fibers and restores the core."""
     regularization_scale = None
     if (solver.l2_reg_mode == 'absolute') and (solver.l2_reg > 0):
         regularization_scale = (-2 * log_scale).exp()
-    solution, record = solver.solve(
-        environment,
-        target,
-        site=site,
-        sweep=sweep,
-        return_record=return_record,
-        regularization_scale=regularization_scale)
+    target = target * (-log_scale).exp().to(target.dtype)
+    weights = problem._row_weights(indices)
+    if weights is not None:
+        weights = weights.to(environment.real.dtype)
+    if samples is not None:
+        sample_weights = samples.weights.to(environment.real.dtype)
+        weights = (sample_weights if weights is None else
+                   weights * sample_weights)
+
+    if compact:
+        dimension = current.shape[1]
+        if problem.observations is None:
+            if samples is None:
+                target = target.reshape(problem.in_dim).movedim(site, -1)
+                if weights is not None:
+                    weights = weights.reshape(problem.in_dim).movedim(site, -1)
+            target = target.reshape(-1, dimension)
+            if weights is not None:
+                weights = weights.reshape(-1, dimension)
+            if (weights is None) or torch.equal(
+                    weights, weights[:, :1].expand_as(weights)):
+                if weights is not None:
+                    environment = environment * weights[:, :1]
+                    target = target * weights
+                solution, record = solver._solve(
+                    environment, target, site, sweep, return_record,
+                    regularization_scale, n_copies=dimension)
+            else:
+                matrices = [environment * weights[:, j:j + 1]
+                            for j in range(dimension)]
+                targets = [target[:, j] * weights[:, j]
+                           for j in range(dimension)]
+                solution, record = solver._solve_blocks(
+                    matrices, targets, target.numel(), site, sweep,
+                    return_record, regularization_scale)
+        else:
+            if weights is not None:
+                environment = environment * weights.unsqueeze(1)
+                target = target * weights
+            labels = problem.observations.support.values[:, site]
+            selections = [labels == j for j in range(dimension)]
+            matrices = [environment[selected] for selected in selections]
+            targets = [target[selected] for selected in selections]
+            solution, record = solver._solve_blocks(
+                matrices, targets, target.numel(), site, sweep,
+                return_record, regularization_scale)
+    else:
+        if weights is not None:
+            environment = environment * weights.unsqueeze(1)
+            target = target * weights
+        solution, record = solver.solve(
+            environment, target, site, sweep, return_record,
+            regularization_scale)
     if (record is not None) and (samples is not None):
         record = replace(record,
                          sampling_exact=samples.is_exact_for(core_versions),
                          sample_generation=samples.generation)
+    if compact:
+        solution = solution.reshape(
+            current.shape[0], current.shape[2], current.shape[1]
+        ).transpose(1, 2)
     return solution.reshape(current.shape), record
 
 

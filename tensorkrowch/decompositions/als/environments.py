@@ -10,12 +10,13 @@ This script contains:
     Functions:
         * _updated_cores
         * _tr_design
+        * _fiber_indices
         * _environment_norm
         * _normalize_environment
         * _tr_sample_indices
 """
 
-from math import prod
+from math import prod, sqrt
 from typing import Any, Mapping, Optional, Protocol, Sequence, Tuple, Union
 
 import torch
@@ -24,7 +25,8 @@ import torch.nn.functional as nnf
 from tensorkrowch.utils import stable_norm
 
 from tensorkrowch.decompositions._utils import _unravel_indices
-from tensorkrowch.decompositions.als.sampling import SampleBatch
+from tensorkrowch.decompositions.als.sampling import (SampleBatch,
+                                                      _expand_fibers)
 from tensorkrowch.decompositions.sources import ConfigurationBatch
 from tensorkrowch.decompositions.sources.base import _discrete_indices
 
@@ -39,7 +41,7 @@ class EnvironmentCache(Protocol):  # MARK: EnvironmentCache
                                               SampleBatch]] = None) -> None:
         """Prepares reusable contractions for a sweep."""
 
-    def design(self, site: int) -> torch.Tensor:
+    def design(self, site: int, *, compact: bool = False) -> torch.Tensor:
         """Builds the active matrix and retains its logarithmic scale."""
 
     def update(self, replacements: Mapping[int, torch.Tensor]) -> None:
@@ -74,18 +76,34 @@ def _updated_cores(cores: Sequence[torch.Tensor], versions: Sequence[int],
 
 
 def _tr_design(environment: torch.Tensor, in_dim: int,
-               site_ids: torch.Tensor) -> torch.Tensor:
-    """Forms cyclic matrix rows in vectorized physical-core order."""
+               site_ids: torch.Tensor, compact: bool = False) -> torch.Tensor:
+    """Forms cyclic rows, optionally sharing them across physical inputs."""
+    if compact:
+        return environment.transpose(1, 2).reshape(environment.shape[0], -1)
     basis = nnf.one_hot(site_ids.to(torch.long), in_dim).to(
         device=environment.device, dtype=environment.dtype)
     matrix = torch.einsum('jp,jba->japb', basis, environment)
     return matrix.reshape(matrix.shape[0], -1)
 
 
-def _environment_norm(environment: torch.Tensor) -> torch.Tensor:
-    """Computes a finite global norm after extracting the largest magnitude."""
+def _fiber_indices(indices: torch.Tensor, site: int,
+                    in_dim: Sequence[int]) -> torch.Tensor:
+    """Extracts environments from complete, environment-major input fibers."""
+    dimension = in_dim[site]
+    if indices.shape[0] % dimension:
+        raise ValueError('Compact systems require complete input fibers')
+    base = indices[::dimension]
+    if not torch.equal(indices, _expand_fibers(base, site, in_dim)):
+        raise ValueError(
+            'Compact systems require ordered complete input fibers')
+    return base
+
+
+def _environment_norm(environment: torch.Tensor, n_copies: int = 1
+                      ) -> torch.Tensor:
+    """Computes a finite norm, including unmaterialized physical copies."""
     maximum = environment.abs().amax()
-    norm = stable_norm(environment)
+    norm = stable_norm(environment) * sqrt(n_copies)
     return torch.where(torch.isfinite(norm), norm, maximum)
 
 
@@ -393,7 +411,7 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
         self._prepared = True
         self._invalidation_reason = None
 
-    def design(self, site: int) -> torch.Tensor:
+    def design(self, site: int, *, compact: bool = False) -> torch.Tensor:
         """
         Builds the active TT design and stores its ``log_scale``.
 
@@ -402,7 +420,14 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
         site : int
             Next site in the prepared sweep order. Commit its update before
             requesting another environment.
+        compact : bool
+            Whether to return one row per external configuration and one
+            column per bond pair, sharing the matrix across physical inputs.
+            Defaults to ``False``. Selected entries retain one row each;
+            complete sweeps retain one row per external configuration.
         """
+        if not isinstance(compact, bool):
+            raise TypeError('`compact` should be bool type')
         if not self._prepared:
             reason = '' if self._invalidation_reason is None \
                 else f' after {self._invalidation_reason}'
@@ -435,10 +460,18 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
         self.sampled = site_ids is not None
         dimension = self.in_dim[site]
         if site_ids is not None:
+            if compact:
+                self.matrix = torch.einsum('ja,jb->jab', left, right).reshape(
+                    left.shape[0], -1)
+                return self.matrix
             basis = nnf.one_hot(site_ids.to(torch.long), dimension).to(
                 device=left.device, dtype=left.dtype)
             matrix = torch.einsum('ja,jp,jb->japb', left, basis, right)
             self.matrix = matrix.reshape(matrix.shape[0], -1)
+            return self.matrix
+        if compact:
+            self.matrix = torch.einsum('la,rb->lrab', left, right).reshape(
+                left.shape[0] * right.shape[0], -1)
             return self.matrix
         identity = torch.eye(dimension, device=left.device, dtype=left.dtype)
         matrix = (left[:, None, None, :, None, None] *
@@ -516,8 +549,9 @@ class DirectTREnvironment:  # MARK: DirectTREnvironment
         self._cores = TRSegmentEnvironmentCache._validate_cores(tuple(cores))
 
     def design(self, site: int,
-               samples: Optional[Union[ConfigurationBatch, SampleBatch]] = None
-               ) -> torch.Tensor:
+               samples: Optional[Union[ConfigurationBatch,
+                                       SampleBatch]] = None,
+               *, compact: bool = False) -> torch.Tensor:
         """
         Builds direct cyclic rows; ``log_scale`` is zero.
 
@@ -527,15 +561,33 @@ class DirectTREnvironment:  # MARK: DirectTREnvironment
             Core excluded from the cyclic contraction.
         samples : ConfigurationBatch or SampleBatch, optional
             Selected configurations; omitted for the complete tensor.
+        compact : bool
+            Whether to share the design across physical inputs. Defaults to
+            ``False``. Sampled rows must contain complete input fibers in
+            environment-major order.
         """
         n_sites = len(self._cores)
         if isinstance(site, bool) or not isinstance(site, int) or \
                 (site < 0) or (site >= n_sites):
             raise ValueError('`site` should identify a TR core')
-        indices, generation, sampled = _tr_sample_indices(
-            samples=samples,
-            in_dim=tuple(core.shape[1] for core in self._cores),
-            device=self._cores[0].device)
+        if not isinstance(compact, bool):
+            raise TypeError('`compact` should be bool type')
+        in_dim = tuple(core.shape[1] for core in self._cores)
+        if compact and (samples is None):
+            external_dim = in_dim[:site] + in_dim[site + 1:]
+            external = _unravel_indices(torch.arange(
+                prod(external_dim), device=self._cores[0].device),
+                external_dim)
+            indices = torch.cat((external[:, :site],
+                                 external.new_zeros((len(external), 1)),
+                                 external[:, site:]), dim=1)
+            sampled = False
+        else:
+            indices, _, sampled = _tr_sample_indices(
+                samples=samples, in_dim=in_dim,
+                device=self._cores[0].device)
+            if compact:
+                indices = _fiber_indices(indices, site, in_dim)
         order = (*range(site + 1, n_sites), *range(site))
         environment = None
         for other_site in order:
@@ -552,7 +604,7 @@ class DirectTREnvironment:  # MARK: DirectTREnvironment
         self.log_scale = environment.real.new_zeros(())
         self.sampled = sampled
         self.matrix = _tr_design(environment, self._cores[site].shape[1],
-                                 indices[:, site])
+                                 indices[:, site], compact=compact)
         return self.matrix
 
 
@@ -908,7 +960,7 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
         self._prepared = True
         self._invalidation_reason = None
 
-    def design(self, site: int) -> torch.Tensor:
+    def design(self, site: int, *, compact: bool = False) -> torch.Tensor:
         """
         Builds the active TR design and stores its ``log_scale``.
 
@@ -917,7 +969,14 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
         site : int
             Next site in the prepared sweep order. Commit its update before
             requesting another environment.
+        compact : bool
+            Whether to return one row per external configuration and one
+            column per bond pair, sharing the matrix across physical inputs.
+            Defaults to ``False``. Selected entries retain one row each;
+            complete sweeps retain one row per external configuration.
         """
+        if not isinstance(compact, bool):
+            raise TypeError('`compact` should be bool type')
         if not self._prepared:
             reason = '' if self._invalidation_reason is None else \
                 f' after {self._invalidation_reason}'
@@ -952,8 +1011,17 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
         self._active_site = site
         self.log_scale = log_scale
         self.sampled = self._sampled
+        if compact and not self._sampled:
+            # The cache enumerates all entries; remove the repeated active
+            # index before building the shared external design.
+            left_size = prod(self.in_dim[:site])
+            right_size = prod(self.in_dim[site + 1:])
+            environment = environment.reshape(
+                left_size, self.in_dim[site], right_size,
+                *environment.shape[1:])[:, 0].reshape(
+                    left_size * right_size, *environment.shape[1:])
         self.matrix = _tr_design(environment, self.in_dim[site],
-                                 self._indices[:, site])
+                                 self._indices[:, site], compact=compact)
         return self.matrix
 
     def update(self, replacements: Mapping[int, torch.Tensor]) -> None:

@@ -180,3 +180,34 @@ def observed_error(
     """Returns the L2 error restricted to fixed observed entries."""
     residual = contract_tr_dense(cores).reshape(-1) - target.reshape(-1)
     return residual.index_select(0, rows).norm()
+
+
+
+def expanded_local_proposal(*, environment, current, problem, site,
+                             samples=None, compact=False, **options):
+    """Recreates the physical identity blocks for a reference ALS sweep."""
+    from math import prod
+    from tensorkrowch.decompositions.als.solvers import _solve_local_proposal
+    if compact:
+        dimension = current.shape[1]
+        if problem.observations is not None:
+            labels = problem.observations.support.values[:, site]
+            points = environment
+        elif samples is not None:
+            labels = torch.arange(dimension, device=environment.device).repeat(
+                environment.shape[0])
+            points = environment.repeat_interleave(dimension, dim=0)
+        else:
+            left = prod(problem.in_dim[:site])
+            right = prod(problem.in_dim[site + 1:])
+            points = environment.reshape(left, right, -1).unsqueeze(1).expand(
+                left, dimension, right, -1).reshape(-1, environment.shape[1])
+            labels = torch.arange(dimension, device=environment.device).view(
+                1, dimension, 1).expand(left, dimension, right).reshape(-1)
+        points = points.reshape(-1, current.shape[0], current.shape[2])
+        basis = torch.nn.functional.one_hot(labels, dimension).to(points.dtype)
+        environment = torch.einsum('ji,jab->jaib', basis, points).reshape(
+            points.shape[0], -1)
+    return _solve_local_proposal(
+        environment=environment, current=current, problem=problem, site=site,
+        samples=samples, compact=False, **options)

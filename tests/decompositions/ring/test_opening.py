@@ -473,3 +473,51 @@ class TestGaugeCoordinateMaps:
         with pytest.raises(error):
             opening.transform_gauges(left_map=matrix)
         torch.testing.assert_close(opening.contract_dense(), before)
+
+
+@pytest.mark.parametrize('orientation', ['left', 'right'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('mode', ['absolute', 'relative'])
+def test_fixed_gauge_shared_solve_matches_regularized_expansion(
+        orientation, dtype, mode, monkeypatch):
+    generator = torch.Generator().manual_seed(325)
+    left = torch.randn(2, 4, 2, dtype=dtype, generator=generator)
+    right = torch.randn(3, 5, 2, dtype=dtype, generator=generator)
+    target = torch.randn(4, 3, 5, dtype=dtype, generator=generator)
+    solver = tk.decompositions.LeastSquaresSolver(
+        l2_reg=.02, l2_reg_mode=mode, driver='gelsd')
+    core = torch.zeros(2, 3, 3, dtype=dtype)
+    from tests.decompositions.als._oracles import dense_local_design
+    full = dense_local_design([left, core, right], 1, 'tr')
+    expected, _ = solver.solve(full, target.flatten())
+    calls = []
+    lstsq = torch.linalg.lstsq
+
+    def capture(matrix, rhs, **kwargs):
+        calls.append((matrix.shape, rhs.shape))
+        return lstsq(matrix, rhs, **kwargs)
+
+    monkeypatch.setattr(torch.linalg, 'lstsq', capture)
+    result = _FixedGaugeCoreOpener(solver).open(
+        target, (2, 3, 2), fixed_left=left, fixed_right=right,
+        orientation=orientation)
+    torch.testing.assert_close(result.cores[0], expected.reshape(core.shape),
+                               atol=1e-10, rtol=1e-10)
+    assert len(calls) == 1
+    # Twenty data rows plus six Tikhonov rows share three target columns.
+    assert calls[0] == ((26, 6), (26, 3))
+    assert result.local_records[0].environment_shape == (20, 6)
+
+
+def test_als_loop_opener_uses_shared_physical_systems():
+    opener = tk.decompositions.ALSLoopOpener({
+        'convergence': tk.decompositions.ConvergencePolicy(max_sweeps=1)})
+    target = torch.randn(4, 3, 5, dtype=torch.complex128,
+                         generator=torch.Generator().manual_seed(326))
+    result = opener.open(target, (2, 2, 2))
+    assert len(result.local_records) == 3
+    for site, record in enumerate(result.local_records):
+        assert record.environment_shape == (
+            target.numel() // target.shape[site], 4)
+        assert record.target_shape == (record.environment_shape[0],
+                                        target.shape[site])

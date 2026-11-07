@@ -35,7 +35,8 @@ from tensorkrowch.decompositions.als.driver import (ALSBackend,
                                                     _report_als_result)
 from tensorkrowch.decompositions.als.environments import (_updated_cores,
                                                           TTEnvironmentCache,
-                                                          _environment_norm)
+                                                          _environment_norm,
+                                                          _fiber_indices)
 from tensorkrowch.decompositions.als.gauges import (_absorb_factor,
                                                     _factor_core)
 from tensorkrowch.decompositions.als.problem import ALSProblem
@@ -265,14 +266,15 @@ class _TTALSBackend:  # MARK: _TTALSBackend
                     sweep: int,
                     return_record: bool) -> Optional[LocalSolveRecord]:
         """Builds one local proposal and its atomic gauge update."""
-        environment = self.cache.design(site)
+        environment = self.cache.design(site, compact=True)
         proposal, record = _solve_local_proposal(
             solver=self.solver, environment=environment,
             target=self.current_target, current=self.cache.cores[site],
             site=site, sweep=sweep, return_record=return_record,
             problem=self.problem, log_scale=self.cache.log_scale,
             indices=None,
-            samples=self.sample_batch, core_versions=self.cache.core_versions)
+            samples=self.sample_batch, core_versions=self.cache.core_versions,
+            compact=True)
         replacements = _gauge_core_update(
             cores=self.cache.cores,
             fixed_sites=self.fixed_sites,
@@ -285,7 +287,7 @@ class _TTALSBackend:  # MARK: _TTALSBackend
 
     def skip_site(self, site: int) -> None:
         """Advances the cache through one frozen site."""
-        self.cache.design(site)
+        self.cache.design(site, compact=True)
         self.cache.update({})
 
     def _update(self, replacements: Mapping[int, torch.Tensor]) -> None:
@@ -323,11 +325,16 @@ class _TTALSBackend:  # MARK: _TTALSBackend
 def _direct_sampled_tt_design(cores: Sequence[torch.Tensor],
                               site: int,
                               indices: torch.Tensor,
-                              renormalize: bool) -> Tuple[
+                              renormalize: bool,
+                              compact: bool = False) -> Tuple[
             torch.Tensor, torch.Tensor]:
     """
     Builds correlated sampled TT rows for one independently drawn ``site``.
     """
+    if compact:
+        indices = _fiber_indices(
+            indices, site, tuple(core.shape[1] for core in cores))
+    n_copies = cores[site].shape[1] if compact else 1
     n_samples = indices.shape[0]
     left = cores[0].new_ones((n_samples, 1))
     right = cores[0].new_ones((n_samples, 1))
@@ -337,7 +344,7 @@ def _direct_sampled_tt_design(cores: Sequence[torch.Tensor],
         selected = cores[current][:, indices[:, current], :].permute(1, 0, 2)
         left = torch.einsum('ja,jab->jb', left, selected)
         if renormalize:
-            norm = _environment_norm(left)
+            norm = _environment_norm(left, n_copies)
             if norm > 0:
                 left = left / norm
                 log_scale = log_scale + norm.log()
@@ -345,11 +352,14 @@ def _direct_sampled_tt_design(cores: Sequence[torch.Tensor],
         selected = cores[current][:, indices[:, current], :].permute(1, 0, 2)
         right = torch.einsum('jab,jb->ja', selected, right)
         if renormalize:
-            norm = _environment_norm(right)
+            norm = _environment_norm(right, n_copies)
             if norm > 0:
                 right = right / norm
                 log_scale = log_scale + norm.log()
 
+    if compact:
+        design = torch.einsum('ja,jb->jab', left, right)
+        return design.reshape(n_samples, -1), log_scale
     basis = torch.nn.functional.one_hot(
         indices[:, site], cores[site].shape[1]).to(
             device=cores[0].device, dtype=cores[0].dtype)
@@ -464,13 +474,13 @@ class _TTSampledALSBackend:  # MARK: _TTSampledALSBackend
         indices = _unravel_indices(
             batch.ids, tuple(core.shape[1] for core in self._cores))
         environment, log_scale = _direct_sampled_tt_design(
-            self._cores, site, indices, self.renormalize)
+            self._cores, site, indices, self.renormalize, compact=True)
         proposal, record = _solve_local_proposal(
             solver=self.solver, environment=environment, target=target,
             current=self._cores[site], site=site, sweep=sweep,
             return_record=return_record, problem=self.problem,
             log_scale=log_scale, indices=indices, samples=batch,
-            core_versions=self._versions)
+            core_versions=self._versions, compact=True)
         replacements = _gauge_core_update(
             cores=self._cores,
             fixed_sites=self.fixed_sites,

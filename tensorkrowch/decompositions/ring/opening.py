@@ -949,7 +949,8 @@ class _FixedGaugeCoreOpener:  # MARK: _FixedGaugeCoreOpener
     """
     Solves the single remaining input core with both gauges fixed.
 
-    The full effective local design is solved once using LeastSquaresSolver.
+    The external design is factored once for all physical slices using
+    LeastSquaresSolver, without expanding physical identity blocks.
     The external maps remain fixed; they are not pseudoinverted separately.
     This opener requires exactly one input core between the two gauges.
 
@@ -1071,21 +1072,16 @@ class _FixedGaugeCoreOpener:  # MARK: _FixedGaugeCoreOpener
         right_environment = fixed_right.permute(1, 0, 2)
         environment = torch.einsum(
             'iab,jca->ijbc', left_environment, right_environment)
-        identity = torch.eye(
-            source.in_dim[1],
-            device=values.device,
-            dtype=values.dtype)
-        design = torch.einsum(
-            'ijbc,pq->ipjbqc', environment, identity).reshape(
-                values.numel(), ranks[0] * source.in_dim[1] * ranks[1])
-        solution, record = self.solver.solve(
-            design,
-            values.reshape(-1),
-            site=1,
-            sweep=0,
-            return_record=context.get('collect_metrics', True))
+        # Every physical slice shares this two-sided external design.
+        design = environment.reshape(-1, ranks[0] * ranks[1])
+        target_matrix = values.reshape(source.in_dim).movedim(1, -1).reshape(
+            -1, source.in_dim[1])
+        solution, record = self.solver._solve(
+            design, target_matrix, site=1, sweep=0,
+            return_record=context.get('collect_metrics', True),
+            n_copies=source.in_dim[1])
         core = solution.reshape(
-            ranks[0], source.in_dim[1], ranks[1])
+            ranks[0], ranks[1], source.in_dim[1]).transpose(1, 2)
         result_cores = (fixed_left, core, fixed_right)
         if orientation == 'left':
             result_cores = _mirror_cores(result_cores)

@@ -56,7 +56,13 @@ mixing. Every sampled method retains complete active input fibers.
 at each site. Uniform sampling can share base configurations and cache target
 fibers across one or more directional sweeps with ``n_reuse_sweeps>=1``.
 :class:`LeastSquaresSolver` wraps PyTorch least squares with scaling and
-optional Tikhonov regularization. :class:`ConvergencePolicy` controls the sweep
+optional Tikhonov regularization. Complete unweighted objectives and sampled
+fibers share one external design matrix across all active physical values;
+its factorization is reused for every target column. Masks, residual weights
+and observed entries use independent physical systems without identity blocks.
+Their regularization and numerical scaling are determined for the complete
+core. All physical slices retain the same regularization coefficient.
+:class:`ConvergencePolicy` controls the sweep
 budget, ``atol``, ``rtol``, stability and optional best-state retention.
 Sampled fits cache separate uniform evaluation entries, fixed throughout
 the run, to measure complete-sweep errors and apply the same stopping rules.

@@ -224,14 +224,15 @@ class _TRALSBackend:  # MARK: _TRALSBackend
                     sweep: int,
                     return_record: bool) -> Optional[LocalSolveRecord]:
         """Builds one local proposal and its atomic gauge update."""
-        environment = self.cache.design(site)
+        environment = self.cache.design(site, compact=True)
         proposal, record = _solve_local_proposal(
             solver=self.solver, environment=environment,
             target=self.current_target, current=self.cache.cores[site],
             site=site, sweep=sweep, return_record=return_record,
             problem=self.problem, log_scale=self.cache.log_scale,
             indices=None,
-            samples=self.sample_batch, core_versions=self.cache.core_versions)
+            samples=self.sample_batch, core_versions=self.cache.core_versions,
+            compact=True)
         replacements = _tr_gauge_core_update(
             cores=self.cache.cores,
             fixed_sites=self.fixed_sites,
@@ -251,7 +252,7 @@ class _TRALSBackend:  # MARK: _TRALSBackend
 
     def skip_site(self, site: int) -> None:
         """Advances the cache through one frozen site."""
-        self.cache.design(site)
+        self.cache.design(site, compact=True)
         self.cache.update({})
 
     def _update(self, replacements: Mapping[int, torch.Tensor]) -> None:
@@ -375,10 +376,11 @@ class _TRSampledALSBackend:  # MARK: _TRSampledALSBackend
             batch.ids, tuple(core.shape[1] for core in self._cores))
 
         environment = DirectTREnvironment(self._cores).design(
-            site, samples=batch)
+            site, samples=batch, compact=True)
         log_scale = environment.real.new_zeros(())
         if self.renormalize:
-            norm = _environment_norm(environment)
+            norm = _environment_norm(
+                environment, self._cores[site].shape[1])
             if norm > 0:
                 environment = environment / norm
                 log_scale = norm.log()
@@ -387,7 +389,7 @@ class _TRSampledALSBackend:  # MARK: _TRSampledALSBackend
             current=self._cores[site], site=site, sweep=sweep,
             return_record=return_record, problem=self.problem,
             log_scale=log_scale, indices=indices, samples=batch,
-            core_versions=self._versions)
+            core_versions=self._versions, compact=True)
         replacements = _tr_gauge_core_update(
             cores=self._cores,
             fixed_sites=self.fixed_sites,

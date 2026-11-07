@@ -253,6 +253,14 @@ explicit composition with ``TTSVD``. ``fixed_cores`` freezes selected cores.
 The default ``orthogonalize=True`` prepares and moves the orthogonality center
 using QR. ``orthogonalize=False`` replaces cores directly.
 
+For complete objectives without masks or weights, ALS factors one external
+design matrix and solves all physical slices together as multiple right-hand
+sides. The same reduction applies to complete sampled fibers. With
+entry-dependent weights, masks or completion, ALS solves separate physical
+systems without materializing a matrix of identity blocks. Their scaling,
+rank cutoff and absolute or relative Tikhonov penalty are determined for the
+complete core. Unknown entries are never added to a completion objective.
+
 A rank sequence has one entry per open-chain bond, so a four-site TT uses
 three entries. Each directional pass counts as one sweep.
 

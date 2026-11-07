@@ -866,3 +866,159 @@ def test_orthogonalize_is_recorded_as_a_boolean(algorithm, orthogonalize):
         result = algorithm(source, rank=1, orthogonalize=orthogonalize)
     assert result.metadata['orthogonalize'] is orthogonalize
     torch.testing.assert_close(result.contract_dense(), source.tensor)
+
+
+@pytest.mark.parametrize('engine, method', [
+    (d.TTALS, None), (d.TRALS, None), *_SAMPLED_ENGINES])
+@pytest.mark.parametrize('mode', ['absolute', 'relative'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_shared_als_sweeps_match_the_expanded_regularized_algorithm(
+        engine, method, mode, dtype, monkeypatch):
+    generator = torch.Generator().manual_seed(323)
+    tensor = torch.randn(2, 4, 3, dtype=dtype, generator=generator)
+    sampler = None if method is None else d.SamplingPolicy(25, method)
+    options = dict(
+        rank=2, orthogonalize=engine is d.TTALS and method == 'leverage',
+        sampler=sampler,
+        solver=d.LeastSquaresSolver(l2_reg=.03, l2_reg_mode=mode,
+                                    driver='gelsd', column_scaling=True),
+        convergence=d.ConvergencePolicy(max_sweeps=2), collect_metrics=True)
+    compact = engine(tensor, out_device=None).fit(
+        generator=torch.Generator().manual_seed(324), **options)
+    from importlib import import_module
+    from tests.decompositions.als._oracles import expanded_local_proposal
+    module = import_module('tensorkrowch.decompositions.als.' +
+                            ('tt' if engine is d.TTALS else 'tr'))
+    monkeypatch.setattr(
+        module, '_solve_local_proposal', expanded_local_proposal)
+    expanded = engine(tensor, out_device=None).fit(
+        generator=torch.Generator().manual_seed(324), **options)
+    torch.testing.assert_close(compact.contract_dense(),
+                               expanded.contract_dense(), atol=1e-9, rtol=1e-9)
+    for small, full in zip(compact.metrics.local_solves,
+                            expanded.metrics.local_solves):
+        dimension = tensor.shape[small.site]
+        assert full.environment_shape == (
+            small.environment_shape[0] * dimension,
+            small.environment_shape[1] * dimension)
+        assert small.target_shape == (small.environment_shape[0], dimension)
+        torch.testing.assert_close(small.abs_residual, full.abs_residual,
+                                   atol=1e-9, rtol=1e-9)
+        torch.testing.assert_close(small.effective_l2_reg,
+                                   full.effective_l2_reg)
+
+
+@pytest.mark.parametrize('engine', [d.TTALS, d.TRALS])
+@pytest.mark.parametrize('objective, sampled', [
+    ('mask', False), ('mask', True), ('weights', False), ('weights', True),
+    ('observations', False)])
+def test_entry_constraints_avoid_expanded_local_systems(
+        engine, objective, sampled, monkeypatch):
+    tensor = torch.arange(24., dtype=torch.float64).reshape(2, 4, 3) + 1
+    indices = torch.tensor([[0, 0, 1], [0, 2, 0], [1, 1, 2], [1, 3, 0]])
+    options = {}
+    if objective == 'mask':
+        options['mask'] = tensor > 5
+    elif objective == 'weights':
+        options['weights'] = torch.linspace(.5, 2., 24).reshape(tensor.shape)
+    else:
+        options['mask'] = d.SparseTensorSource(
+            indices, torch.ones(4, dtype=torch.bool), tensor.shape)
+    result = engine(tensor, **options).fit(
+        rank=1, sampler=d.SamplingPolicy(8) if sampled else None,
+        convergence=d.ConvergencePolicy(max_sweeps=1), collect_metrics=True)
+    assert len(result.metrics.local_solves) == tensor.ndim
+    for record in result.metrics.local_solves:
+        assert record.environment_shape[1] == 1
+    assert torch.isfinite(result.contract_dense()).all()
+
+
+@pytest.mark.parametrize('engine', [d.TTALS, d.TRALS])
+def test_fixed_sites_do_not_build_expanded_identity_blocks(
+        engine, monkeypatch):
+    tensor = torch.ones(2, 4, 3, dtype=torch.float64)
+    cores = [torch.ones(1, size, 1, dtype=tensor.dtype)
+             for size in tensor.shape]
+    cache_cls = (d.TTEnvironmentCache if engine is d.TTALS else
+                 d.TRSegmentEnvironmentCache)
+    design = cache_cls.design
+    calls = []
+
+    def capture(self, site, *, compact=False):
+        calls.append((site, compact))
+        return design(self, site, compact=compact)
+
+    monkeypatch.setattr(cache_cls, 'design', capture)
+    engine(tensor).fit(
+        initial_cores=cores, fixed_cores=[cores[0], None, cores[-1]],
+        convergence=d.ConvergencePolicy(max_sweeps=1))
+    assert calls == [(0, True), (1, True), (2, True)]
+
+
+@pytest.mark.parametrize('engine', [d.TTALS, d.TRALS])
+@pytest.mark.parametrize('objective, sampled', [
+    ('mask', False), ('mask', True), ('weights', False), ('weights', True),
+    ('observations', False), ('shared_weights', False), ('zeros', False)])
+@pytest.mark.parametrize('mode', ['absolute', 'relative'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_weighted_and_observed_sweeps_match_expanded_reference(
+        engine, objective, sampled, mode, dtype, monkeypatch):
+    from importlib import import_module
+    from tests.decompositions.als._oracles import expanded_local_proposal
+    generator = torch.Generator().manual_seed(414)
+    tensor = torch.randn(3, 4, 3, dtype=dtype, generator=generator)
+    constructor = {}
+    if objective in ('mask', 'zeros'):
+        constructor['mask'] = (torch.rand(tensor.shape, generator=generator)
+                               > (.4 if objective == 'mask' else 1.))
+    elif objective == 'shared_weights':
+        constructor['weights'] = torch.full(tensor.shape, .7)
+    elif objective == 'weights':
+        constructor['weights'] = torch.rand(tensor.shape, generator=generator)
+    else:
+        indices = torch.tensor([[0, 0, 0], [1, 1, 2], [2, 0, 2], [2, 1, 1]])
+        constructor['mask'] = d.SparseTensorSource(
+            indices, torch.ones(4, dtype=torch.bool), tensor.shape)
+        constructor['weights'] = torch.rand(tensor.shape, generator=generator)
+    options = dict(
+        rank=2, orthogonalize=False,
+        sampler=d.SamplingPolicy(15) if sampled else None,
+        solver=d.LeastSquaresSolver(l2_reg=.02, l2_reg_mode=mode,
+                                    column_scaling='auto', driver='gelsd'),
+        convergence=d.ConvergencePolicy(max_sweeps=2), collect_metrics=True)
+    actual = engine(tensor, out_device=None, **constructor).fit(
+        generator=torch.Generator().manual_seed(415), **options)
+    module = import_module('tensorkrowch.decompositions.als.' +
+                            ('tt' if engine is d.TTALS else 'tr'))
+    monkeypatch.setattr(
+        module, '_solve_local_proposal', expanded_local_proposal)
+    reference = engine(tensor, out_device=None, **constructor).fit(
+        generator=torch.Generator().manual_seed(415), **options)
+    torch.testing.assert_close(
+        actual.contract_dense(), reference.contract_dense(),
+        atol=1e-8, rtol=1e-8)
+    for a, b in zip(actual.metrics.local_solves,
+                    reference.metrics.local_solves):
+        torch.testing.assert_close(a.effective_l2_reg, b.effective_l2_reg)
+        torch.testing.assert_close(a.abs_residual, b.abs_residual,
+                                   atol=1e-8, rtol=1e-8)
+        assert a.environment_shape[1] * tensor.shape[a.site] == \
+            b.environment_shape[1]
+
+
+@pytest.mark.parametrize('engine', [d.TTALS, d.TRALS])
+@pytest.mark.parametrize('dtype', [torch.float32, torch.complex64])
+@pytest.mark.parametrize('sampled', [False, True])
+def test_physical_systems_preserve_core_dtype_with_double_weights(
+        engine, dtype, sampled):
+    tensor = torch.ones(3, 4, 3, dtype=dtype)
+    weights = torch.linspace(.5, 2., tensor.numel(), dtype=torch.float64)
+    initial = [torch.ones(1, size, 1, dtype=dtype) for size in tensor.shape]
+    result = engine(tensor, weights=weights.reshape(tensor.shape)).fit(
+        initial_cores=initial,
+        sampler=d.SamplingPolicy(15) if sampled else None,
+        convergence=d.ConvergencePolicy(max_sweeps=2),
+        generator=torch.Generator().manual_seed(416))
+    assert result.dtype == dtype
+    torch.testing.assert_close(result.contract_dense(), tensor,
+                               atol=1e-5, rtol=1e-5)

@@ -1,5 +1,7 @@
 """Tests for reusable TT ALS environment caches."""
 
+from math import prod
+
 import pytest
 import torch
 
@@ -758,3 +760,97 @@ class TestEnvironmentContracts:  # MARK: TestEnvironmentContracts
         assert all(original is current for original,
                    current in zip(cores, cache.cores))
         cache.update(_empty_update())
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'direct_tr'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('dimensions', [(3,), (2, 3, 1, 4), (2, 3, 2, 2, 3)])
+@pytest.mark.parametrize('reverse', [False, True])
+def test_compact_environments_match_expanded_physical_blocks(
+        topology, dtype, dimensions, reverse):
+    generator = torch.Generator().manual_seed(320)
+    n_sites = len(dimensions)
+    if topology == 'tt':
+        cores = make_tt_cores(dimensions, (2,) * (n_sites - 1), dtype,
+                              generator)
+        cls = tk.decompositions.TTEnvironmentCache
+    else:
+        cores = make_tr_cores(dimensions, (2,) * n_sites, dtype, generator)
+        cls = (tk.decompositions.DirectTREnvironment if topology == 'direct_tr'
+               else tk.decompositions.TRSegmentEnvironmentCache)
+    order = tuple(range(n_sites))
+    if reverse:
+        order = tuple(reversed(order))
+    compact, expanded = cls(cores), cls(cores)
+    if topology != 'direct_tr':
+        compact.prepare_sweep(order)
+        expanded.prepare_sweep(order)
+    for site in order:
+        matrix = compact.design(site, compact=True)
+        full = expanded.design(site)
+        left = prod(dimensions[:site])
+        right = prod(dimensions[site + 1:])
+        expected = full.reshape(
+            left, dimensions[site], right,
+            cores[site].shape[0], dimensions[site], cores[site].shape[2]
+        )[:, 0, :, :, 0, :].reshape(left * right, -1)
+        torch.testing.assert_close(matrix, expected, atol=1e-11, rtol=1e-11)
+        assert full.numel() == dimensions[site] ** 2 * matrix.numel()
+        if topology != 'direct_tr':
+            compact.update({})
+            expanded.update({})
+
+
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('site', [0, 1, 3])
+def test_compact_sampled_designs_share_complete_fibers(dtype, site):
+    from types import SimpleNamespace
+    from tensorkrowch.decompositions.als.tt import _direct_sampled_tt_design
+    dimensions = (2, 3, 2, 4)
+    generator = torch.Generator().manual_seed(321)
+    for topology in ['tt', 'tr']:
+        cores = (make_tt_cores(dimensions, (2,) * 3, dtype, generator)
+                 if topology == 'tt' else make_tr_cores(
+                     dimensions, (2,) * 4, dtype, generator))
+        owner = SimpleNamespace(cores=cores, core_versions=(0,) * 4)
+        batch = tk.decompositions.UniformRows().draw(
+            owner, site, 12, generator)
+        indices = torch.stack(torch.unravel_index(batch.ids, dimensions), 1)
+        if topology == 'tt':
+            matrix, scale = _direct_sampled_tt_design(
+                cores, site, indices, True, compact=True)
+            full, full_scale = _direct_sampled_tt_design(
+                cores, site, indices, True)
+        else:
+            compact = tk.decompositions.DirectTREnvironment(cores)
+            expanded = tk.decompositions.DirectTREnvironment(cores)
+            matrix = compact.design(site, batch, compact=True)
+            full = expanded.design(site, batch)
+            scale, full_scale = compact.log_scale, expanded.log_scale
+        dimension = dimensions[site]
+        expected = full.reshape(12, dimension, cores[site].shape[0],
+                                dimension, cores[site].shape[2])[
+                                    :, 0, :, 0, :].reshape(12, -1)
+        torch.testing.assert_close(matrix * scale.exp(),
+                                   expected * full_scale.exp())
+
+
+@pytest.mark.parametrize('cls', [tk.decompositions.TTEnvironmentCache,
+                                tk.decompositions.TRSegmentEnvironmentCache])
+def test_compact_cache_supports_observed_rows_and_boolean_control(cls):
+    cores = [torch.ones(1, 2, 1), torch.ones(1, 3, 1)]
+    cache = cls(cores)
+    samples = tk.decompositions.ConfigurationBatch(torch.tensor([[0, 1]]))
+    cache.prepare_sweep((0, 1), samples)
+    with pytest.raises(TypeError, match='compact'):
+        cache.design(0, compact=1)
+    torch.testing.assert_close(cache.design(0, compact=True), torch.ones(1, 1))
+
+
+def test_direct_compact_design_rejects_incomplete_or_misaligned_fibers():
+    cores = [torch.ones(1, 2, 1), torch.ones(1, 3, 1)]
+    for values in [torch.tensor([[0, 0]]), torch.tensor([[1, 0], [0, 0]]),
+                   torch.tensor([[0, 0], [1, 1]])]:
+        with pytest.raises(ValueError, match='complete input fibers'):
+            tk.decompositions.DirectTREnvironment(cores).design(
+                0, tk.decompositions.ConfigurationBatch(values), compact=True)

@@ -696,6 +696,51 @@ sketch sample set. For example, a reflection average is:
        source, embedding=embedding, domain=domain, transform=transform)
    result = engine.fit(samples, rank=2)
 
+The callback can also optimize shared values against a dataset while
+regularizing the complete query Phis. ``sample_indices()`` returns
+``(value_rows, sample_rows)``: matching rows of the initial value table and
+their positions in the original ``sketch_samples``. Missing samples are
+omitted without evaluating them; repetitions retain their original order.
+The discrete source below includes every original sample.
+
+Each item of ``phi_indices`` is a PyTorch index tuple. Indexing a value table
+with it reconstructs the corresponding Phi with its registered shape, before
+embedding fits or SVD projections. Shared entries remain a single parameter,
+and gradients from different Phis accumulate on that parameter:
+
+.. code-block:: python
+
+   tensor = torch.arange(1, 13, dtype=torch.float64).reshape(2, 3, 2)
+   samples = torch.cartesian_prod(torch.arange(2), torch.arange(3),
+                                  torch.arange(2))
+   targets = 2 * tensor[tuple(samples.unbind(-1))]
+
+   def learn_values(configuration_map):
+       values = torch.nn.Parameter(configuration_map.values.detach().clone())
+       optimizer = torch.optim.SGD([values], lr=0.1)
+       rows, sample_rows = configuration_map.sample_indices()
+       for _ in range(10):
+           optimizer.zero_grad()
+           loss = values.real.sum() * 0
+           if rows.numel():
+               residual = values[rows] - targets[sample_rows]
+               loss = residual.abs().square().mean()
+           for index in configuration_map.phi_indices:
+               phi = values[index]
+               loss = loss + 0.01 * phi.abs().square().mean()
+           loss.backward()
+           optimizer.step()
+       return values.detach()
+
+   source = d.DenseTensorSource(tensor)
+   engine = d.TTRSS(source, transform=learn_values)
+   result = engine.fit(samples, rank=2)
+
+Indexing constructs new tensors; the index tuples and the original values
+should be treated as read-only. Optimize a separate value table as above
+instead of assigning independently to overlapping Phis. The returned
+``detach()`` makes this example an independent inner optimization.
+
 Tensor-valued functions
 ^^^^^^^^^^^^^^^^^^^^^^^
 

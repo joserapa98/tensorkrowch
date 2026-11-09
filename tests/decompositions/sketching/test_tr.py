@@ -41,6 +41,39 @@ def _rank_one_problem(n_sites=5):
 
 class TestTRRSS:  # MARK: TestTRRSS
 
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('n_sites', [1, 5])
+    def test_shared_transform_indices_preserve_rank_one_recovery(
+            self, dtype, n_sites):
+        samples = _grid((2,) * n_sites).flip(0)
+        target = (1 + _grid((2,) * n_sites)).prod(-1).to(dtype)
+        target = target.reshape((2,) * n_sites)
+        if dtype.is_complex:
+            target = target * (1 + .5j)
+        transformed = []
+
+        def transform(configuration_map):
+            rows, sample_rows = configuration_map.sample_indices()
+            assert torch.equal(sample_rows, torch.arange(len(samples)))
+            values = configuration_map.values.clone().requires_grad_()
+            expected = 2 * target[tuple(samples.unbind(-1))]
+            loss = (values[rows] - expected[sample_rows]).abs().square().mean()
+            for index in configuration_map.phi_indices:
+                phi = values[index]
+                loss = loss + .01 * phi.abs().square().mean()
+            gradient, = torch.autograd.grad(loss, values)
+            values = (values - .1 * gradient).detach()
+            transformed.append((configuration_map.configurations, values))
+            return values
+
+        result = tk.decompositions.TRRSS(target, transform=transform).fit(
+            samples, rank=1, loop_opener=_opener(30),
+            generator=torch.Generator().manual_seed(47))
+        assert len(transformed) == 1
+        configurations, expected = transformed[0]
+        actual = result.contract_dense()[tuple(configurations.unbind(-1))]
+        torch.testing.assert_close(actual, expected)
+
     @pytest.mark.parametrize('rank', [None, 1, 2])
     def test_single_site_ring_has_no_outward_branch(self, rank):
         target = torch.tensor([1., 2., -1.], dtype=torch.complex128)

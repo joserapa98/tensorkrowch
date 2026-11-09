@@ -50,7 +50,9 @@ central isometric lifts and diagnostics stay with its coefficients. Raw
 materialization remains a separate cache. ``PhiOperator.from_tensor`` uses
 the same preparation for local tensors obtained by TT-RS contractions.
 ``ConfigurationMap`` also owns registration and gather indices, without
-intermediate request or plan classes.
+intermediate request or plan classes. Its ``phi_indices`` reconstructs query
+Phis from a shared value table; ``sample_indices()`` matches original sketch
+samples already present in that table without adding source queries.
 
 Physical fitting and range projection use separate strategy contracts:
 

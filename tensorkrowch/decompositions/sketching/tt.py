@@ -153,6 +153,9 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         Called once with a :class:`ConfigurationMap`. Returns transformed
         values with the same shape as its initial ``values`` table. Extra
         raw source evaluations are available through its ``evaluate`` method.
+        ``phi_indices`` reconstructs query Phis from a value table, and
+        ``sample_indices()`` matches the original sketch samples already
+        present in that table without evaluating missing samples.
     local_solver : LeastSquaresSolver, optional
         Solver for local core-determining equations.
 
@@ -690,7 +693,8 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
                 for site in range(count)]
         configurations = ConfigurationMap(
             self._source, batch_size=context.spec.batch_size,
-            transform=self.transform)
+            transform=self.transform,
+            sketch_samples=context.state['input_samples'])
         handles = [configurations.register(phi) for phi in phis]
         with context.phase('source.evaluate'):
             configurations.evaluate_source()

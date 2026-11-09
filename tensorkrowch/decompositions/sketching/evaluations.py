@@ -81,7 +81,23 @@ class ConfigurationMap:  # MARK: ConfigurationMap
     Instances are created by RSS; callbacks normally only read these properties
     and call :meth:`evaluate`. Source input columns follow ``source.in_sites``.
     Treat the exposed tables as read-only so cached raw evaluations remain
-    available throughout the callback.
+    available throughout the callback. :attr:`phi_indices` reconstructs each
+    registered Phi from a value table with its original shape.
+    :meth:`sample_indices` matches original sketch samples to the initial
+    table without evaluating missing samples.
+
+    Parameters
+    ----------
+    source : BaseSource
+        Source supplying the shared evaluations.
+    batch_size : int or None, optional
+        Maximum configurations per source call. Default is 64. ``None``
+        evaluates all missing configurations in one call.
+    transform : callable, optional
+        Called once with this map and returns values of the same shape.
+    sketch_samples : torch.Tensor, sequence or ConfigurationBatch, optional
+        Original sketch samples, used only by :meth:`sample_indices`.
+        Input columns follow ``source.in_sites``. They do not add queries.
 
     Examples
     --------
@@ -95,7 +111,10 @@ class ConfigurationMap:  # MARK: ConfigurationMap
     """
 
     def __init__(self, source: BaseSource, batch_size: Optional[int] = 64,
-                 transform: Optional[Callable] = None) -> None:
+                 transform: Optional[Callable] = None, *,
+                 sketch_samples: Optional[Union[
+                     torch.Tensor, Sequence[torch.Tensor],
+                     ConfigurationBatch]] = None) -> None:
         if not isinstance(source, BaseSource):
             raise TypeError('`source` should inherit from BaseSource')
         if (batch_size is not None) and (
@@ -104,6 +123,10 @@ class ConfigurationMap:  # MARK: ConfigurationMap
             raise ValueError('`batch_size` should be positive or None')
         if (transform is not None) and not callable(transform):
             raise TypeError('`transform` should be callable or None')
+        if (sketch_samples is not None) and not isinstance(
+                sketch_samples, ConfigurationBatch):
+            sketch_samples = ConfigurationBatch(
+                sketch_samples, kind=source.input_kind)
         self.source = source
         self._batch_size = batch_size
         self._transform = transform
@@ -111,6 +134,9 @@ class ConfigurationMap:  # MARK: ConfigurationMap
         self._requests = []
         self._incidences = []
         self._configurations = None
+        self._phi_indices = None
+        self._sketch_samples = sketch_samples
+        self._sample_indices = None
 
         # Raw evaluations remain available after the global transformation.
         self._values = None
@@ -180,6 +206,89 @@ class ConfigurationMap:  # MARK: ConfigurationMap
     def values(self) -> torch.Tensor:
         """Raw source values aligned with the initial configurations."""
         return self.evaluate_source()
+
+    @property
+    def phi_indices(self) -> Tuple[Tuple[torch.Tensor, ...], ...]:
+        """
+        Index tuples reconstructing the registered Phis in registration order.
+
+        ``values[phi_indices[k]]`` returns the registered Phi with its original
+        query shape, including any output-component selection. The same
+        indices apply to another value table of the same shape and device,
+        such as trainable values inside ``transform``. Indices are cached and
+        should be treated as read-only. They do not apply the transformation.
+
+        Returns
+        -------
+        tuple[tuple[torch.Tensor, ...], ...]
+            One PyTorch index tuple per registered Phi. Every index tensor has
+            the registered result shape and is on the value table's device.
+            A partial registration uses the selected entries' shape.
+        """
+        if self._phi_indices is None:
+            values = self.evaluate_source()
+            selectors = []
+            validated_shapes = set()
+            for ids, shape, output_spec, labels in self._incidences:
+                rows = ids.to(values.device).reshape(shape)
+                indices = (rows,)
+                if output_spec is not None:
+                    out_shape = tuple(output_spec.out_shape)
+                    if out_shape not in validated_shapes:
+                        output_spec.validate_values(values)
+                        validated_shapes.add(out_shape)
+                    if output_spec.scalar:
+                        if values.ndim == 2:
+                            indices += (torch.zeros_like(rows),)
+                    else:
+                        outputs = output_spec.unflatten_labels(
+                            labels.to(values.device))
+                        indices += tuple(output.reshape(shape)
+                                         for output in outputs.unbind(-1))
+                selectors.append(indices)
+            self._phi_indices = tuple(selectors)
+        return self._phi_indices
+
+    def sample_indices(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Matches original sketch samples to the initial configuration table.
+
+        Only samples already present in :attr:`configurations` are returned.
+        No source values are evaluated and auxiliary :meth:`evaluate` queries
+        do not change this match. Repeated sketch samples retain separate
+        positions and may select the same value row.
+
+        Returns
+        -------
+        value_rows, sample_rows : torch.Tensor
+            Integer vectors of equal length on the configuration device.
+            ``values[value_rows]`` corresponds to
+            ``sketch_samples[sample_rows]``. ``sample_rows`` is increasing.
+            Both vectors are empty when no original sample is present.
+            The cached indices should be treated as read-only.
+
+        Raises
+        ------
+        RuntimeError
+            If ``sketch_samples`` was not supplied to the map.
+        """
+        if self._sketch_samples is None:
+            raise RuntimeError('`sketch_samples` was not supplied to the map')
+        self.freeze()
+        if self._sample_indices is None:
+            combined = _concatenate_configurations(
+                (self._configurations, self._sketch_samples))
+            unique = _SamplePool(combined).restrict(
+                SiteRegion(range(combined.n_inputs)))
+            count = self._configurations.batch_size
+            lookup = torch.full((unique.n_unique,), -1, dtype=torch.long,
+                                device=combined.device)
+            lookup[unique.inverse_ids[:count]] = torch.arange(
+                count, device=combined.device)
+            rows = lookup[unique.inverse_ids[count:]]
+            sample_rows = torch.nonzero(rows >= 0, as_tuple=True)[0]
+            self._sample_indices = rows[sample_rows], sample_rows
+        return self._sample_indices
 
     @property
     def stats(self) -> EvaluationStats:
@@ -313,28 +422,16 @@ class ConfigurationMap:  # MARK: ConfigurationMap
         self.freeze()
         if (handle < 0) or (handle >= len(self._incidences)):
             raise ValueError('`handle` is outside the evaluation plan')
-        self.freeze()
-        ids, result_shape, output_spec, labels = self._incidences[handle]
         values = self.prepare_values()
+        indices = self.phi_indices[handle]
         if index_selection is not None:
-            selection = index_selection.to(ids.device).reshape(
+            result_shape = self._incidences[handle][1]
+            selection = index_selection.to(indices[0].device).reshape(
                 -1, len(result_shape))
-            indices = tuple(selection.unbind(-1))
-            ids = ids.reshape(result_shape)[indices]
-            if labels is not None:
-                labels = labels.reshape(result_shape)[indices]
-            result_shape = tuple(index_selection.shape[:-1])
-        selected = values.index_select(0, ids.to(values.device))
-        if output_spec is None:
-            return selected.reshape(
-                (*result_shape, *selected.shape[1:]))
-        selected = output_spec.validate_values(selected)
-        if output_spec.scalar:
-            return selected.reshape(result_shape)
-        labels = labels.to(values.device)
-        selected = selected.reshape(selected.shape[0], -1).gather(
-            1, labels.unsqueeze(1)).squeeze(1)
-        return selected.reshape(result_shape)
+            selection = tuple(selection.unbind(-1))
+            indices = tuple(index[selection].reshape(
+                index_selection.shape[:-1]) for index in indices)
+        return values[indices]
 
 
 __all__ = ['ConfigurationMap']

@@ -110,6 +110,112 @@ class TestEvaluationPlan:  # MARK: TestEvaluationPlan
 class TestConfigurationMap:  # MARK: TestConfigurationMap
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('singleton', [False, True])
+    @pytest.mark.parametrize('partial', [False, True])
+    def test_phi_indices_preserve_shapes_order_and_gradients(
+            self, dtype, singleton, partial):
+        def function(indices):
+            values = (indices[:, 0] + 10 * indices[:, 1]).to(dtype)
+            if dtype.is_complex:
+                values = values * (1 + 2j)
+            return values[:, None] if singleton else values
+
+        source = tk.decompositions.CallableTensorSource(
+            function, in_dim=(2, 2, 1) if singleton else (2, 2),
+            in_sites=(0, 1), out_shape=(1,) if singleton else (), dtype=dtype)
+        builder = ConfigurationMap(source)
+        selection = torch.tensor([[[1, 0], [0, 1], [1, 0]]]) \
+            if partial else None
+        phis = [_discrete_phi(source, reverse=reverse)
+                for reverse in (False, True)]
+        handles = [builder.register(phi, selection) for phi in phis]
+        indices = builder.phi_indices
+        assert builder.phi_indices is indices
+        assert len(indices) == len(phis)
+
+        parameter = builder.values.detach().clone().requires_grad_()
+        actual = parameter.real.sum() * 0
+        counts = torch.zeros_like(parameter.real)
+        for handle, phi in zip(handles, phis):
+            tensor = parameter[indices[handle]]
+            shape = selection.shape[:-1] if partial else phi.shape
+            assert tensor.shape == shape
+            assert all(index.shape == shape for index in indices[handle])
+            assert len(indices[handle]) == (2 if singleton else 1)
+            torch.testing.assert_close(tensor, builder._result(handle))
+            expected_values = function(phi.configuration_batch(
+                selection).values).reshape(shape)
+            torch.testing.assert_close(tensor, expected_values)
+            actual = actual + tensor.abs().square().sum()
+            counts.index_put_(indices[handle], torch.ones_like(tensor.real),
+                              accumulate=True)
+
+        actual.backward()
+        expected_gradient = 2 * parameter.detach() * counts
+        torch.testing.assert_close(parameter.grad, expected_gradient)
+
+    @pytest.mark.parametrize('samples, present', [
+        ([[1, 1], [3, 3], [0, 1], [1, 1]], [0, 2, 3]),
+        ([[3, 3], [2, 2]], []),
+        ([], []),
+    ])
+    def test_sample_indices_only_match_initial_queries(self, samples, present):
+        calls = []
+
+        def function(indices):
+            calls.append(indices.clone())
+            return indices.sum(-1).to(torch.float64)
+
+        source = tk.decompositions.CallableTensorSource(
+            function, in_dim=(4, 4), dtype=torch.float64)
+        samples = torch.tensor(samples, dtype=torch.long).reshape(-1, 2)
+        builder = ConfigurationMap(source, sketch_samples=samples)
+        builder.register(_discrete_phi(source))
+        rows, sample_rows = builder.sample_indices()
+
+        assert not calls
+        assert torch.equal(sample_rows,
+                           torch.tensor(present, dtype=torch.long))
+        assert rows.dtype == sample_rows.dtype == torch.long
+        assert torch.equal(builder.configurations[rows], samples[sample_rows])
+        assert builder.sample_indices()[0] is rows
+        before = builder.stats
+        builder.values
+        assert before.unique_points == builder.stats.unique_points == 4
+
+        # Auxiliary queries never enter the initial indexed value table.
+        builder.evaluate(torch.tensor([[3, 3], [2, 2]]))
+        assert builder.sample_indices()[0] is rows
+        assert torch.equal(builder.sample_indices()[1], sample_rows)
+        assert builder.values.shape == (4,)
+        if len(present) == 3:
+            assert rows[0] == rows[2]
+
+    def test_sample_indices_require_original_samples(self):
+        source = tk.decompositions.DenseTensorSource(torch.ones(2, 2))
+        builder, _ = _configuration_map(source)
+        with pytest.raises(RuntimeError, match='sketch_samples'):
+            builder.sample_indices()
+
+    @pytest.mark.parametrize('samples', [1, True, 'samples', torch.zeros(2)])
+    def test_invalid_sketch_samples_are_rejected(self, samples):
+        source = tk.decompositions.DenseTensorSource(torch.ones(2, 2))
+        with pytest.raises((TypeError, ValueError)):
+            ConfigurationMap(source, sketch_samples=samples)
+
+    @pytest.mark.parametrize('samples', [
+        torch.zeros(1, 1, dtype=torch.long),
+        tk.decompositions.ConfigurationBatch(torch.zeros(1, 2),
+                                              kind='features'),
+    ])
+    def test_incompatible_sketch_samples_are_rejected(self, samples):
+        source = tk.decompositions.DenseTensorSource(torch.ones(2, 2))
+        builder = ConfigurationMap(source, sketch_samples=samples)
+        builder.register(_discrete_phi(source))
+        with pytest.raises(ValueError, match='input count|value kind'):
+            builder.sample_indices()
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     def test_transform_auxiliary_queries_preserve_initial_tables(self, dtype):
         calls = []
         transforms = []
@@ -169,6 +275,12 @@ class TestConfigurationMap:  # MARK: TestConfigurationMap
         configurations._transform = lambda table: table.values + 100
 
         assert configurations.values.shape == (4, 2, 3)
+        indices = configurations.phi_indices[handle]
+        assert len(indices) == 3
+        assert all(index.shape == phi.shape for index in indices)
+        expected = function(torch.tensor([[0, 0], [0, 1], [1, 0], [1, 1]]))
+        torch.testing.assert_close(configurations.values[indices],
+                                   expected.reshape(phi.shape))
         result = configurations._result(handle)
         assert result.shape == phi.shape
         assert torch.equal(result[1, 1], function(
@@ -206,6 +318,31 @@ class TestConfigurationMap:  # MARK: TestConfigurationMap
         (result.sum() + configurations._result(handle).sum()).backward()
         assert scale.grad.item() == 50
         assert configurations.stats.unique_points == 3
+
+    def test_heterogeneous_samples_match_without_evaluation(self):
+        calls = []
+
+        def function(values):
+            calls.append(values)
+            return values[0] + values[1].sum(-1)
+
+        source = tk.decompositions.CallableSource(
+            function, n_sites=2, dtype=torch.float64)
+        samples = (
+            torch.tensor([2., 3., 1., 2.], dtype=torch.float64),
+            torch.tensor([[3., 4.], [3., 4.], [3., 4.], [3., 4.]],
+                         dtype=torch.float64))
+        builder = ConfigurationMap(source, sketch_samples=samples)
+        phi = PhiOperator(source, (
+            (0, torch.tensor([1., 2.], dtype=torch.float64)),
+            (1, torch.tensor([[3., 4.]], dtype=torch.float64))),
+            _OutputSpec.normalize(torch.ones(1), n_input_sites=2))
+        builder.register(phi)
+        rows, sample_rows = builder.sample_indices()
+
+        assert not calls
+        assert torch.equal(sample_rows, torch.tensor([0, 2, 3]))
+        assert torch.equal(rows, torch.tensor([1, 0, 1]))
 
     @pytest.mark.parametrize('batch_size', [True, 0, -1, 1.5])
     def test_batch_size_is_validated(self, batch_size):

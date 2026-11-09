@@ -513,6 +513,87 @@ class TestRSSTransform:  # MARK: TestRSSTransform
         torch.testing.assert_close(result.contract_dense(),
                                    .5j * (tensor + tensor.T))
 
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('n_sites', [1, 4])
+    def test_transform_can_learn_shared_values_with_phi_regularization(
+            self, dtype, n_sites):
+        tensor = _rank_two_tensor((2,) * n_sites, dtype=dtype)
+        samples = _grid(tensor.shape).flip(0)
+        samples = torch.cat((samples, samples[:1]))
+        targets = 1.7 * tensor[tuple(samples.unbind(-1))]
+        observed = []
+
+        def transform(configuration_map):
+            raw = configuration_map.values.clone()
+            values = torch.nn.Parameter(raw.clone())
+            optimizer = torch.optim.SGD([values], lr=.1)
+            rows, sample_rows = configuration_map.sample_indices()
+            assert torch.equal(sample_rows, torch.arange(len(samples)))
+            assert len(configuration_map.phi_indices) == n_sites
+            for _ in range(2):
+                optimizer.zero_grad()
+                loss = (values[rows] - targets[sample_rows]).abs().square()
+                loss = loss.mean()
+                for index in configuration_map.phi_indices:
+                    phi = values[index]
+                    loss = loss + .01 * phi.abs().square().mean()
+                loss.backward()
+                optimizer.step()
+            torch.testing.assert_close(configuration_map.values, raw)
+            assert not torch.equal(values, raw)
+            observed.append((configuration_map.configurations,
+                             values.detach().clone()))
+            return values.detach()
+
+        result = tk.decompositions.TTRSS(tensor, transform=transform).fit(
+            samples, collect_metrics=True)
+        assert len(observed) == 1
+        configurations, expected = observed[0]
+        actual = result.contract_dense()[tuple(configurations.unbind(-1))]
+        torch.testing.assert_close(actual, expected)
+
+    def test_transform_sample_indices_do_not_evaluate_missing_samples(self):
+        samples = torch.tensor([[0., 0., 0.], [2., 2., 2.], [0., 2., 0.],
+                                [2., 0., 2.], [2., 2., 2.]],
+                               dtype=torch.float64)
+        calls = []
+        observed = []
+
+        def function(values):
+            calls.append(values.clone())
+            return (1 + values).prod(-1)
+
+        def embedding(values):
+            return torch.ones_like(values).unsqueeze(-1)
+
+        def transform(configuration_map):
+            rows, sample_rows = configuration_map.sample_indices()
+            assert torch.equal(sample_rows, torch.tensor([0, 2, 3]))
+            assert torch.equal(configuration_map.configurations[rows],
+                               samples[sample_rows])
+            for index in configuration_map.phi_indices:
+                assert torch.isfinite(configuration_map.values[index]).all()
+            observed.append(sample_rows)
+            return configuration_map.values
+
+        source = tk.decompositions.CallableSource(
+            function, n_sites=3, dtype=torch.float64)
+        domain = torch.tensor([0.], dtype=torch.float64)
+        baseline = tk.decompositions.TTRSS(
+            source, embedding, domain=domain).fit(samples, rank=1)
+        baseline_calls = [values.clone() for values in calls]
+        calls.clear()
+        result = tk.decompositions.TTRSS(
+            source, embedding, domain=domain, transform=transform).fit(
+                samples, rank=1)
+
+        assert len(observed) == 1
+        assert len(calls) == len(baseline_calls)
+        for actual, expected in zip(calls, baseline_calls):
+            torch.testing.assert_close(actual, expected)
+        torch.testing.assert_close(result.contract_dense(),
+                                   baseline.contract_dense())
+
 
 class TestTTRS:  # MARK: TestTTRS
 

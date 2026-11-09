@@ -152,6 +152,14 @@ class TestALSLoopOpener:
 
 class TestQRLoopOpener:
 
+    def test_fixed_balancing_is_disabled_by_default(self):
+        assert tk.decompositions.QRLoopOpener().balance_fixed is False
+
+    @pytest.mark.parametrize('invalid', [None, 0, 1, 'true'])
+    def test_invalid_fixed_balancing(self, invalid):
+        with pytest.raises(TypeError, match='balance_fixed'):
+            tk.decompositions.QRLoopOpener(balance_fixed=invalid)
+
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('orientation', ['right', 'left'])
     @pytest.mark.parametrize('block', [False, True])
@@ -181,17 +189,21 @@ class TestQRLoopOpener:
                 record['relative_error_before']
 
     @pytest.mark.parametrize('side', ['left', 'right'])
-    def test_fixed_axis_is_balanced_and_preserved_with_promotion(self, side):
+    @pytest.mark.parametrize('balance_fixed', [False, True])
+    def test_fixed_axis_is_preserved_with_promotion(self, side, balance_fixed):
         left = torch.tensor([1., 2.], dtype=torch.float64)
         center = torch.tensor([1., -2., 3.], dtype=torch.float64)
         right = torch.tensor([2., 1., -1., 3.], dtype=torch.float64)
         target = torch.einsum('i,j,k->ijk', left, center, right)
         vector = left if side == 'left' else right
         gauge = 1j * vector[None, :, None]
-        opening = tk.decompositions.QRLoopOpener().open(
+        opening = tk.decompositions.QRLoopOpener(
+            balance_fixed=balance_fixed).open(
             target, 1, **{f'fixed_{side}': gauge},
             context={'generator': torch.Generator().manual_seed(121)})
-        assert opening.diagnostics[f'qr_{side}']
+        assert opening.diagnostics[f'qr_{side}'] == balance_fixed
+        free_side = 'right' if side == 'left' else 'left'
+        assert opening.diagnostics[f'qr_{free_side}']
         assert torch.equal(getattr(opening, f'{side}_gauge'), gauge)
         torch.testing.assert_close(
             opening.contract_dense(), target.to(torch.complex128))
@@ -247,7 +259,8 @@ class TestQRLoopOpener:
         capabilities = tk.decompositions.LoopOpenerCapabilities(
             supports_fixed_left=True, supports_fixed_right=True)
         opener = tk.decompositions.QRLoopOpener(
-            tk.decompositions.CallableLoopOpener(keep_initial, capabilities))
+            tk.decompositions.CallableLoopOpener(keep_initial, capabilities),
+            balance_fixed=True)
         result = opener.open(target, 1, **{f'fixed_{side}': gauge},
                              context={'initial_cores': cores})
 
@@ -316,8 +329,9 @@ class TestQRLoopOpener:
     @pytest.mark.parametrize('orientation', ['left', 'right'])
     @pytest.mark.parametrize('side', ['left', 'right'])
     @pytest.mark.parametrize('block', [False, True])
+    @pytest.mark.parametrize('balance_fixed', [False, True])
     def test_fixed_coordinate_round_trip(
-            self, dtype, orientation, side, block):
+            self, dtype, orientation, side, block, balance_fixed):
         generator = torch.Generator().manual_seed(321)
         physical = (3, 2) if block else (5,)
         dimensions = (9, *physical, 4) if side == 'left' else \
@@ -341,11 +355,15 @@ class TestQRLoopOpener:
         def inspect(**kwargs):
             initial = kwargs['context']['initial_cores']
             fixed = kwargs[f'fixed_{side}']
-            rows = fixed.permute(1, 0, 2).reshape(4, 4)
-            torch.testing.assert_close(
-                rows @ rows.mH, torch.eye(4, dtype=dtype))
+            if balance_fixed:
+                rows = fixed.permute(1, 0, 2).reshape(4, 4)
+                torch.testing.assert_close(
+                    rows @ rows.mH, torch.eye(4, dtype=dtype))
+            else:
+                assert fixed is gauge
             assert initial[index] is fixed
-            assert kwargs['target'].shape[index] == 4
+            assert kwargs['target'].shape[index] == (
+                4 if balance_fixed else external)
             torch.testing.assert_close(
                 contract_tr_dense(initial), kwargs['target'],
                 rtol=1e-9, atol=1e-9)
@@ -359,7 +377,7 @@ class TestQRLoopOpener:
                 inspect, tk.decompositions.LoopOpenerCapabilities(
                     supports_fixed_left=True, supports_fixed_right=True,
                     supports_blocks=True)),
-            refinement_sweeps=0)
+            refinement_sweeps=0, balance_fixed=balance_fixed)
         result = opener.open(
             target, (2,) * len(cores), orientation=orientation,
             **{f'fixed_{side}': gauge},
@@ -375,8 +393,9 @@ class TestQRLoopOpener:
     @pytest.mark.parametrize('orientation', ['left', 'right'])
     @pytest.mark.parametrize('side', ['left', 'right'])
     @pytest.mark.parametrize('refinement_sweeps', [0, 1])
+    @pytest.mark.parametrize('balance_fixed', [False, True])
     def test_fixed_gauge_als_with_supplied_initialization(
-            self, dtype, orientation, side, refinement_sweeps):
+            self, dtype, orientation, side, refinement_sweeps, balance_fixed):
         cores, target = _local_problem(dtype, block=True)
         index = 0 if side == 'left' else -1
         gauge = cores[index]
@@ -385,7 +404,8 @@ class TestQRLoopOpener:
                 'orthogonalize': True,
                 'convergence': tk.decompositions.ConvergencePolicy(
                     max_sweeps=2),
-            }), refinement_sweeps=refinement_sweeps)
+            }), refinement_sweeps=refinement_sweeps,
+            balance_fixed=balance_fixed)
         result = opener.open(
             target, tuple(core.shape[-1] for core in cores),
             **{f'fixed_{side}': gauge}, orientation=orientation,
@@ -410,7 +430,7 @@ class TestQRLoopOpener:
             tk.decompositions.ALSLoopOpener({
                 'convergence': tk.decompositions.ConvergencePolicy(
                     max_sweeps=10),
-            }))
+            }), balance_fixed=True)
         initial = make_tr_cores(
             target.shape, (1, 1, 1), dtype=dtype, generator=generator)
         result = opener.open(target, 1, **{f'fixed_{side}': gauge},
@@ -430,7 +450,7 @@ class TestQRLoopOpener:
         target = torch.zeros(5, 3, 6, dtype=dtype)
         external = target.shape[0 if side == 'left' else -1]
         gauge = torch.zeros(2, external, 2, dtype=dtype)
-        result = tk.decompositions.QRLoopOpener().open(
+        result = tk.decompositions.QRLoopOpener(balance_fixed=True).open(
             target, 2, **{f'fixed_{side}': gauge},
             context={'generator': torch.Generator().manual_seed(323)})
 

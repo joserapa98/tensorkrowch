@@ -582,12 +582,13 @@ class QRLoopOpener:  # MARK: QRLoopOpener
     Both factorizations retain their complete reduced bases: there is no
     singular-value threshold or TR-rank cap. Triangular factors are kept
     outside the initial objective and restored in the returned gauges.
-    With one fixed gauge, QR factorizes its external-by-virtual matrix as
-    ``L @ Q.mH``. The target is transformed by ``pinv(L)`` and
-    ``Q.mH`` becomes the fixed gauge in the balanced problem. The original
-    fixed gauge is restored exactly afterwards, without optimizing it.
+    Fixed external axes are unchanged by default. With ``balance_fixed=True``
+    and one fixed gauge, QR factorizes its external-by-virtual matrix as
+    ``L @ Q.mH``. The target is transformed by ``pinv(L)`` and ``Q.mH`` becomes
+    the fixed gauge in the balanced problem. The original fixed gauge is
+    restored exactly afterwards, without optimizing it.
 
-    Fixed gauges are balanced before free axes. This changes the initial
+    When enabled, fixed gauges are balanced before free axes. This changes the
     residual's metric and projects out target components outside the fixed
     gauge's external column space. Refinement uses the original target and
     fixed gauges, accepting only a smaller residual in those coordinates.
@@ -603,6 +604,11 @@ class QRLoopOpener:  # MARK: QRLoopOpener
         factors. Default is one. Zero disables refinement. Only candidates
         reducing the local residual are accepted. This does not guarantee a
         smaller global reconstruction error.
+    balance_fixed : bool, optional
+        Whether to balance a single fixed gauge before the free axis.
+        Default is ``False``, which only balances free external axes.
+        The fixed gauge is retained exactly in either case. This option has
+        no effect when both gauges are free or both are fixed.
 
     Examples
     --------
@@ -613,13 +619,17 @@ class QRLoopOpener:  # MARK: QRLoopOpener
 
     def __init__(self,
                  opener: Union[str, LoopOpener] = 'als',
-                 refinement_sweeps: int = 1) -> None:
+                 refinement_sweeps: int = 1,
+                 balance_fixed: bool = False) -> None:
         self.opener = resolve_loop_opener(opener)
         if isinstance(refinement_sweeps, bool) or \
                 not isinstance(refinement_sweeps, int):
             raise TypeError('`refinement_sweeps` should be int type')
         if refinement_sweeps < 0:
             raise ValueError('`refinement_sweeps` should be non-negative')
+        if not isinstance(balance_fixed, bool):
+            raise TypeError('`balance_fixed` should be bool type')
+        self.balance_fixed = balance_fixed
         self.refiner = None
         if refinement_sweeps:
             options = dict(self.opener.fit_options) \
@@ -670,8 +680,9 @@ class QRLoopOpener:  # MARK: QRLoopOpener
             the two external gauge cores. The last link closes the ring.
         fixed_left, fixed_right : torch.Tensor, optional
             Gauges retained exactly in the returned opening. With one fixed
-            gauge, its external factor is removed with a pseudoinverse and
-            the orthonormal gauge stays fixed during the balanced solve.
+            gauge and ``balance_fixed=True``, its external factor is removed
+            with a pseudoinverse and the orthonormal gauge stays fixed during
+            the balanced solve.
         orientation : {"right", "left"}
             Construction direction. ALS mirrors leftward problems so its
             forward sweeps follow that direction. Returned cores always follow
@@ -734,13 +745,15 @@ class QRLoopOpener:  # MARK: QRLoopOpener
 
         # Whiten inherited coordinates before balancing the free target axes.
         # Two fixed gauges use the original two-sided least-squares metric.
-        if (fixed_right is not None) and not two_fixed:
-            balanced_right, lift, inverse = self._fixed_qr(fixed_right)
-            tensor = torch.einsum('...t,at->...a', tensor, inverse)
-            right_factor = lift.T
-        if (fixed_left is not None) and not two_fixed:
-            balanced_left, left_factor, inverse = self._fixed_qr(fixed_left)
-            tensor = torch.einsum('as,s...->a...', inverse, tensor)
+        if self.balance_fixed and not two_fixed:
+            if fixed_right is not None:
+                balanced_right, lift, inverse = self._fixed_qr(fixed_right)
+                tensor = torch.einsum('...t,at->...a', tensor, inverse)
+                right_factor = lift.T
+            if fixed_left is not None:
+                balanced_left, left_factor, inverse = self._fixed_qr(
+                    fixed_left)
+                tensor = torch.einsum('as,s...->a...', inverse, tensor)
 
         if fixed_right is None:
             matrix = tensor.reshape(-1, tensor.shape[-1])

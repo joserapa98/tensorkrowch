@@ -181,7 +181,7 @@ class TestQRLoopOpener:
                 record['relative_error_before']
 
     @pytest.mark.parametrize('side', ['left', 'right'])
-    def test_fixed_axis_stays_unprojected_and_complex(self, side):
+    def test_fixed_axis_is_balanced_and_preserved_with_promotion(self, side):
         left = torch.tensor([1., 2.], dtype=torch.float64)
         center = torch.tensor([1., -2., 3.], dtype=torch.float64)
         right = torch.tensor([2., 1., -1., 3.], dtype=torch.float64)
@@ -191,7 +191,7 @@ class TestQRLoopOpener:
         opening = tk.decompositions.QRLoopOpener().open(
             target, 1, **{f'fixed_{side}': gauge},
             context={'generator': torch.Generator().manual_seed(121)})
-        assert not opening.diagnostics[f'qr_{side}']
+        assert opening.diagnostics[f'qr_{side}']
         assert torch.equal(getattr(opening, f'{side}_gauge'), gauge)
         torch.testing.assert_close(
             opening.contract_dense(), target.to(torch.complex128))
@@ -203,20 +203,56 @@ class TestQRLoopOpener:
             context={'generator': torch.Generator().manual_seed(123)})
         torch.testing.assert_close(opening.contract_dense(), target)
 
-    def test_worsening_refinement_is_rejected(self):
+    @pytest.mark.parametrize('side', [None, 'left', 'right'])
+    def test_worsening_refinement_is_rejected(self, side):
         target = torch.tensor([[[1.], [2.], [-3.]]], dtype=torch.float64)
         opener = tk.decompositions.QRLoopOpener()
+        fixed = {} if side is None else {
+            f'fixed_{side}': torch.ones(1, 1, 1, dtype=target.dtype)}
 
         def worsen(**kwargs):
+            assert kwargs['target'] is target
+            for name, gauge in fixed.items():
+                assert kwargs[name] is gauge
             cores = list(kwargs['context']['initial_cores'])
             cores[1] = 2 * cores[1]
             return tk.decompositions.LoopOpening(
                 cores[0], cores[1:-1], cores[-1], (1, 1, 1),
                 diagnostics={'metadata': {'n_sweeps': 1}})
 
-        opener.refiner = tk.decompositions.CallableLoopOpener(worsen)
-        result = opener.open(target, 1)
+        capabilities = tk.decompositions.LoopOpenerCapabilities(
+            supports_fixed_left=True, supports_fixed_right=True)
+        opener.refiner = tk.decompositions.CallableLoopOpener(
+            worsen, capabilities)
+        result = opener.open(target, 1, **fixed)
         assert not result.diagnostics['qr_refinement']['accepted']
+        torch.testing.assert_close(result.contract_dense(), target)
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('side', ['left', 'right'])
+    def test_fixed_gauge_refinement_improves_original_residual(
+            self, dtype, side):
+        generator = torch.Generator().manual_seed(324)
+        cores = make_tr_cores((9, 3, 7), (1, 1, 1), dtype=dtype,
+                              generator=generator)
+        target = contract_tr_dense(cores)
+        gauge = cores[0 if side == 'left' else -1]
+        cores[1] = 2 * cores[1]
+
+        def keep_initial(**kwargs):
+            initial = kwargs['context']['initial_cores']
+            return tk.decompositions.LoopOpening(
+                initial[0], initial[1:-1], initial[-1], (1, 1, 1))
+
+        capabilities = tk.decompositions.LoopOpenerCapabilities(
+            supports_fixed_left=True, supports_fixed_right=True)
+        opener = tk.decompositions.QRLoopOpener(
+            tk.decompositions.CallableLoopOpener(keep_initial, capabilities))
+        result = opener.open(target, 1, **{f'fixed_{side}': gauge},
+                             context={'initial_cores': cores})
+
+        assert result.diagnostics['qr_refinement']['accepted']
+        assert torch.equal(getattr(result, f'{side}_gauge'), gauge)
         torch.testing.assert_close(result.contract_dense(), target)
 
     @pytest.mark.parametrize('invalid', [True, None, 1.5, '1', -1])
@@ -225,15 +261,181 @@ class TestQRLoopOpener:
         with pytest.raises(error, match='refinement_sweeps'):
             tk.decompositions.QRLoopOpener(refinement_sweeps=invalid)
 
-    def test_two_fixed_axes_need_no_preparation_or_refinement(self):
-        cores, target = _local_problem(torch.complex128)
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('orientation', ['left', 'right'])
+    @pytest.mark.parametrize('noise', [0., 0.1])
+    def test_two_fixed_axes_keep_the_original_least_squares_metric(
+            self, dtype, orientation, noise):
+        cores, target = _local_problem(dtype)
+        generator = torch.Generator().manual_seed(325)
+        target = target + noise * torch.randn(
+            target.shape, dtype=dtype, generator=generator)
         result = tk.decompositions.QRLoopOpener(
             _FixedGaugeCoreOpener()).open(
                 target, (2, 3, 2),
-                fixed_left=cores[0], fixed_right=cores[-1])
+                fixed_left=cores[0], fixed_right=cores[-1],
+                orientation=orientation)
+        direct = _FixedGaugeCoreOpener().open(
+            target, (2, 3, 2), fixed_left=cores[0], fixed_right=cores[-1],
+            orientation=orientation)
         assert not result.diagnostics['qr_left']
         assert not result.diagnostics['qr_right']
+        assert torch.equal(result.left_gauge, cores[0])
+        assert torch.equal(result.right_gauge, cores[-1])
         assert 'qr_refinement' not in result.diagnostics
+        torch.testing.assert_close(result.contract_dense(),
+                                   direct.contract_dense())
+        if not noise:
+            torch.testing.assert_close(result.contract_dense(), target)
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('external', [1, 3, 9])
+    @pytest.mark.parametrize('scale', [1e-150, 1., 1e150])
+    def test_fixed_qr_algebra(self, dtype, external, scale):
+        generator = torch.Generator().manual_seed(320)
+        size = min(external, 6)
+        u = torch.linalg.qr(torch.randn(
+            external, size, dtype=dtype, generator=generator)).Q
+        v = torch.linalg.qr(torch.randn(
+            6, size, dtype=dtype, generator=generator)).Q
+        singular = torch.logspace(0, -4, size, dtype=torch.float64)
+        matrix = ((u * singular) @ v.mH) * scale
+        gauge = matrix.reshape(external, 2, 3).permute(1, 0, 2)
+        orthogonal, lift, inverse = \
+            tk.decompositions.QRLoopOpener._fixed_qr(gauge)
+        rows = orthogonal.permute(1, 0, 2).reshape(size, 6)
+
+        torch.testing.assert_close(lift @ rows / scale, matrix / scale)
+        torch.testing.assert_close(
+            rows @ rows.mH, torch.eye(size, dtype=dtype))
+        torch.testing.assert_close(
+            inverse @ lift, torch.eye(size, dtype=dtype),
+            rtol=1e-9, atol=1e-9)
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('orientation', ['left', 'right'])
+    @pytest.mark.parametrize('side', ['left', 'right'])
+    @pytest.mark.parametrize('block', [False, True])
+    def test_fixed_coordinate_round_trip(
+            self, dtype, orientation, side, block):
+        generator = torch.Generator().manual_seed(321)
+        physical = (3, 2) if block else (5,)
+        dimensions = (9, *physical, 4) if side == 'left' else \
+            (4, *physical, 9)
+        cores = make_tr_cores(
+            dimensions, (2,) * len(dimensions), dtype=dtype,
+            generator=generator)
+        index = 0 if side == 'left' else -1
+        external = dimensions[index]
+        u = torch.linalg.qr(torch.randn(
+            external, 4, dtype=dtype, generator=generator)).Q
+        v = torch.linalg.qr(torch.randn(
+            4, 4, dtype=dtype, generator=generator)).Q
+        matrix = (u * torch.logspace(0, -4, 4)) @ v.mH
+        cores[index] = matrix.reshape(external, 2, 2).permute(1, 0, 2)
+        gauge = cores[index]
+        target = contract_tr_dense(cores)
+        originals = [core.clone() for core in cores]
+        seen = []
+
+        def inspect(**kwargs):
+            initial = kwargs['context']['initial_cores']
+            fixed = kwargs[f'fixed_{side}']
+            rows = fixed.permute(1, 0, 2).reshape(4, 4)
+            torch.testing.assert_close(
+                rows @ rows.mH, torch.eye(4, dtype=dtype))
+            assert initial[index] is fixed
+            assert kwargs['target'].shape[index] == 4
+            torch.testing.assert_close(
+                contract_tr_dense(initial), kwargs['target'],
+                rtol=1e-9, atol=1e-9)
+            seen.append(kwargs['target'])
+            return tk.decompositions.LoopOpening(
+                initial[0], initial[1:-1], initial[-1], kwargs['rank'],
+                orientation=kwargs['orientation'])
+
+        opener = tk.decompositions.QRLoopOpener(
+            tk.decompositions.CallableLoopOpener(
+                inspect, tk.decompositions.LoopOpenerCapabilities(
+                    supports_fixed_left=True, supports_fixed_right=True,
+                    supports_blocks=True)),
+            refinement_sweeps=0)
+        result = opener.open(
+            target, (2,) * len(cores), orientation=orientation,
+            **{f'fixed_{side}': gauge},
+            context={'initial_cores': cores})
+
+        assert len(seen) == 1
+        assert getattr(result, f'{side}_gauge') is gauge
+        torch.testing.assert_close(result.contract_dense(), target)
+        for core, original in zip(cores, originals):
+            assert torch.equal(core, original)
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('orientation', ['left', 'right'])
+    @pytest.mark.parametrize('side', ['left', 'right'])
+    @pytest.mark.parametrize('refinement_sweeps', [0, 1])
+    def test_fixed_gauge_als_with_supplied_initialization(
+            self, dtype, orientation, side, refinement_sweeps):
+        cores, target = _local_problem(dtype, block=True)
+        index = 0 if side == 'left' else -1
+        gauge = cores[index]
+        opener = tk.decompositions.QRLoopOpener(
+            tk.decompositions.ALSLoopOpener({
+                'orthogonalize': True,
+                'convergence': tk.decompositions.ConvergencePolicy(
+                    max_sweeps=2),
+            }), refinement_sweeps=refinement_sweeps)
+        result = opener.open(
+            target, tuple(core.shape[-1] for core in cores),
+            **{f'fixed_{side}': gauge}, orientation=orientation,
+            context={'initial_cores': cores})
+
+        assert torch.equal(getattr(result, f'{side}_gauge'), gauge)
+        torch.testing.assert_close(result.contract_dense(), target)
+        if refinement_sweeps:
+            record = result.diagnostics['qr_refinement']
+            assert record['relative_error_after'] <= \
+                record['relative_error_before']
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('side', ['left', 'right'])
+    def test_unsupported_target_component_is_measured_after_restoring(
+            self, dtype, side):
+        generator = torch.Generator().manual_seed(322)
+        target = torch.randn(5, 3, 6, dtype=dtype, generator=generator)
+        external = target.shape[0 if side == 'left' else -1]
+        gauge = torch.randn(1, external, 1, dtype=dtype, generator=generator)
+        opener = tk.decompositions.QRLoopOpener(
+            tk.decompositions.ALSLoopOpener({
+                'convergence': tk.decompositions.ConvergencePolicy(
+                    max_sweeps=10),
+            }))
+        initial = make_tr_cores(
+            target.shape, (1, 1, 1), dtype=dtype, generator=generator)
+        result = opener.open(target, 1, **{f'fixed_{side}': gauge},
+                             context={'initial_cores': initial})
+        relative = (result.contract_dense() - target).norm() / target.norm()
+        record = result.diagnostics['qr_refinement']
+
+        assert torch.equal(getattr(result, f'{side}_gauge'), gauge)
+        assert relative > 0.1
+        torch.testing.assert_close(relative, record['relative_error_after'])
+        assert record['relative_error_after'] <= \
+            record['relative_error_before']
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('side', ['left', 'right'])
+    def test_zero_fixed_gauge_is_preserved(self, dtype, side):
+        target = torch.zeros(5, 3, 6, dtype=dtype)
+        external = target.shape[0 if side == 'left' else -1]
+        gauge = torch.zeros(2, external, 2, dtype=dtype)
+        result = tk.decompositions.QRLoopOpener().open(
+            target, 2, **{f'fixed_{side}': gauge},
+            context={'generator': torch.Generator().manual_seed(323)})
+
+        assert torch.equal(getattr(result, f'{side}_gauge'), gauge)
+        assert all(torch.isfinite(core).all() for core in result.all_cores)
         torch.testing.assert_close(result.contract_dense(), target)
 
     def test_invalid_target(self):

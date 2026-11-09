@@ -425,7 +425,8 @@ Choose a strategy to control that factorization:
        such as a solver and convergence policy.
    * - :class:`QRLoopOpener`
      - Balance an opening with QR, use another opener, restore the factors
-       and optionally refine in the original target coordinates.
+       and optionally refine in the original target coordinates. One fixed
+       gauge can be balanced too and is restored exactly without optimizing it.
    * - :class:`BLOSTRLoopOpener`
      - Recover all local factors using the spectral BLOSTR algorithm.
    * - :class:`BLOSTRSVDLoopOpener`

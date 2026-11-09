@@ -39,7 +39,7 @@ from typing import (Any,
 import torch
 
 from tensorkrowch.formats import TR
-from tensorkrowch.utils import safe_divide
+from tensorkrowch.utils import safe_divide, scale_tensor
 
 from tensorkrowch.decompositions._utils import _normalize_rank
 from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
@@ -576,13 +576,23 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
 
 class QRLoopOpener:  # MARK: QRLoopOpener
     """
-    Balances free external axes with QR before opening a local tensor ring.
+    Balances external axes with QR before opening a local tensor ring.
 
-    The right axis is factorized first, followed by the left axis using QR
-    of its adjoint. Both factorizations retain their complete reduced bases:
-    there is no singular-value threshold or TR-rank cap. Triangular factors
-    are kept outside the initial objective and restored in the returned
-    gauges. Inherited fixed gauges and their external axes are unchanged.
+    Free axes are factorized right first, then left using QR of its adjoint.
+    Both factorizations retain their complete reduced bases: there is no
+    singular-value threshold or TR-rank cap. Triangular factors are kept
+    outside the initial objective and restored in the returned gauges.
+    With one fixed gauge, QR factorizes its external-by-virtual matrix as
+    ``L @ Q.mH``. The target is transformed by ``pinv(L)`` and
+    ``Q.mH`` becomes the fixed gauge in the balanced problem. The original
+    fixed gauge is restored exactly afterwards, without optimizing it.
+
+    Fixed gauges are balanced before free axes. This changes the initial
+    residual's metric and projects out target components outside the fixed
+    gauge's external column space. Refinement uses the original target and
+    fixed gauges, accepting only a smaller residual in those coordinates.
+    With two fixed gauges, the wrapped solver is used directly, without
+    balancing or ALS refinement.
 
     Parameters
     ----------
@@ -590,9 +600,9 @@ class QRLoopOpener:  # MARK: QRLoopOpener
         Local strategy applied to the balanced target. Default is ``"als"``.
     refinement_sweeps : int, optional
         Additional ALS sweeps on the original target after restoring the
-        factors. Default is one. Zero disables refinement. A candidate that
-        increases the local residual is rejected. This does not guarantee
-        a smaller global reconstruction error.
+        factors. Default is one. Zero disables refinement. Only candidates
+        reducing the local residual are accepted. This does not guarantee a
+        smaller global reconstruction error.
 
     Examples
     --------
@@ -626,6 +636,19 @@ class QRLoopOpener:  # MARK: QRLoopOpener
         """Returns the wrapped solver's gauge and block constraints."""
         return self.opener.capabilities
 
+    @staticmethod
+    def _fixed_qr(gauge: torch.Tensor
+                  ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Separates a fixed gauge's external factor and its pseudoinverse."""
+        left, external, right = gauge.shape
+        matrix = gauge.permute(1, 0, 2).reshape(external, -1)
+        matrix, scale = scale_tensor(matrix)
+        q, factor = torch.linalg.qr(matrix.mH, mode='reduced')
+        lift = factor.mH
+        inverse = torch.linalg.pinv(lift) / scale
+        orthogonal = q.mH.reshape(-1, left, right).permute(1, 0, 2)
+        return orthogonal, lift * scale, inverse
+
     def open(self,
              target: torch.Tensor,
              rank: _Rank,
@@ -646,7 +669,9 @@ class QRLoopOpener:  # MARK: QRLoopOpener
             Prescribed right-link ranks of the complete local ring, including
             the two external gauge cores. The last link closes the ring.
         fixed_left, fixed_right : torch.Tensor, optional
-            Gauges retained exactly. Only free external axes are balanced.
+            Gauges retained exactly in the returned opening. With one fixed
+            gauge, its external factor is removed with a pseudoinverse and
+            the orthonormal gauge stays fixed during the balanced solve.
         orientation : {"right", "left"}
             Construction direction. ALS mirrors leftward problems so its
             forward sweeps follow that direction. Returned cores always follow
@@ -704,6 +729,18 @@ class QRLoopOpener:  # MARK: QRLoopOpener
             dtype=runtime_dtype)
         tensor = target
         left_factor = right_factor = None
+        balanced_left, balanced_right = fixed_left, fixed_right
+        two_fixed = (fixed_left is not None) and (fixed_right is not None)
+
+        # Whiten inherited coordinates before balancing the free target axes.
+        # Two fixed gauges use the original two-sided least-squares metric.
+        if (fixed_right is not None) and not two_fixed:
+            balanced_right, lift, inverse = self._fixed_qr(fixed_right)
+            tensor = torch.einsum('...t,at->...a', tensor, inverse)
+            right_factor = lift.T
+        if (fixed_left is not None) and not two_fixed:
+            balanced_left, left_factor, inverse = self._fixed_qr(fixed_left)
+            tensor = torch.einsum('as,s...->a...', inverse, tensor)
 
         if fixed_right is None:
             matrix = tensor.reshape(-1, tensor.shape[-1])
@@ -719,22 +756,30 @@ class QRLoopOpener:  # MARK: QRLoopOpener
                          'dtype': tensor.dtype, 'device': tensor.device}
         if context.get('initial_cores') is not None:
             initial = [core.to(dtype=runtime_dtype) for core in initial]
-            if left_factor is not None:
+            if fixed_left is not None:
+                initial[0] = balanced_left
+            elif left_factor is not None:
                 initial[0] = torch.einsum(
                     'as,gsr->gar', torch.linalg.pinv(left_factor), initial[0])
-            if right_factor is not None:
+            if fixed_right is not None:
+                initial[-1] = balanced_right
+            elif right_factor is not None:
                 initial[-1] = torch.einsum(
                     'rtg,tb->rbg', initial[-1],
                     torch.linalg.pinv(right_factor))
             local_context['initial_cores'] = tuple(initial)
         opening = self.opener.open(
-            tensor, rank, fixed_left=fixed_left, fixed_right=fixed_right,
+            tensor, rank, fixed_left=balanced_left, fixed_right=balanced_right,
             orientation=orientation, context=local_context)
         left_gauge, right_gauge = opening.left_gauge, opening.right_gauge
-        if left_factor is not None:
+        if fixed_left is not None:
+            left_gauge = fixed_left
+        elif left_factor is not None:
             left_gauge = torch.einsum(
                 'sa,gar->gsr', left_factor.to(left_gauge.dtype), left_gauge)
-        if right_factor is not None:
+        if fixed_right is not None:
+            right_gauge = fixed_right
+        elif right_factor is not None:
             right_gauge = torch.einsum(
                 'rbg,bt->rtg', right_gauge,
                 right_factor.to(right_gauge.dtype))
@@ -745,8 +790,7 @@ class QRLoopOpener:  # MARK: QRLoopOpener
             diagnostics={**opening.diagnostics,
                          'qr_left': left_factor is not None,
                          'qr_right': right_factor is not None})
-        if (self.refiner is None) or (
-                (fixed_left is not None) and (fixed_right is not None)):
+        if (self.refiner is None) or two_fixed:
             return initial
 
         before = torch.linalg.vector_norm(target - initial.contract_dense())
@@ -756,7 +800,7 @@ class QRLoopOpener:  # MARK: QRLoopOpener
             context={**context, 'in_dim': tuple(target.shape),
                      'initial_cores': initial.all_cores})
         candidate = torch.linalg.vector_norm(target - refined.contract_dense())
-        accepted = bool(torch.isfinite(candidate) & (candidate <= before))
+        accepted = bool(torch.isfinite(candidate) & (candidate < before))
         selected = refined if accepted else initial
         after = candidate if accepted else before
         denominator = torch.linalg.vector_norm(target)

@@ -263,6 +263,28 @@ class TestTRRSS:  # MARK: TestTRRSS
         assert len(result.metadata['center_block']) > 1
         assert _relative_error(result, target) < 1e-6
 
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('center', [1, 3])
+    def test_full_physical_rank_discovery_keeps_single_site(
+            self, dtype, center):
+        rank = (3, 3, 3, 3, 1)
+        cores = make_tr_cores(
+            in_dim=(5,) * 5, rank=rank, dtype=dtype,
+            generator=torch.Generator().manual_seed(317))
+        target = contract_tr_dense(cores)
+        target = target / target.norm()
+        result = tk.decompositions.TRRSS(target).fit(
+            _grid(target.shape), center=center, rtol=1e-12,
+            loop_opener=_opener(30),
+            generator=torch.Generator().manual_seed(318))
+
+        assert result.metadata['center_block'] == (center,)
+        assert result.metadata['boundary_blocks'] == ((0,), (4,))
+        assert result.metadata['rank_discovery']['physical_rank'] == 5
+        assert result.metadata['rank_discovery']['cyclic_rank'] == 1
+        assert result.rank == list(rank)
+        assert _relative_error(result, target) < 1e-10
+
     def test_function_returns_result_and_repeated_fits_are_independent(self):
         function, embedding, samples, domain = _rank_one_problem()
         engine = tk.decompositions.TRRSS(function, embedding, domain=domain)

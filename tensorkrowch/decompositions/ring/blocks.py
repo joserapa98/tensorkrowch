@@ -3,6 +3,7 @@ This script contains:
 
     Functions:
         * _select_block
+        * _central_block
         * _spectral_block
         * _split_block
         * _numerical_rank
@@ -112,7 +113,7 @@ def _select_block(
     if (center < lower) or (center > upper):
         raise ValueError('`center` should lie inside `bounds`')
 
-    # Grow the block until its physical space exceeds both external ranks.
+    # Grow until the physical capacity exceeds the external rank product.
     left = right = center
     target_center = (lower + upper) / 2
     alternate_right = True
@@ -255,6 +256,14 @@ def _numerical_rank(matrix: torch.Tensor, rtol: float) -> int:
     return len(truncated_svd(matrix, rtol=rtol)[1])
 
 
+def _central_block(provider: Any, rank: Sequence[int], center: int
+                   ) -> Tuple[int, ...]:
+    """Selects a geometric initial block without consuming separate ends."""
+    count = len(provider.in_dim)
+    bounds = (1, count - 2) if 0 < center < count - 1 else (center, center)
+    return _select_block(provider, rank, center, bounds=bounds)['sites']
+
+
 def _boundary_partition(provider: Any, sites: Sequence[int]
                         ) -> Tuple[Tuple[int, ...], ...]:
     """Selects end blocks and merges intersections with the central block."""
@@ -289,30 +298,32 @@ def _boundary_partition(provider: Any, sites: Sequence[int]
 
 def _discovery_partition(provider: Any, center: int,
                          rtol: float) -> Tuple[Any, ...]:
-    """Discovers central ranks and partitions the chain into three blocks."""
+    """
+    Selects a geometric block, then estimates its ranks from SVD supports.
+
+    TT cuts include the unknown cyclic factor. For selection only, estimate
+    that factor by the rounded square root of the largest TT bond and divide
+    the TT bonds by it, rounding up. This balanced-rank heuristic supplies TR
+    caps to the same selector used for prescribed ranks. Numerical ranks are
+    measured only after selection; full physical rank does not grow the block.
+    """
     cores, dimensions = provider.cores, provider.in_dim
-    count = len(cores)
-    left = right = center
-    while True:
-        sites = tuple(range(left, right + 1))
-        target = provider.local_target(sites, {})
-        physical = prod(dimensions[left:right + 1])
-        q = _numerical_rank(target.movedim(0, -2).reshape(physical, -1), rtol)
-        if physical > q:
-            break
-        if (left == 0) and (right == count - 1):
-            break
-        left = max(0, left - 1)
-        right = min(count - 1, right + 1)
+    tt_rank = tuple(core.shape[-1] for core in cores[:-1])
+    cyclic = max(1, round(sqrt(max(tt_rank, default=1))))
+    ranks = tuple((value + cyclic - 1) // cyclic for value in tt_rank)
+    sites = _central_block(provider, (*ranks, cyclic), center)
+    target = provider.local_target(sites, {})
+    physical = prod(dimensions[site] for site in sites)
 
     # Measure the two external supports and the physical-to-virtual rank.
+    q = _numerical_rank(target.movedim(0, -2).reshape(physical, -1), rtol)
     left_dim = _numerical_rank(target.reshape(target.shape[0], -1), rtol)
     right_dim = _numerical_rank(target.reshape(-1, target.shape[-1]), rtol)
     cyclic = max(1, round(sqrt(left_dim * right_dim / q)))
-    ranks = [max(1, (core.shape[-1] + cyclic - 1) // cyclic)
-             for core in cores[:-1]] + [cyclic]
+    ranks = [max(1, (value + cyclic - 1) // cyclic)
+             for value in tt_rank] + [cyclic]
     sites, left_sites, right_sites = _boundary_partition(
-        provider, tuple(range(left, right + 1)))
+        provider, sites)
     return (sites, left_sites, right_sites, tuple(ranks), {
         'left_dim': left_dim, 'right_dim': right_dim,
         'physical_rank': q, 'cyclic_rank': cyclic})
@@ -332,12 +343,7 @@ def _ring_partition(provider: Any, rank: Optional[_Rank], center: int,
             provider, center, rtol)
     else:
         ranks = _normalize_rank(rank, count)
-        capacity = ranks[center - 1] * ranks[center]
-        if (provider.in_dim[center] <= capacity) and (0 < center < count - 1):
-            sites = tuple(_select_block(
-                provider, ranks, center, bounds=(1, count - 2))['sites'])
-        else:
-            sites = (center,)
+        sites = _central_block(provider, ranks, center)
         if block_boundaries:
             sites, left, right = _boundary_partition(provider, sites)
         else:

@@ -6,7 +6,7 @@ import torch
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.ring.blocks import (
-    _select_block, _ring_partition, _spectral_block,
+    _discovery_partition, _select_block, _ring_partition, _spectral_block,
 )
 
 
@@ -230,7 +230,78 @@ class TestRingPartition:
             for _ in range(7)])
         sites, left, right, ranks, info, rtol = _ring_partition(
             _TTCoreProvider(ring.to_tt()), None, 3, True, 1e-12)
-        assert (sites, left, right) == ((2, 3, 4), (0, 1), (5, 6))
+        assert (sites, left, right) == ((3, 4), (0, 1), (5, 6))
         assert ranks == (2,) * 7
         assert info['cyclic_rank'] == 2
         assert rtol >= 1e-12
+
+    @pytest.mark.parametrize('count', [1, 2, 3, 5, 7])
+    @pytest.mark.parametrize('dimension', [2, 4, 5])
+    @pytest.mark.parametrize('position', ['left', 'middle', 'right'])
+    def test_discovery_and_prescribed_ranks_share_geometric_partition(
+            self, count, dimension, position):
+        from tensorkrowch.decompositions.ring.tt2tr import _TTCoreProvider
+
+        generator = torch.Generator().manual_seed(318)
+        ring = tk.formats.TR([
+            torch.randn(2, dimension, 2, dtype=torch.complex128,
+                        generator=generator) for _ in range(count)])
+        provider = _TTCoreProvider(ring.to_tt())
+        centers = {'left': 0, 'middle': count // 2, 'right': count - 1}
+        center = centers[position]
+        known = _ring_partition(provider, 2, center, True, 1e-12)
+        discovered = _ring_partition(provider, None, center, True, 1e-12)
+
+        assert discovered[:3] == known[:3]
+        sites, left, right = discovered[:3]
+        assert not set(sites).intersection(left + right)
+        assert not set(left).intersection(right)
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('dimension', [3, 5])
+    def test_full_physical_rank_does_not_expand_selected_block(
+            self, dtype, dimension, monkeypatch):
+        from tensorkrowch.decompositions.ring.tt2tr import _TTCoreProvider
+
+        generator = torch.Generator().manual_seed(317)
+        ranks = (3,) * 6 + (1,)
+        ring = tk.formats.TR([
+            torch.randn(ranks[site - 1], dimension, ranks[site], dtype=dtype,
+                        generator=generator) for site in range(7)])
+        provider = _TTCoreProvider(ring.to_tt())
+        requested = []
+        local_target = provider.local_target
+
+        def record_target(sites, context):
+            requested.append(sites)
+            return local_target(sites, context)
+
+        monkeypatch.setattr(provider, 'local_target', record_target)
+        sites, left, right, ranks, info = _discovery_partition(
+            provider, 3, 1e-12)
+
+        # Provisional cyclic rank 2 gives TR caps 2. The first capacity > 4
+        # has full physical rank, and SVD then finds cyclic rank 1.
+        expected = ((3, 4), (0, 1), (5, 6)) if dimension == 3 else \
+            ((3,), (0,), (6,))
+        assert requested == [expected[0]]
+        assert (sites, left, right) == expected
+        assert info == {'left_dim': 3, 'right_dim': 3,
+                        'physical_rank': dimension ** len(sites),
+                        'cyclic_rank': 1}
+        assert ranks == (3,) * 6 + (1,)
+
+    def test_low_numerical_rank_does_not_replace_geometric_capacity(self):
+        from tensorkrowch.decompositions.ring.tt2tr import _TTCoreProvider
+
+        # Redundant TT bonds retain dimension 4, although every support is 1.
+        tt = tk.formats.TT([
+            torch.ones(4, 4, dtype=torch.float64),
+            *[torch.ones(4, 4, 4, dtype=torch.float64) for _ in range(5)],
+            torch.ones(4, 4, dtype=torch.float64)])
+        sites, left, right, _, info = _discovery_partition(
+            _TTCoreProvider(tt), 3, 1e-12)
+
+        # One site's capacity equals 2*2, so geometry still requires growth.
+        assert (sites, left, right) == ((3, 4), (0, 1), (5, 6))
+        assert info['physical_rank'] == 1

@@ -498,10 +498,13 @@ class TT2TR:  # MARK: TT2TR
         gauges are absorbed before SVD splitting. Overlapping blocks merge;
         the whole chain may be opened at once. With known ranks, boundary
         blocking can be disabled independently of the initial block.
-        Discovery first fits one physical supercore for the central block
-        and splits it with SVDs to determine its internal ranks. Prescribed
-        blocks instead optimize their physical cores individually. Discovery
-        is a numerical rank heuristic, not unique rank recovery.
+        Discovery selects the same geometric block using provisional TR caps
+        estimated from the TT bonds, then measures its SVD support ranks.
+        Full physical rank is accepted without growing the block again.
+        It fits one physical supercore and splits it with SVDs to determine
+        internal ranks. Prescribed blocks instead optimize their physical
+        cores individually. Discovery is a numerical rank heuristic, not
+        unique rank recovery.
 
         BLOSTR instead selects the shortest interior block containing
         ``center`` with equal external TT bond dimensions. It uses no

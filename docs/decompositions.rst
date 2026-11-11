@@ -403,6 +403,14 @@ block when necessary to expose sufficient physical dimensions.
 ``block_boundaries`` controls automatic end blocks; disabling it for
 optimization requires prescribed ranks.
 
+Both prescribed-rank and discovery openings select the initial block by
+requiring its physical dimension product to exceed the product of its two
+external TR rank caps. During discovery, provisional caps divide the TT bonds
+by a cyclic-rank estimate: the rounded square root of the largest TT bond.
+These divisions round up. SVD support ranks are measured after selection;
+a full-rank physical unfolding is accepted without growing the block again.
+The final cyclic rank can be one, representing a tensor train as a ring.
+
 ``center`` selects the initial site or the center of the discovery block.
 At block SVD splits, ``rank`` acts as a cap and an optional ``rtol`` can
 reduce the returned ranks. This tolerance controls discarded squared

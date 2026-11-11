@@ -105,17 +105,36 @@ class TestTT2TR:
         result = tk.decompositions.tt2tr(tt, loop_opener=_opener())
         assert result.metadata['requested_rank'] is None
         assert result.metadata['boundary_blocks'] == ((0, 1), (5, 6))
-        assert result.metadata['center_block'] == (2, 3, 4)
+        assert result.metadata['center_block'] == (3, 4)
         assert result.rank == [2] * 7
         assert _error(tt, result) < 1e-6
 
-    @pytest.mark.parametrize('length', [3, 4, 5])
-    def test_overlapping_discovery_blocks(self, length):
+    @pytest.mark.parametrize('length, sites, boundaries', [
+        (3, (0, 1, 2), ((), ())),
+        (4, (0, 1, 2, 3), ((), ())),
+        (5, (2, 3, 4), ((0, 1), ())),
+    ])
+    def test_overlapping_discovery_blocks(self, length, sites, boundaries):
         tt = _ring(length).to_tt()
         result = tk.decompositions.tt2tr(tt, loop_opener=_opener())
-        assert result.metadata['center_block'] == tuple(range(length))
-        assert result.metadata['boundary_blocks'] == ((), ())
+        assert result.metadata['center_block'] == sites
+        assert result.metadata['boundary_blocks'] == boundaries
         assert _error(tt, result) < 1e-6
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('center', [1, 3])
+    def test_full_physical_rank_opens_one_site_and_recovers_cyclic_one(
+            self, dtype, center):
+        tt = _ring(5, ranks=[3, 3, 3, 3, 1], dimension=5, dtype=dtype).to_tt()
+        result = tk.decompositions.TT2TR(tt).fit(
+            center=center, loop_opener=_opener(), rtol=1e-12)
+
+        assert result.metadata['center_block'] == (center,)
+        assert result.metadata['boundary_blocks'] == ((0,), (4,))
+        assert result.metadata['rank_discovery']['physical_rank'] == 5
+        assert result.metadata['rank_discovery']['cyclic_rank'] == 1
+        assert result.rank == [3, 3, 3, 3, 1]
+        assert _error(tt, result) < 1e-10
 
     @pytest.mark.parametrize('opener', ['blostr', 'blostr_svd'])
     @pytest.mark.parametrize('rank', [2, None])
@@ -357,7 +376,7 @@ class TestTT2TR:
         provider = _TTCoreProvider(_ring().to_tt())
         central, left, right, ranks, info = _discovery_partition(
             provider, 3, 1e-12)
-        assert (central, left, right) == ((2, 3, 4), (0, 1), (5, 6))
+        assert (central, left, right) == ((3, 4), (0, 1), (5, 6))
         assert ranks == (2,) * 7
         assert info['cyclic_rank'] == 2
 

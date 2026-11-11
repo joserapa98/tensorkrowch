@@ -4,7 +4,9 @@ import pytest
 import torch
 
 import tensorkrowch as tk
+from tensorkrowch.utils import truncated_svd
 
+from tensorkrowch.decompositions.ring import blocks as blocks_module
 from tensorkrowch.decompositions.ring.blocks import (
     _discovery_partition, _select_block, _ring_partition, _spectral_block,
 )
@@ -298,6 +300,43 @@ class TestRingPartition:
             _TTCoreProvider(tt), 3, 1e-12)
         assert (sites, left, right) == ((2, 3, 4), (0, 1), (5, 6))
         assert info['physical_rank'] == 1
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_discovery_uses_tt_dimensions_instead_of_truncated_supports(
+            self, dtype, monkeypatch):
+        from tensorkrowch.decompositions.ring.tt2tr import _TTCoreProvider
+
+        identity = torch.eye(4, dtype=dtype)
+        diagonal = torch.zeros(4, 4, 4, dtype=dtype)
+        indices = torch.arange(4)
+        diagonal[indices, indices, indices] = 1
+        cores = [identity, *[diagonal.clone() for _ in range(5)], identity]
+        scales = torch.tensor([1., 1., 1., 1e-8], dtype=dtype)
+        cores[3] *= scales[None, :, None]
+        provider = _TTCoreProvider(tk.formats.TT(cores))
+        target = provider.local_target((2, 3, 4), {})
+
+        # Both external supports lose a nonzero direction at this tolerance.
+        for matrix in (target.reshape(4, -1), target.reshape(-1, 4)):
+            assert torch.linalg.matrix_rank(matrix) == 4
+            assert len(truncated_svd(matrix, rtol=1e-12)[1]) == 3
+
+        svd_shapes = []
+
+        def record(matrix, **kwargs):
+            svd_shapes.append(tuple(matrix.shape))
+            return truncated_svd(matrix, **kwargs)
+
+        monkeypatch.setattr(blocks_module, 'truncated_svd', record)
+        sites, left, right, ranks, info = _discovery_partition(
+            provider, 3, 1e-12)
+
+        assert (sites, left, right) == ((2, 3, 4), (0, 1), (5, 6))
+        assert svd_shapes == [(64, 16)]
+        assert info == {'left_dim': 4, 'right_dim': 4,
+                        'physical_rank': 3, 'cyclic_rank': 2}
+        # round(sqrt(16 / 3)) is 2; using ceil here would give 3.
+        assert ranks == (2, 2, 2, 2, 2, 2, 2)
 
     def test_discovery_rounds_up_every_tt_cut_including_central_links(self):
         from tensorkrowch.decompositions.ring.tt2tr import _TTCoreProvider

@@ -409,11 +409,22 @@ TT bonds. Overlap with either end block raises an error before discovery SVDs,
 including when ``block_boundaries=False``. Choose a more interior center or
 provide ranks when the chain cannot contain three separated blocks.
 
-The central SVD supports estimate the cyclic rank. Dividing all internal TT
-bonds by it, rounded up, gives the preliminary TR profile, including links
-inside the central block. Local ALS then uses the same execution as prescribed
-ranks, keeping all physical cores separate. Full physical rank does not cause
-further block growth. The inferred cyclic rank may be one.
+One SVD of the central block, unfolding the grouped physical axes against both
+external bonds, estimates its rank :math:`q` using the discovery tolerance.
+The external TT bond dimensions :math:`d_L` and :math:`d_R` are used directly,
+without truncating their numerical supports. The cyclic rank is estimated as
+
+.. math::
+
+   c = \max\left(1, \operatorname{round}\sqrt{d_L d_R / q}\right).
+
+In ``metadata['rank_discovery']``, ``left_dim`` and ``right_dim`` store these
+TT dimensions, while ``physical_rank`` stores the SVD-truncated rank :math:`q`.
+Dividing all internal TT bonds by :math:`c`, rounded up, gives the preliminary
+TR profile, including links inside the central block. Local ALS then uses the
+same execution as prescribed ranks, keeping all physical cores separate.
+Full physical rank does not cause further block growth. The inferred cyclic
+rank may be one.
 
 With ``block_boundaries=True``, discovery end blocks absorb their gauges and
 split by SVD, determining their internal ranks. Prescribed end blocks use ALS
@@ -645,8 +656,10 @@ closing bond.
 
 The rank sequence has one right-link rank per final core, with the cyclic
 rank last. Sampled TT-cut caps are formed from products of cyclic and
-internal TR ranks. With no prescribed rank, local SVDs and blocks determine
-the numerical dimensions used for discovery.
+internal TR ranks. With no prescribed rank, discovery uses the intermediate
+TT bond dimensions and the SVD-truncated physical rank of its central block,
+following the same cyclic-rank estimate as ``TT2TR``. The external TT dimensions
+are not truncated again during discovery.
 
 ``center`` seeds an automatic initial block. Discovery requires an interior
 center and three disjoint TT capacity blocks, then reuses prescribed-rank ALS

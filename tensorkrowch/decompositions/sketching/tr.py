@@ -227,6 +227,8 @@ class TRRSS(TTRSS):  # MARK: TRRSS
             last entry is cyclic. Phi TT-cut caps are cyclic rank times each
             internal rank. ``None`` estimates a complete TR profile from three
             disjoint TT blocks before using the same physical-core ALS solves.
+            Discovery uses the central block's external TT dimensions and
+            the SVD-truncated rank of its physical-to-virtual unfolding.
         center : int, optional
             Seed site of the initial block. Defaults to the middle; blocks
             grow to provide sufficient physical capacity. Discovery requires

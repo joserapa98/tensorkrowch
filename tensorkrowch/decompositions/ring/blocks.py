@@ -302,12 +302,17 @@ def _boundary_partition(provider: Any, sites: Sequence[int], *,
 def _discovery_partition(provider: Any, center: int,
                          rtol: float) -> Tuple[Any, ...]:
     """
-    Selects a geometric block, then estimates its ranks from SVD supports.
+    Selects a geometric block and estimates its cyclic rank.
 
     Selection uses the external TT bond dimensions. All three blocks must be
     disjoint before any SVD is computed. Full physical rank does not grow the
     block. The resulting profile is used by the ordinary prescribed-rank
     openings, including links inside the central block.
+
+    Diagnostics ``left_dim`` and ``right_dim`` are the external TT bond
+    dimensions. Only ``physical_rank`` is a numerical rank, truncated by
+    ``rtol`` in the physical-to-virtual unfolding. The cyclic estimate rounds
+    to the nearest integer; subsequent TT-to-TR rank divisions round upward.
     """
     cores, dimensions = provider.cores, provider.in_dim
     if center in (0, len(cores) - 1):
@@ -320,10 +325,10 @@ def _discovery_partition(provider: Any, center: int,
     target = provider.local_target(sites, {})
     physical = prod(dimensions[site] for site in sites)
 
-    # Measure the two external supports and the physical-to-virtual rank.
+    # Keep the TT bond dimensions; only the physical rank is truncated.
     q = _numerical_rank(target.movedim(0, -2).reshape(physical, -1), rtol)
-    left_dim = _numerical_rank(target.reshape(target.shape[0], -1), rtol)
-    right_dim = _numerical_rank(target.reshape(-1, target.shape[-1]), rtol)
+    left_dim = target.shape[0]
+    right_dim = target.shape[-1]
     cyclic = max(1, round(sqrt(left_dim * right_dim / q)))
     ranks = [max(1, (value + cyclic - 1) // cyclic)
              for value in tt_rank] + [cyclic]

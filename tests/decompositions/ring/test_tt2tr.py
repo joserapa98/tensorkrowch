@@ -150,6 +150,11 @@ class TestTT2TR:
         assert all(len(sites) == 1 for sites in calls[1:])
         assert result.rank == ranks
         assert _error(tt, result) < 1e-6
+        info = result.metadata['rank_discovery']
+        sites = result.metadata['center_block']
+        assert info['left_dim'] == ranks[sites[0] - 1] * ranks[-1]
+        assert info['right_dim'] == ranks[sites[-1]] * ranks[-1]
+        assert info['cyclic_rank'] == ranks[-1]
         if not block_boundaries:
             assert result.metadata['boundary_blocks'] == ((0,), (6,))
             assert not result.metrics.truncations

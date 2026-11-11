@@ -498,8 +498,11 @@ class TT2TR:  # MARK: TT2TR
         fixed. Overlapping blocks merge; the whole chain may be opened at once.
         Discovery requires an interior center and three disjoint blocks.
         The central physical capacity must exceed the external TT bond
-        product. Its SVD supports estimate a cyclic rank; dividing TT bonds
-        by that rank, rounded up, gives the complete preliminary TR profile.
+        product. An SVD estimates its physical-to-virtual rank. The cyclic
+        rank is estimated from that rank and the external TT bond dimensions,
+        rounding to the nearest integer without truncating their supports.
+        Dividing TT bonds by the cyclic rank, rounded up, gives the complete
+        preliminary TR profile.
         ALS then uses that profile with separate physical cores, as for
         prescribed ranks. Discovery end blocks absorb their gauges before
         SVD splitting. With ``block_boundaries=False``, both modes absorb

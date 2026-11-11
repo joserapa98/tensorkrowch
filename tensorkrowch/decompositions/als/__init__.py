@@ -64,6 +64,9 @@ Their regularization and numerical scaling are determined for the complete
 core. All physical slices retain the same regularization coefficient.
 :class:`ConvergencePolicy` controls the sweep
 budget, ``atol``, ``rtol``, stability and optional best-state retention.
+``keep_best=True`` includes the initialization among the candidates. When
+measured, the objective error of the returned approximation is stored in
+``metrics.errors``.
 Sampled fits cache separate uniform evaluation entries, fixed throughout
 the run, to measure complete-sweep errors and apply the same stopping rules.
 ``ConvergencePolicy.error_samples`` controls this budget; ``None`` requests

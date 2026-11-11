@@ -645,6 +645,8 @@ class TRALS(TTALS):  # MARK: TRALS
             must match the source values.
         collect_metrics : bool
             Whether to record local solves, complete-sweep errors and timings.
+            When measured, the objective error of the returned approximation
+            is stored in ``metrics.errors``.
         verbose : bool or int
             Console verbosity from 0 (silent) to 3 (most detailed).
 

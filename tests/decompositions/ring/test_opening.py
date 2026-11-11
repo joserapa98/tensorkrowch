@@ -5,6 +5,7 @@ import torch
 
 import tensorkrowch as tk
 
+from tensorkrowch.decompositions.als import tr as tr_module
 from tensorkrowch.decompositions.ring.opening import (
     _FixedGaugeCoreOpener,
     resolve_loop_opener,
@@ -152,6 +153,148 @@ class TestALSLoopOpener:
 
 class TestQRLoopOpener:
 
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('orientation', ['left', 'right'])
+    @pytest.mark.parametrize('side', [None, 'left', 'right'])
+    @pytest.mark.parametrize('method', [
+        'uniform', 'leverage', 'product_leverage'])
+    def test_sampled_refinement_inherits_policy_and_validation(
+            self, dtype, orientation, side, method, monkeypatch):
+        cores, target = _local_problem(dtype)
+        sampler = tk.decompositions.SamplingPolicy(32, method=method)
+        policy = tk.decompositions.ConvergencePolicy(
+            max_sweeps=3, rtol=1e-12, error_samples=5)
+        generator = torch.Generator().manual_seed(321)
+        opener = tk.decompositions.QRLoopOpener(
+            tk.decompositions.ALSLoopOpener({
+                'sampler': sampler, 'convergence': policy,
+                'generator': generator}), refinement_sweeps=2)
+        assert opener.refiner.fit_options['sampler'] is sampler
+        assert opener.refiner.fit_options['convergence'].error_samples == 5
+        assert opener.refiner.fit_options['convergence'].rtol == policy.rtol
+        assert opener.refiner.fit_options['convergence'].max_sweeps == 2
+        initial = []
+        refine = opener.refiner.open
+
+        def record(*args, **kwargs):
+            initial.append(contract_tr_dense(
+                kwargs['context']['initial_cores']))
+            return refine(*args, **kwargs)
+
+        monkeypatch.setattr(opener.refiner, 'open', record)
+        fixed = {} if side is None else {
+            f'fixed_{side}': cores[0 if side == 'left' else -1]}
+        result = opener.open(
+            target, (2, 3, 2), orientation=orientation, **fixed,
+            context={'initial_cores': cores})
+        diagnostics = result.diagnostics['qr_refinement']
+        info = diagnostics['error_evaluation']
+        assert info['estimated']
+        assert info['n_samples'] == 5
+        assert info['seed'] == 322
+        assert diagnostics['sampler']['method'] == method
+
+        rng = torch.Generator().manual_seed(322)
+        dimensions = target.shape if orientation == 'right' else \
+            tuple(reversed(target.shape))
+        indices = torch.stack([torch.randint(dim, (5,), generator=rng)
+                               for dim in dimensions], dim=1)
+        if orientation == 'left':
+            indices = indices.flip(1)
+        selection = tuple(indices.unbind(-1))
+        denominator = target[selection].norm()
+        before = (initial[0][selection] - target[selection]).norm()
+        after = (result.contract_dense()[selection] - target[selection]).norm()
+        final, = result.diagnostics['errors']
+        assert final.kind == 'final'
+        assert after <= before + 1e-12 * denominator
+        torch.testing.assert_close(final.relative, after / denominator)
+
+    @pytest.mark.parametrize('sampled', [False, True])
+    @pytest.mark.parametrize('budget', [None, 100])
+    def test_refinement_uses_full_error_without_sampled_validation(
+            self, sampled, budget):
+        cores, target = _local_problem()
+        sampler = tk.decompositions.SamplingPolicy(32) if sampled else None
+        opener = tk.decompositions.QRLoopOpener(
+            tk.decompositions.ALSLoopOpener({
+                'sampler': sampler,
+                'convergence': tk.decompositions.ConvergencePolicy(
+                    max_sweeps=1, error_samples=budget),
+                'generator': torch.Generator().manual_seed(321)}))
+        result = opener.open(target, (2, 3, 2),
+                             context={'initial_cores': cores})
+        record = result.diagnostics['qr_refinement']
+        assert not record['error_evaluation']['estimated']
+        assert record['error_evaluation']['n_samples'] == target.numel()
+        error = (result.contract_dense() - target).norm() / target.norm()
+        final, = result.diagnostics['errors']
+        torch.testing.assert_close(final.relative, error)
+
+    @pytest.mark.parametrize('orientation', ['left', 'right'])
+    def test_sampled_acceptance_uses_validation_without_dense_contraction(
+            self, orientation, monkeypatch):
+        target = torch.ones(3, 2, 4, dtype=torch.float64)
+        cores = [torch.ones(1, dim, 1, dtype=target.dtype)
+                 for dim in target.shape]
+        cores[1] = 2 * cores[1]
+        generator = torch.Generator().manual_seed(123)
+        opener = tk.decompositions.QRLoopOpener(
+            tk.decompositions.ALSLoopOpener({
+                'sampler': tk.decompositions.SamplingPolicy(8),
+                'convergence': tk.decompositions.ConvergencePolicy(
+                    max_sweeps=1, error_samples=1), 'generator': generator}))
+        rng = torch.Generator().manual_seed(124)
+        dimensions = target.shape if orientation == 'right' else \
+            tuple(reversed(target.shape))
+        indices = [int(torch.randint(dim, (1,), generator=rng))
+                   for dim in dimensions]
+        if orientation == 'left':
+            indices.reverse()
+
+        def initial(target, rank, **kwargs):
+            initial_cores = kwargs['context']['initial_cores']
+            return tk.decompositions.LoopOpening(
+                initial_cores[0], initial_cores[1:-1], initial_cores[-1],
+                (1, 1, 1),
+                orientation=orientation)
+
+        def update(backend, site, sweep, return_record):
+            if site == 1:
+                candidate = torch.full_like(backend.cores[site], 20)
+                candidate[:, indices[1], :] = 1
+                backend._update({site: candidate})
+
+        plans = []
+        prepare = tk.decompositions.ALSProblem.prepare_evaluation
+
+        def prepare_once(problem, n_samples, generator):
+            state = generator.get_state().clone()
+            prepare(problem, n_samples, generator)
+            assert torch.equal(generator.get_state(), state)
+            plans.append(problem.evaluation_info)
+
+        def unexpected_dense(*args):
+            pytest.fail('Sampled refinement materialized the complete ring')
+
+        monkeypatch.setattr(opener.opener, 'open', initial)
+        monkeypatch.setattr(tr_module._TRSampledALSBackend, 'update_site',
+                            update)
+        monkeypatch.setattr(tk.decompositions.ALSProblem, 'prepare_evaluation',
+                            prepare_once)
+        monkeypatch.setattr(tk.decompositions.LoopOpening, 'contract_dense',
+                            unexpected_dense)
+        result = opener.open(target, 1, orientation=orientation,
+                             fixed_left=cores[0],
+                             context={'initial_cores': cores})
+        assert len(plans) == 1
+        record = result.diagnostics['qr_refinement']
+        assert record['error_evaluation']['estimated']
+        assert result.diagnostics['errors'][0].relative < 1e-12
+        # The chosen validation entry improves although the full norm worsens.
+        assert (contract_tr_dense(result.all_cores) - target).norm() > \
+            target.norm()
+
     def test_fixed_balancing_is_disabled_by_default(self):
         assert tk.decompositions.QRLoopOpener().balance_fixed is False
 
@@ -184,9 +327,9 @@ class TestQRLoopOpener:
         assert opening.diagnostics['qr_left']
         assert opening.diagnostics['qr_right']
         if refinement_sweeps:
-            record = opening.diagnostics['qr_refinement']
-            assert record['relative_error_after'] <= \
-                record['relative_error_before']
+            final, = opening.diagnostics['errors']
+            assert final.kind == 'final'
+            assert final.relative < 1e-10
 
     @pytest.mark.parametrize('side', ['left', 'right'])
     @pytest.mark.parametrize('balance_fixed', [False, True])
@@ -216,29 +359,36 @@ class TestQRLoopOpener:
         torch.testing.assert_close(opening.contract_dense(), target)
 
     @pytest.mark.parametrize('side', [None, 'left', 'right'])
-    def test_worsening_refinement_is_rejected(self, side):
+    def test_worsening_refinement_is_rejected(self, side, monkeypatch):
         target = torch.tensor([[[1.], [2.], [-3.]]], dtype=torch.float64)
-        opener = tk.decompositions.QRLoopOpener()
+        cores = [torch.ones(1, 1, 1, dtype=target.dtype),
+                 target.clone(), torch.ones(1, 1, 1, dtype=target.dtype)]
         fixed = {} if side is None else {
-            f'fixed_{side}': torch.ones(1, 1, 1, dtype=target.dtype)}
+            f'fixed_{side}': cores[0 if side == 'left' else -1]}
 
-        def worsen(**kwargs):
-            assert kwargs['target'] is target
-            for name, gauge in fixed.items():
-                assert kwargs[name] is gauge
-            cores = list(kwargs['context']['initial_cores'])
-            cores[1] = 2 * cores[1]
+        def initial(**kwargs):
+            initial_cores = kwargs['context']['initial_cores']
             return tk.decompositions.LoopOpening(
-                cores[0], cores[1:-1], cores[-1], (1, 1, 1),
-                diagnostics={'metadata': {'n_sweeps': 1}})
+                initial_cores[0], initial_cores[1:-1], initial_cores[-1],
+                (1, 1, 1))
+
+        def worsen(backend, site, sweep, return_record):
+            backend.cache.design(site, compact=True)
+            replacements = {site: 2 * backend.cores[site]} if site == 1 else {}
+            backend._update(replacements)
 
         capabilities = tk.decompositions.LoopOpenerCapabilities(
             supports_fixed_left=True, supports_fixed_right=True)
-        opener.refiner = tk.decompositions.CallableLoopOpener(
-            worsen, capabilities)
-        result = opener.open(target, 1, **fixed)
-        assert not result.diagnostics['qr_refinement']['accepted']
+        opener = tk.decompositions.QRLoopOpener(
+            tk.decompositions.CallableLoopOpener(initial, capabilities))
+        monkeypatch.setattr(tr_module._TRALSBackend, 'update_site', worsen)
+        result = opener.open(target, 1, **fixed,
+                             context={'initial_cores': cores})
+        assert result.diagnostics['errors'][0].relative < 1e-12
         torch.testing.assert_close(result.contract_dense(), target)
+        for name, gauge in fixed.items():
+            assert torch.equal(getattr(result, name.replace('fixed_', '') +
+                                       '_gauge'), gauge)
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('side', ['left', 'right'])
@@ -264,7 +414,7 @@ class TestQRLoopOpener:
         result = opener.open(target, 1, **{f'fixed_{side}': gauge},
                              context={'initial_cores': cores})
 
-        assert result.diagnostics['qr_refinement']['accepted']
+        assert result.diagnostics['errors'][0].relative < 1e-12
         assert torch.equal(getattr(result, f'{side}_gauge'), gauge)
         torch.testing.assert_close(result.contract_dense(), target)
 
@@ -414,9 +564,9 @@ class TestQRLoopOpener:
         assert torch.equal(getattr(result, f'{side}_gauge'), gauge)
         torch.testing.assert_close(result.contract_dense(), target)
         if refinement_sweeps:
-            record = result.diagnostics['qr_refinement']
-            assert record['relative_error_after'] <= \
-                record['relative_error_before']
+            final, = result.diagnostics['errors']
+            assert final.kind == 'final'
+            assert final.relative < 1e-10
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('side', ['left', 'right'])
@@ -436,13 +586,11 @@ class TestQRLoopOpener:
         result = opener.open(target, 1, **{f'fixed_{side}': gauge},
                              context={'initial_cores': initial})
         relative = (result.contract_dense() - target).norm() / target.norm()
-        record = result.diagnostics['qr_refinement']
+        final, = result.diagnostics['errors']
 
         assert torch.equal(getattr(result, f'{side}_gauge'), gauge)
         assert relative > 0.1
-        torch.testing.assert_close(relative, record['relative_error_after'])
-        assert record['relative_error_after'] <= \
-            record['relative_error_before']
+        torch.testing.assert_close(relative, final.relative)
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('side', ['left', 'right'])

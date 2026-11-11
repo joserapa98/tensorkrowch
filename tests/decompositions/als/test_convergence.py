@@ -77,8 +77,9 @@ class _FakeALSBackend:
 
     def measure_objective(self, problem):
         self.measure_count += 1
-        value = self.objective[min(self.current_sweep,
-                                   len(self.objective) - 1)]
+        value = (2. if self.current_sweep is None else
+                 self.objective[min(self.current_sweep,
+                                    len(self.objective) - 1)])
         return torch.tensor(float(value)), torch.tensor(float(value))
 
     def snapshot(self):

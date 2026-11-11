@@ -21,6 +21,7 @@ from tensorkrowch.decompositions.als.problem import ALSProblem
 from tensorkrowch.decompositions.als.solvers import (NonFiniteLocalSystemError,
                                                      NonFiniteSolutionError)
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
+                                                 ErrorRecord,
                                                  LocalSolveRecord,
                                                  SweepRecord)
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
@@ -63,10 +64,10 @@ class ALSBackend(Protocol):  # MARK: ALSBackend
     def measure_objective(self,
                           problem: ALSProblem) -> Tuple[
             torch.Tensor, torch.Tensor]:
-        """Measures one fixed/global objective after a complete sweep."""
+        """Measures the current state on the complete or validation objective."""
 
     def snapshot(self) -> Sequence[torch.Tensor]:
-        """Returns the current state for optional best-state retention."""
+        """Copies the current state for optional best-state retention."""
 
     def restore(self, cores: Sequence[torch.Tensor]) -> None:
         """Restores a previously captured state."""
@@ -99,7 +100,20 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
     The backend owns environment construction and local solves. This driver
     chooses sweep directions, requests complete site updates, measures
     complete-sweep objectives, applies convergence and emits structured events.
+    Best-state retention includes the initialization. When measured, the
+    objective error of the returned approximation is stored in
+    ``metrics.errors``.
     """
+
+    @staticmethod
+    def _measure_error(backend: ALSBackend, problem: ALSProblem) -> ErrorRecord:
+        """Measures one state using the backend's shared objective."""
+        absolute, relative = backend.measure_objective(problem)
+        for name, value in (('absolute', absolute), ('relative', relative)):
+            if not isinstance(value, torch.Tensor) or (value.numel() != 1):
+                raise TypeError(f'Backend objective {name} error should be '
+                                'a scalar tensor')
+        return ErrorRecord(kind='final', absolute=absolute, relative=relative)
 
     def _finish(self, cores: Sequence[torch.Tensor],
                 metrics: DecompositionMetrics, converged: bool,
@@ -194,15 +208,6 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
             raise ValueError('Backend trainable sites should be unique')
 
         metrics = DecompositionMetrics()
-        if not trainable_sites:
-            result = self._finish(
-                cores=tuple(backend.cores),
-                metrics=metrics,
-                converged=True,
-                stop_reason='all_cores_fixed',
-                n_sweeps=0)
-            return result
-
         fixed_objective = problem.has_fixed_objective
         need_objective = fixed_objective and (
             problem.sampled or collect_metrics or
@@ -213,10 +218,23 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
             (convergence.callback is not None) or (observer is not None)
         need_local_records = collect_metrics or (observer is not None)
 
+        final_error = None
+        if need_objective and (convergence.keep_best or not trainable_sites):
+            final_error = self._measure_error(backend, problem)
+        if not trainable_sites:
+            if final_error is not None:
+                metrics.errors.append(final_error)
+            return self._finish(tuple(backend.cores), metrics, True,
+                                'all_cores_fixed', 0)
+
         previous_record = None
         stable_sweeps = 0
-        best_score = None
+        best_error = None
         best_cores = None
+        if convergence.keep_best and torch.isfinite(final_error.absolute) \
+                and not torch.isnan(final_error.relative):
+            best_error = final_error
+            best_cores = tuple(backend.snapshot())
         stop_reason = None
         completed_sweeps = 0
 
@@ -278,6 +296,8 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
                         values=values))
 
             if stop_reason is not None:
+                if need_objective:
+                    final_error = self._measure_error(backend, problem)
                 elapsed = None if start is None else perf_counter() - start
                 record = SweepRecord(
                     sweep=sweep,
@@ -298,20 +318,9 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
             abs_error = None
             rel_error = None
             if need_objective:
-                absolute_tensor, relative_tensor = backend.measure_objective(
-                    problem)
-                if not isinstance(absolute_tensor, torch.Tensor) or \
-                        (absolute_tensor.numel() != 1):
-                    raise TypeError(
-                        'Backend objective absolute error should be a scalar '
-                        'tensor')
-                if not isinstance(relative_tensor, torch.Tensor) or \
-                        (relative_tensor.numel() != 1):
-                    raise TypeError(
-                        'Backend objective relative error should be a scalar '
-                        'tensor')
-                abs_error = absolute_tensor.detach().cpu()
-                rel_error = relative_tensor.detach().cpu()
+                final_error = self._measure_error(backend, problem)
+                abs_error = final_error.absolute
+                rel_error = final_error.relative
                 if (not torch.isfinite(abs_error)) or torch.isnan(rel_error):
                     stop_reason = 'nonfinite_solution'
 
@@ -338,12 +347,11 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
             if stop_reason is not None:
                 record = replace(record, stop_reason=stop_reason)
 
-            if convergence.keep_best and (abs_error is not None):
-                score = abs_error
-                if (best_score is None) or (score < best_score):
-                    best_score = score
-                    best_cores = tuple(
-                        core.clone() for core in backend.snapshot())
+            if convergence.keep_best and torch.isfinite(abs_error) and \
+                    not torch.isnan(rel_error):
+                if (best_error is None) or (abs_error < best_error.absolute):
+                    best_error = final_error
+                    best_cores = tuple(backend.snapshot())
 
             if collect_metrics:
                 metrics.sweeps.append(record)
@@ -370,6 +378,9 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
             stop_reason = 'max_sweeps'
         if convergence.keep_best and (best_cores is not None):
             backend.restore(best_cores)
+            final_error = best_error
+        if final_error is not None:
+            metrics.errors.append(final_error)
 
         converged = stop_reason not in (
             'max_sweeps',
@@ -398,16 +409,12 @@ def _report_als_result(result: 'TensorDecomposition',
             'error_evaluation', {}).get('estimated', False),
     }
     if result.metrics.sweeps:
-        # A restored best state need not be the last recorded sweep
-        records = [record for record in result.metrics.sweeps
-                   if record.abs_error is not None]
-        if records:
-            record = (min(records, key=lambda item: item.abs_error)
-                      if result.metadata.get('keep_best') else records[-1])
-            values.update(absolute_error=record.abs_error,
-                          relative_error=record.rel_error)
         values['elapsed'] = sum(record.elapsed or 0
                                 for record in result.metrics.sweeps)
+    if result.metrics.errors:
+        record = result.metrics.errors[-1]
+        values.update(absolute_error=record.absolute,
+                      relative_error=record.relative)
     observer.emit(DecompositionEvent(
         name='summary', phase=phase, values=values))
     for site, core in enumerate(result.cores):

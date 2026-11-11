@@ -24,7 +24,7 @@ This script contains:
         * resolve_loop_opener
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import (Any,
                     Callable,
                     Dict,
@@ -39,7 +39,7 @@ from typing import (Any,
 import torch
 
 from tensorkrowch.formats import TR
-from tensorkrowch.utils import safe_divide, scale_tensor
+from tensorkrowch.utils import scale_tensor
 
 from tensorkrowch.decompositions._utils import _normalize_rank
 from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
@@ -591,7 +591,10 @@ class QRLoopOpener:  # MARK: QRLoopOpener
     When enabled, fixed gauges are balanced before free axes. This changes the
     residual's metric and projects out target components outside the fixed
     gauge's external column space. Refinement uses the original target and
-    fixed gauges, accepting only a smaller residual in those coordinates.
+    fixed gauges, inheriting the sampler and convergence settings of an ALS
+    opener. The best approximation is retained, including the factors obtained
+    before refinement. With sampling, errors are measured on fixed validation
+    entries; otherwise, they are measured on the complete original target.
     With two fixed gauges, the wrapped solver is used directly, without
     balancing or ALS refinement.
 
@@ -603,7 +606,9 @@ class QRLoopOpener:  # MARK: QRLoopOpener
         Additional ALS sweeps on the original target after restoring the
         factors. Default is one. Zero disables refinement. Only candidates
         reducing the local residual are accepted. This does not guarantee a
-        smaller global reconstruction error.
+        smaller global reconstruction error. ALS sampler and convergence
+        settings are inherited, with this sweep budget and ``keep_best=True``.
+        Sampled refinement uses the ALS fixed validation set for acceptance.
     balance_fixed : bool, optional
         Whether to balance a single fixed gauge before the free axis.
         Default is ``False``, which only balances free external axes.
@@ -634,11 +639,9 @@ class QRLoopOpener:  # MARK: QRLoopOpener
         if refinement_sweeps:
             options = dict(self.opener.fit_options) \
                 if isinstance(self.opener, ALSLoopOpener) else {}
-            options.update({
-                'sampler': None,
-                'convergence': ConvergencePolicy(
-                    max_sweeps=refinement_sweeps, keep_best=True),
-            })
+            options['convergence'] = replace(
+                options.get('convergence') or ConvergencePolicy(),
+                max_sweeps=refinement_sweeps, keep_best=True)
             self.refiner = ALSLoopOpener(options)
 
     @property
@@ -694,7 +697,7 @@ class QRLoopOpener:  # MARK: QRLoopOpener
         -------
         LoopOpening
             Gauges and cores in the original external coordinates, with
-            optional full-target refinement diagnostics.
+            optional refinement errors and evaluation diagnostics.
         """
         if not isinstance(target, torch.Tensor):
             raise TypeError('`target` should be torch.Tensor type')
@@ -806,28 +809,19 @@ class QRLoopOpener:  # MARK: QRLoopOpener
         if (self.refiner is None) or two_fixed:
             return initial
 
-        before = torch.linalg.vector_norm(target - initial.contract_dense())
         refined = self.refiner.open(
             target, initial.rank, fixed_left=fixed_left,
             fixed_right=fixed_right, orientation=orientation,
             context={**context, 'in_dim': tuple(target.shape),
                      'initial_cores': initial.all_cores})
-        candidate = torch.linalg.vector_norm(target - refined.contract_dense())
-        accepted = bool(torch.isfinite(candidate) & (candidate < before))
-        selected = refined if accepted else initial
-        after = candidate if accepted else before
-        denominator = torch.linalg.vector_norm(target)
         return LoopOpening(
-            left_gauge=selected.left_gauge, cores=selected.cores,
-            right_gauge=selected.right_gauge, rank=selected.rank,
+            left_gauge=refined.left_gauge, cores=refined.cores,
+            right_gauge=refined.right_gauge, rank=refined.rank,
             orientation=orientation,
             local_records=initial.local_records + refined.local_records,
-            diagnostics={**initial.diagnostics, 'qr_refinement': {
-                'accepted': accepted,
-                'relative_error_before': safe_divide(before, denominator),
-                'relative_error_after': safe_divide(after, denominator),
-                'metadata': refined.diagnostics['metadata'],
-            }})
+            diagnostics={**initial.diagnostics,
+                         'errors': refined.diagnostics['errors'],
+                         'qr_refinement': refined.diagnostics['metadata']})
 
 
 class BLOSTRLoopOpener:  # MARK: BLOSTRLoopOpener

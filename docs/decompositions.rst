@@ -292,8 +292,11 @@ The same objects configure both engines:
 
 * :class:`ConvergencePolicy` sets the sweep budget, absolute and relative
   objective-error thresholds, stagnation criteria, and optional retention of
-  the best complete-sweep approximation. A stagnation threshold indicates
-  little change, not necessarily a small reconstruction error.
+  the best approximation among the initialization and complete sweeps.
+  Equal errors retain the earlier state. A stagnation threshold indicates
+  little change, not necessarily a small reconstruction error. When measured,
+  the objective error of the returned approximation is stored in
+  ``result.metrics.errors``.
 * :class:`LeastSquaresSolver` configures the PyTorch least-squares solve,
   conditioning controls and optional Tikhonov regularization.
 * :class:`SamplingPolicy` replaces complete local systems with sampled rows.
@@ -453,6 +456,16 @@ The strings ``"als"``, ``"blostr"`` and ``"blostr_svd"`` select the
 corresponding built-in strategies with default settings. Use objects when
 their detailed options are needed. :class:`LoopOpening` documents the
 returned local factors; ordinary conversion code need not construct it.
+
+``QRLoopOpener`` inherits the sampler and convergence settings of its ALS
+opener. Refinement optimizes the original target after restoring the QR
+factors, using the specified additional sweep budget. It retains the best
+approximation, including the factors obtained before refinement. With
+sampling, errors are measured on fixed validation entries controlled by
+``ConvergencePolicy.error_samples``; otherwise, they are measured on the
+complete target. Improving the validation error does not guarantee a smaller
+full-tensor residual. The diagnostics include the approximation's error,
+convergence information and ``error_evaluation`` identifying the measure used.
 
 For a conversion with customized local optimization, pass a configured
 opener. This example also balances each target and refines its factors:

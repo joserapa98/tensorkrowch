@@ -32,6 +32,7 @@ class _FakeALSBackend:
         self.skipped = []
         self.restored = None
         self.previous_generation = None
+        self.initial_objective = 2.
 
     @property
     def n_sites(self):
@@ -79,8 +80,9 @@ class _FakeALSBackend:
 
     def measure_objective(self, problem):
         self.measure_count += 1
-        value = self.objective[min(self.current_sweep,
-                                   len(self.objective) - 1)]
+        value = (self.initial_objective if self.current_sweep is None else
+                 self.objective[min(self.current_sweep,
+                                    len(self.objective) - 1)])
         return torch.tensor(float(value)), torch.tensor(float(value))
 
     def snapshot(self):
@@ -98,6 +100,96 @@ def _fixed_problem():
 
 
 class TestALSSweepDriver:  # MARK: TestALSSweepDriver
+
+    @pytest.mark.parametrize('sampled', [False, True])
+    @pytest.mark.parametrize('errors', [[.3, .4], [.2, .2]])
+    def test_keep_best_includes_initialization_and_ties(self, sampled, errors):
+        backend = _FakeALSBackend(errors)
+        backend.initial_objective = .2
+        initial = backend.snapshot()
+        problem = _fixed_problem()
+        problem.sampled = sampled
+        result = tk.decompositions.ALSSweepDriver().fit(
+            problem, backend,
+            tk.decompositions.ConvergencePolicy(max_sweeps=2, keep_best=True))
+
+        assert result.n_sweeps == 2
+        assert backend.measure_count == 3
+        for actual, expected in zip(result.cores, initial):
+            torch.testing.assert_close(actual, expected)
+        final, = result.metrics.errors
+        assert final.kind == 'final'
+        assert final.absolute == pytest.approx(.2)
+        assert not result.metrics.sweeps
+
+    @pytest.mark.parametrize('all_fixed', [False, True])
+    def test_initial_state_survives_failure_or_no_updates(self, all_fixed):
+        backend = _FakeALSBackend(
+            [1.], trainable_sites=() if all_fixed else None,
+            fail=None if all_fixed else ('system', 0, 1))
+        initial = backend.snapshot()
+        result = tk.decompositions.ALSSweepDriver().fit(
+            _fixed_problem(), backend,
+            tk.decompositions.ConvergencePolicy(keep_best=True))
+        assert result.n_sweeps == 0
+        assert len(result.metrics.errors) == 1
+        assert result.metrics.errors[0].kind == 'final'
+        for actual, expected in zip(result.cores, initial):
+            torch.testing.assert_close(actual, expected)
+
+    def test_nonfinite_objective_cannot_replace_finite_initialization(self):
+        backend = _FakeALSBackend([.1])
+        initial = backend.snapshot()
+
+        def measure(problem):
+            if backend.current_sweep is None:
+                return torch.tensor(.2), torch.tensor(.2)
+            return torch.tensor(torch.inf), torch.tensor(torch.inf)
+
+        backend.measure_objective = measure
+        result = tk.decompositions.ALSSweepDriver().fit(
+            _fixed_problem(), backend,
+            tk.decompositions.ConvergencePolicy(keep_best=True))
+        assert result.stop_reason == 'nonfinite_solution'
+        assert result.metrics.errors[-1].relative == pytest.approx(.2)
+        for actual, expected in zip(result.cores, initial):
+            torch.testing.assert_close(actual, expected)
+
+    @pytest.mark.parametrize('engine', [tk.decompositions.TTALS,
+                                        tk.decompositions.TRALS])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('objective', ['full', 'weighted', 'sampled',
+                                           'observed'])
+    def test_public_als_retains_exact_initialization_when_ridge_worsens_fit(
+            self, engine, dtype, objective):
+        target = torch.ones(3, 4, 2, dtype=dtype)
+        cores = [torch.ones(1, dim, 1, dtype=dtype) for dim in target.shape]
+        options = {}
+        sampler = None
+        if objective == 'weighted':
+            options['weights'] = torch.linspace(.1, 2., 24).reshape(
+                target.shape)
+            options['mask'] = target.real > 0
+        elif objective == 'observed':
+            indices = torch.cartesian_prod(torch.arange(3), torch.arange(4),
+                                           torch.arange(2))[::2]
+            options['mask'] = tk.decompositions.SparseTensorSource(
+                indices, torch.ones(len(indices), dtype=torch.bool),
+                target.shape)
+        elif objective == 'sampled':
+            sampler = tk.decompositions.SamplingPolicy(8)
+        result = engine(target, **options).fit(
+            initial_cores=cores, orthogonalize=False, sampler=sampler,
+            solver=tk.decompositions.LeastSquaresSolver(l2_reg=10.),
+            convergence=tk.decompositions.ConvergencePolicy(
+                max_sweeps=2, keep_best=True, error_samples=5),
+            generator=torch.Generator().manual_seed(42), collect_metrics=True)
+
+        torch.testing.assert_close(result.contract_dense(), target)
+        final, = result.metrics.errors
+        assert final.kind == 'final'
+        assert final.absolute == 0
+        assert result.metrics.sweeps[-1].abs_error > 0
 
     @pytest.mark.parametrize(
         'sweep_direction', [None, 'forward', 'alternating']
@@ -240,6 +332,7 @@ class TestALSSweepDriver:  # MARK: TestALSSweepDriver
         for site, core in enumerate(result.cores):
             torch.testing.assert_close(core, torch.tensor([site + 2.]))
         assert result.metrics.sweeps[-1].abs_error == pytest.approx(0.3)
+        assert result.metrics.errors[-1].absolute == pytest.approx(.1)
 
     def test_infinite_relative_error_for_zero_target_is_not_solver_failure(
         self,
@@ -247,7 +340,8 @@ class TestALSSweepDriver:  # MARK: TestALSSweepDriver
         backend = _FakeALSBackend([2., 1.])
 
         def measure_objective(problem):
-            value = backend.objective[backend.current_sweep]
+            value = (backend.initial_objective if backend.current_sweep is None
+                     else backend.objective[backend.current_sweep])
             return torch.tensor(value), torch.tensor(torch.inf)
 
         backend.measure_objective = measure_objective

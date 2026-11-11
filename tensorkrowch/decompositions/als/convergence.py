@@ -43,8 +43,9 @@ class ConvergencePolicy:  # MARK: ConvergencePolicy
         Consecutive stable sweeps required. Defaults to one when
         ``stagnation_rtol`` is set; otherwise it must be omitted.
     keep_best : bool
-        Restore the best complete-sweep state before returning. Default is
-        ``False``.
+        Restore the best state among the initialization and complete sweeps
+        before returning. Default is ``False``. Equal errors retain the
+        earlier state, using the same objective or fixed validation set.
     callback : callable, optional
         Called as ``callback(sweep_record, cores)`` after a complete sweep.
         Return ``True`` to stop. Cores are the current state; the callback
@@ -68,7 +69,7 @@ class ConvergencePolicy:  # MARK: ConvergencePolicy
     rtol: Optional[float] = None  # Relative objective stopping tolerance
     stagnation_rtol: Optional[float] = None  # Relative stagnation tolerance
     patience: Optional[int] = None  # Required consecutive stable sweeps
-    keep_best: bool = False  # Whether to restore the best complete-sweep state
+    keep_best: bool = False  # Retain the best initial or complete-sweep state
     callback: Optional[Callable] = None  # Complete-sweep stopping callback
     error_samples: Optional[int] = 16384  # Independent evaluation-entry budget
 

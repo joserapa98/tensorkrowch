@@ -10,7 +10,6 @@ This script contains:
         * _validate_opening
 """
 
-from math import prod
 from typing import (Any,
                     Dict,
                     Mapping,
@@ -27,8 +26,7 @@ from tensorkrowch.decompositions._utils import _normalize_dims
 from tensorkrowch.decompositions.metrics import DecompositionMetrics
 from tensorkrowch.decompositions.observers import DecompositionEvent
 from tensorkrowch.decompositions.results import TRDecomposition
-from tensorkrowch.decompositions.ring.blocks import (_select_block,
-                                                     _split_block)
+from tensorkrowch.decompositions.ring.blocks import _select_block
 from tensorkrowch.decompositions.ring.gauges import (GaugeRecursion,
                                                      GaugeMap)
 from tensorkrowch.decompositions.ring.opening import (_FixedGaugeCoreOpener,
@@ -98,9 +96,11 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
     Builds a ring from one central opening and outward gauge transports.
 
     Open target providers run an independent rightward branch followed by a
-    leftward branch. Each branch ends by absorbing its learned gauge into a
-    provider-defined boundary block. Central and boundary blocks may merge,
-    including the case where the central opening covers the whole chain.
+    leftward branch. Discovery resolves a rank profile before local openings;
+    every ALS problem keeps separate physical cores. Prescribed end blocks
+    use constrained openings; discovery end blocks absorb gauges before SVD
+    splitting. Single-site ends always absorb their gauges. Only prescribed
+    central and boundary blocks may merge, including the complete chain.
 
     The low-level cyclic-provider path alternates the two fronts and solves
     their final common site with two fixed gauges. TT2TR and TR-RSS use the
@@ -123,7 +123,7 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
                              metrics: DecompositionMetrics,
                              recursion_diagnostics: list
                              ) -> TRDecomposition:
-        """Runs two independent sweeps and absorbs both open target edges."""
+        """Runs two sweeps with constrained openings or boundary absorption."""
         close_boundary = getattr(provider, 'close_boundary', None)
         if not callable(close_boundary):
             raise TypeError('An open provider should implement '
@@ -144,23 +144,39 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
             else:
                 sites_to_open = range(selection['sites'][0] - 1,
                                       boundary_sites[-1], -1)
+            # Prescribed end blocks use the same constrained ALS opening as
+            # interior sites; discovery and one-site ends absorb the gauge.
+            open_boundary = (self.rank_discovery is None) and \
+                (len(boundary_sites) > 1)
+            groups = [(site,) for site in sites_to_open]
+            if open_boundary:
+                groups.append(boundary_sites)
             previous = central_opening
-            for site in sites_to_open:
-                sites = (site,)
+            for sites in groups:
+                adjacent = (sites[0] if direction == 'right' else sites[-1],)
                 fixed = self._advance(
                     recursion, direction, previous,
-                    provider.local_target(sites, context),
-                    self._opening_sites(openings, previous), sites, provider,
-                    context, metrics, recursion_diagnostics)
+                    provider.local_target(adjacent, context),
+                    self._opening_sites(openings, previous), adjacent,
+                    provider, context, metrics, recursion_diagnostics)
                 opening = self._open(
                     provider, rank, opener, sites,
                     provider.local_target(sites, context), direction,
                     fixed if direction == 'right' else None,
                     fixed if direction == 'left' else None, context)
+                if sites == boundary_sites:
+                    finalize = getattr(provider, 'finalize_center', None)
+                    if callable(finalize):
+                        opening = finalize(opening, sites)
+                    boundaries[sites[0]] = opening.cores
+                step_direction = direction + '_boundary' \
+                    if sites == boundary_sites else direction
                 self._store_opening(
-                    sites, direction, opening, cores, openings, order,
+                    sites, step_direction, opening, cores, openings, order,
                     directions, metrics)
                 previous = opening
+            if open_boundary:
+                continue
             adjacent = (boundary_sites[0] if direction == 'right'
                         else boundary_sites[-1])
             boundary_cores = close_boundary(
@@ -195,6 +211,33 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
             if candidate is opening:
                 return sites
         raise RuntimeError('The recursion source opening was not stored')
+
+    @staticmethod
+    def _record_gauge(step: GaugeMap, context: Mapping[str, Any],
+                      metrics: DecompositionMetrics,
+                      diagnostics: list) -> None:
+        """Validates and records shared recursive and boundary gauge data."""
+        if not isinstance(step, GaugeMap):
+            raise TypeError('Gauge transport should return GaugeMap')
+        observer = context.get('_observer')
+        if observer is not None:
+            for record in step.records:
+                observer.emit(DecompositionEvent(
+                    name='gauge', phase='TT to TR', level=2,
+                    site=record.site,
+                    values={'orientation': record.orientation,
+                            'rank': (record.numerical_rank,
+                                     record.cancellable_rank),
+                            'condition_number': record.condition_number,
+                            'cancellation_error': record.cancellation_error,
+                            'projective': record.projective}))
+        metrics.gauges.extend(step.records)
+        diagnostics.append({
+            'direction': context['direction'],
+            'from_sites': context['from_sites'],
+            'to_sites': context['to_sites'],
+            **step.metadata,
+        })
 
     @classmethod
     def _boundary_context(cls,
@@ -231,33 +274,12 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
             provider.local_target(sites, context),
             recursion_context,
             direction)
-        if not isinstance(step, GaugeMap):
-            raise TypeError(
-                '`prepare_boundary` should return GaugeMap')
-        observer = context.get('_observer')
-        if observer is not None:
-            for record in step.records:
-                observer.emit(DecompositionEvent(
-                    name='gauge', phase='TT to TR', level=2,
-                    site=record.site,
-                    values={'orientation': record.orientation,
-                            'rank': (record.numerical_rank,
-                                     record.cancellable_rank),
-                            'condition_number': record.condition_number,
-                            'cancellation_error': record.cancellation_error,
-                            'projective': record.projective}))
-        metrics.gauges.extend(step.records)
-        diagnostics.append({
-            'direction': direction,
-            'from_sites': recursion_context['from_sites'],
-            'to_sites': sites,
-            **step.metadata,
-        })
+        cls._record_gauge(step, recursion_context, metrics, diagnostics)
         boundary_context['boundary_gauge'] = step.core
         return boundary_context
 
-    @staticmethod
-    def _advance(recursion: GaugeRecursion,
+    @classmethod
+    def _advance(cls, recursion: GaugeRecursion,
                  direction: str,
                  opening: LoopOpening,
                  local_target: Any,
@@ -283,28 +305,7 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
         else:
             step = recursion.advance_left(
                 opening, local_target, recursion_context)
-        if not isinstance(step, GaugeMap):
-            raise TypeError(
-                'Gauge recursion methods should return GaugeMap')
-        observer = context.get('_observer')
-        if observer is not None:
-            for record in step.records:
-                observer.emit(DecompositionEvent(
-                    name='gauge', phase='TT to TR', level=2,
-                    site=record.site,
-                    values={'orientation': record.orientation,
-                            'rank': (record.numerical_rank,
-                                     record.cancellable_rank),
-                            'condition_number': record.condition_number,
-                            'cancellation_error': record.cancellation_error,
-                            'projective': record.projective}))
-        metrics.gauges.extend(step.records)
-        diagnostics.append({
-            'direction': direction,
-            'from_sites': from_sites,
-            'to_sites': to_sites,
-            **step.metadata,
-        })
+        cls._record_gauge(step, recursion_context, metrics, diagnostics)
         return step.core
 
     def _open(self, provider: RingTargetProvider,
@@ -320,27 +321,10 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
         local_context = {**context, **provider.local_context(sites, context),
                          'sites': sites}
         local_rank = provider.local_rank(sites, rank, context)
-        if self.discover and (len(sites) > 1):
-            dimensions = target.shape[1:-1]
-            local_context['in_dim'] = (target.shape[0], prod(dimensions),
-                                       target.shape[-1])
-            opening = opener.open(
-                target.reshape(target.shape[0], -1, target.shape[-1]),
-                (local_rank[0], local_rank[-2], local_rank[-1]),
-                orientation=orientation, context=local_context)
-            block = opening.cores[0]
-            split = _split_block(
-                block.reshape(block.shape[0], *dimensions, block.shape[-1]),
-                dimensions, rtol=context['rtol'])
-            opening.cores = split
-            opening.rank = (local_rank[0],
-                            *(core.shape[-1] for core in split),
-                            local_rank[-1])
-        else:
-            opening = opener.open(
-                target, local_rank, fixed_left=fixed_left,
-                fixed_right=fixed_right, orientation=orientation,
-                context=local_context)
+        opening = opener.open(
+            target, local_rank, fixed_left=fixed_left,
+            fixed_right=fixed_right, orientation=orientation,
+            context=local_context)
         _validate_opening(
             opening, sites, orientation, fixed_left, fixed_right)
         observer = context.get('_observer')
@@ -470,7 +454,8 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
             block splitting.
         boundary_opener : LoopOpener, optional
             Solver for the final two-fixed-gauge site of a cyclic provider.
-            Open providers close their boundary blocks directly instead.
+            Open providers fit prescribed boundary blocks or close discovery
+            blocks by gauge absorption instead.
         context : mapping, optional
             Provider execution data. ``left_boundary`` and ``right_boundary``
             contain the open-provider boundary sites; an empty tuple denotes
@@ -501,7 +486,6 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
             raise ValueError(
                 "`provider.boundary_mode` should be 'cyclic' or 'open'")
 
-        self.discover = rank is None
         self.rank_discovery = None
         self.boundary_blocks = ((), ())
         if boundary_mode == 'open':
@@ -512,7 +496,8 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
                 provider.partition(rank, center, block_boundaries, rtol)
             self.boundary_blocks = (left, right)
             context.update(left_boundary=left, right_boundary=right,
-                           rank_caps=None if self.discover else tuple(rank),
+                           rank_caps=None if self.rank_discovery is not None
+                           else tuple(rank),
                            rtol=rtol)
             configure = getattr(provider, 'configure_partition', None)
             if callable(configure):

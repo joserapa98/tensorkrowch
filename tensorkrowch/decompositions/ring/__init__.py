@@ -12,7 +12,7 @@ The main conversion interface is:
     tt2tr(tt, ...) = TT2TR(tt).fit(...)
         |
         +-- prescribed rank --> automatic block and outward construction
-        +-- omitted rank ----> central and boundary blocks, rank discovery
+        +-- omitted rank ----> three disjoint blocks, then inferred-rank ALS
         |
         +-- optimization opener --> gauge recursion and residual expansion
         +-- spectral opener ----> exact gauge absorption and SVD propagation

@@ -61,6 +61,10 @@ class TestTT2TR:
     @pytest.mark.parametrize('rank', [1, None])
     def test_minimal_and_general_rank_one(self, length, rank):
         tt = _ring(length, ranks=1, dtype=torch.float64).to_tt()
+        if (rank is None) and (length < 3):
+            with pytest.raises(ValueError, match='endpoint'):
+                tk.decompositions.tt2tr(tt, rank=rank)
+            return
         result = tk.decompositions.tt2tr(tt, rank=rank, loop_opener=_opener())
         assert isinstance(result, tk.decompositions.TRDecomposition)
         assert result.rank == [1] * length
@@ -105,33 +109,74 @@ class TestTT2TR:
         result = tk.decompositions.tt2tr(tt, loop_opener=_opener())
         assert result.metadata['requested_rank'] is None
         assert result.metadata['boundary_blocks'] == ((0, 1), (5, 6))
-        assert result.metadata['center_block'] == (3, 4)
+        assert result.metadata['center_block'] == (2, 3, 4)
         assert result.rank == [2] * 7
         assert _error(tt, result) < 1e-6
 
-    @pytest.mark.parametrize('length, sites, boundaries', [
-        (3, (0, 1, 2), ((), ())),
-        (4, (0, 1, 2, 3), ((), ())),
-        (5, (2, 3, 4), ((0, 1), ())),
-    ])
-    def test_overlapping_discovery_blocks(self, length, sites, boundaries):
-        tt = _ring(length).to_tt()
-        result = tk.decompositions.tt2tr(tt, loop_opener=_opener())
-        assert result.metadata['center_block'] == sites
-        assert result.metadata['boundary_blocks'] == boundaries
+    @pytest.mark.parametrize('block_boundaries', [False, True])
+    @pytest.mark.parametrize('center,message', [
+        (0, 'endpoint'), (6, 'endpoint'), (1, 'overlaps'), (5, 'overlaps')])
+    def test_discovery_rejects_invalid_centers(
+            self, block_boundaries, center, message):
+        with pytest.raises(ValueError, match=message):
+            tk.decompositions.tt2tr(_ring().to_tt(), center=center,
+                                    block_boundaries=block_boundaries)
+
+    @pytest.mark.parametrize('block_boundaries', [False, True])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('ranks,dimension', [
+        ([2] * 7, 4), ([2, 1, 2, 1, 2, 2, 2], 5)])
+    def test_discovery_reuses_sitewise_als_with_complete_rank_profile(
+            self, block_boundaries, dtype, ranks, dimension, monkeypatch):
+        tt = _ring(7, ranks=ranks, dimension=dimension, dtype=dtype).to_tt()
+        opener = _opener()
+        calls = []
+        solve = opener.opener.open
+
+        def record(target, rank, **kwargs):
+            sites = kwargs['context']['sites']
+            calls.append(sites)
+            assert target.shape[1:-1] == (dimension,) * len(sites)
+            assert tuple(rank) == (ranks[sites[0] - 1],
+                                   *(ranks[site] for site in sites), ranks[-1])
+            return solve(target, rank, **kwargs)
+
+        monkeypatch.setattr(opener.opener, 'open', record)
+        result = tk.decompositions.tt2tr(
+            tt, block_boundaries=block_boundaries, loop_opener=opener,
+            rtol=1e-12, collect_metrics=True)
+        assert calls[0] == result.metadata['center_block']
+        assert len(calls[0]) > 1
+        assert all(len(sites) == 1 for sites in calls[1:])
+        assert result.rank == ranks
         assert _error(tt, result) < 1e-6
+        if not block_boundaries:
+            assert result.metadata['boundary_blocks'] == ((0,), (6,))
+            assert not result.metrics.truncations
+        elif dimension == 4:
+            assert sorted(record.site for record in result.metrics.truncations
+                          ) == [0, 5]
+
+    @pytest.mark.parametrize('length', [3, 4, 5])
+    @pytest.mark.parametrize('block_boundaries', [False, True])
+    def test_overlapping_discovery_blocks_are_rejected(
+            self, length, block_boundaries):
+        tt = _ring(length).to_tt()
+        with pytest.raises(ValueError, match='too small'):
+            tk.decompositions.tt2tr(tt, block_boundaries=block_boundaries)
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('center', [1, 3])
-    def test_full_physical_rank_opens_one_site_and_recovers_cyclic_one(
+    def test_discovery_opens_physical_cores_and_recovers_cyclic_one(
             self, dtype, center):
         tt = _ring(5, ranks=[3, 3, 3, 3, 1], dimension=5, dtype=dtype).to_tt()
         result = tk.decompositions.TT2TR(tt).fit(
             center=center, loop_opener=_opener(), rtol=1e-12)
 
-        assert result.metadata['center_block'] == (center,)
+        assert result.metadata['center_block'] == (
+            (1, 2) if center == 1 else (2, 3))
         assert result.metadata['boundary_blocks'] == ((0,), (4,))
-        assert result.metadata['rank_discovery']['physical_rank'] == 5
+        assert result.metadata['rank_discovery']['physical_rank'] == 9
         assert result.metadata['rank_discovery']['cyclic_rank'] == 1
         assert result.rank == [3, 3, 3, 3, 1]
         assert _error(tt, result) < 1e-10
@@ -243,7 +288,6 @@ class TestTT2TR:
         ({'center': -1}, ValueError),
         ({'center': 5}, ValueError),
         ({'block_boundaries': 1}, TypeError),
-        ({'block_boundaries': False}, ValueError),
         ({'enrich': 1}, TypeError),
         ({'enrich_rank': -1}, ValueError),
         ({'enrich_rtol': -1}, ValueError),
@@ -287,15 +331,9 @@ class TestTT2TR:
         caps = [2] * 10 if isinstance(ranks, int) else ranks
         assert all(actual <= cap for actual, cap in zip(result.rank, caps))
         records = result.metrics.truncations
-        assert sorted(record.site for record in records) == [0, 1, 7, 8]
-        if (rtol is None) or (rtol == 0):
-            assert result.rank == caps
-            assert _error(tt, result) < 1e-6
-        else:
-            assert any(actual < cap for actual, cap
-                       in zip(result.rank, caps))
-            assert any(record.local_abs_error > 0 for record in records)
-            assert _error(tt, result) > .01
+        assert not records
+        assert result.rank == caps
+        assert _error(tt, result) < 1e-6
 
     def test_prescribed_overlapping_blocks_open_whole_chain(self):
         tt = _ring(6, dimension=2).to_tt()
@@ -376,7 +414,7 @@ class TestTT2TR:
         provider = _TTCoreProvider(_ring().to_tt())
         central, left, right, ranks, info = _discovery_partition(
             provider, 3, 1e-12)
-        assert (central, left, right) == ((3, 4), (0, 1), (5, 6))
+        assert (central, left, right) == ((2, 3, 4), (0, 1), (5, 6))
         assert ranks == (2,) * 7
         assert info['cyclic_rank'] == 2
 

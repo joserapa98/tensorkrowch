@@ -93,7 +93,8 @@ Centered reconstruction and ring opening:
         +-- left branch:  left-facing SVDs and recursive solves
         +-- right branch: right-facing SVDs and recursive solves
 
-Every algorithm accepts ``center``; an endpoint gives a single branch. ``rank``
+Every algorithm accepts ``center``; prescribed TR ranks allow endpoint centers.
+TR discovery requires an interior center and three disjoint blocks. ``rank``
 is a shared cap or one cap per bond, while ``None`` requests numerical rank
 discovery. TR profiles include the cyclic bond last. Singular values remain
 absorbed in the truncated tensors; only the center retains the isometric maps
@@ -102,7 +103,9 @@ needed to start both sketch recursions.
 TR-RSS forms central and end blocks by contracting an intermediate TT. These
 blocks introduce no new source queries. The central block is passed directly
 to the configured ``loop_opener``, then learned gauges propagate through the
-sketches. End blocks absorb their gauges and split by SVD. The default
+sketches. Discovery first infers a full TR rank profile; all ALS openings keep
+the physical cores separate. Discovery end blocks absorb gauges and split by
+SVD; prescribed end blocks use ALS with the inherited gauge fixed. The default
 ``ALSLoopOpener`` performs local TR fitting; an optional ``QRLoopOpener``
 balances the free external axes and refines after restoring its factors.
 Both strategies belong to :mod:`~tensorkrowch.decompositions.ring`.

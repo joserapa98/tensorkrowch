@@ -400,21 +400,27 @@ An integer ``rank`` specifies the local TR ranks; a sequence gives one
 right-link rank per core, with the cyclic rank last. Omitting it requests
 rank discovery. With optimization openers, the initial site grows into a
 block when necessary to expose sufficient physical dimensions.
-``block_boundaries`` controls automatic end blocks; disabling it for
-optimization requires prescribed ranks.
+Discovery requires an interior ``center`` and three disjoint capacity blocks.
+Its central physical dimension product must exceed the product of the external
+TT bonds. Overlap with either end block raises an error before discovery SVDs,
+including when ``block_boundaries=False``. Choose a more interior center or
+provide ranks when the chain cannot contain three separated blocks.
 
-Both prescribed-rank and discovery openings select the initial block by
-requiring its physical dimension product to exceed the product of its two
-external TR rank caps. During discovery, provisional caps divide the TT bonds
-by a cyclic-rank estimate: the rounded square root of the largest TT bond.
-These divisions round up. SVD support ranks are measured after selection;
-a full-rank physical unfolding is accepted without growing the block again.
-The final cyclic rank can be one, representing a tensor train as a ring.
+The central SVD supports estimate the cyclic rank. Dividing all internal TT
+bonds by it, rounded up, gives the preliminary TR profile, including links
+inside the central block. Local ALS then uses the same execution as prescribed
+ranks, keeping all physical cores separate. Full physical rank does not cause
+further block growth. The inferred cyclic rank may be one.
+
+With ``block_boundaries=True``, discovery end blocks absorb their gauges and
+split by SVD, determining their internal ranks. Prescribed end blocks use ALS
+with the inherited gauge fixed. ``False`` keeps single-site ends that absorb
+their gauges. Only prescribed-rank blocks may merge or start at an endpoint.
 
 ``center`` selects the initial site or the center of the discovery block.
-At block SVD splits, ``rank`` acts as a cap and an optional ``rtol`` can
-reduce the returned ranks. This tolerance controls discarded squared
-singular-value mass, not ALS convergence.
+ALS keeps prescribed ranks fixed. In exact spectral SVD splits, ``rank``
+acts as a cap and an optional ``rtol`` can reduce the returned ranks. This
+tolerance controls discarded squared singular-value mass, not ALS convergence.
 
 Choosing a loop opener
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -629,9 +635,12 @@ rank last. Sampled TT-cut caps are formed from products of cyclic and
 internal TR ranks. With no prescribed rank, local SVDs and blocks determine
 the numerical dimensions used for discovery.
 
-``center`` seeds an automatic initial block. End blocks absorb the incoming
-gauges before being split; ``block_boundaries=False`` keeps single-site ends
-when ranks are prescribed. The block and rank conventions follow ``TT2TR``.
+``center`` seeds an automatic initial block. Discovery requires an interior
+center and three disjoint TT capacity blocks, then reuses prescribed-rank ALS
+with separate physical cores. Discovery end blocks absorb gauges and split by
+SVD; prescribed end blocks use constrained ALS. ``block_boundaries=False``
+keeps single-site ends in either mode, retaining the discovery checks.
+The block and rank conventions follow ``TT2TR``.
 Recursive steps transport gauges through sketch evaluations, retaining the
 inherited sample coordinates. Local ALS stopping criteria belong to the
 opener's convergence policy, while ``fit`` truncation criteria control SVDs.

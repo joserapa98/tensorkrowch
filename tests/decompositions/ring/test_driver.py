@@ -318,7 +318,7 @@ class TestBoundaryAssembly:
 
 class TestOpenBoundaryBlocks:
 
-    def test_two_multisite_boundaries_leave_only_single_site_recursion(self):
+    def test_prescribed_boundary_blocks_use_constrained_openings(self):
         calls = []
         driver = BidirectionalRingDriver()
         result = driver.fit(
@@ -333,8 +333,9 @@ class TestOpenBoundaryBlocks:
                                 (3,), (2,), (0, 1))
         assert len(driver.boundaries[0]) == 2
         assert len(driver.boundaries[8]) == 3
-        assert len(driver.boundaries[8]) == 3
-        assert all(len(call['sites']) == 1 for call in calls[1:])
+        assert [call['sites'] for call in calls] == list(driver.order)
+        assert calls[3]['fixed_left']
+        assert calls[-1]['fixed_right']
         assert result.rank == [1] * 11
         torch.testing.assert_close(
             result.contract_dense(),

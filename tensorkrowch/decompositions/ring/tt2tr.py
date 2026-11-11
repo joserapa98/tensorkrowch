@@ -211,7 +211,7 @@ class _TTCoreProvider:  # MARK: _TTCoreProvider
         return cores
 
     def finalize_center(self, opening: Any, sites: Sequence[int]) -> Any:
-        """Absorbs dummy external gauges when discovery blocks overlap."""
+        """Absorbs dummy external gauges for openings touching an endpoint."""
         # After absorption, identity gauges prevent transport from applying the
         # same boundary map a second time.
         cores = list(opening.cores)
@@ -494,17 +494,17 @@ class TT2TR:  # MARK: TT2TR
 
         A prescribed ``rank`` starts at ``center`` and grows an initial block
         when one site has insufficient physical capacity, then proceeds
-        sitewise. By default, boundary sites are grouped into blocks, whose
-        gauges are absorbed before SVD splitting. Overlapping blocks merge;
-        the whole chain may be opened at once. With known ranks, boundary
-        blocking can be disabled independently of the initial block.
-        Discovery selects the same geometric block using provisional TR caps
-        estimated from the TT bonds, then measures its SVD support ranks.
-        Full physical rank is accepted without growing the block again.
-        It fits one physical supercore and splits it with SVDs to determine
-        internal ranks. Prescribed blocks instead optimize their physical
-        cores individually. Discovery is a numerical rank heuristic, not
-        unique rank recovery.
+        sitewise. Prescribed boundary blocks use ALS with the inherited gauge
+        fixed. Overlapping blocks merge; the whole chain may be opened at once.
+        Discovery requires an interior center and three disjoint blocks.
+        The central physical capacity must exceed the external TT bond
+        product. Its SVD supports estimate a cyclic rank; dividing TT bonds
+        by that rank, rounded up, gives the complete preliminary TR profile.
+        ALS then uses that profile with separate physical cores, as for
+        prescribed ranks. Discovery end blocks absorb their gauges before
+        SVD splitting. With ``block_boundaries=False``, both modes absorb
+        gauges into single-site ends. Rank discovery remains a heuristic,
+        not unique rank recovery.
 
         BLOSTR instead selects the shortest interior block containing
         ``center`` with equal external TT bond dimensions. It uses no
@@ -518,12 +518,14 @@ class TT2TR:  # MARK: TT2TR
         ----------
         rank : int or sequence of int, optional
             Local ALS rank, or one right-link rank per core including the
-            cyclic last entry. At SVD splits these are upper bounds: ``rtol``
-            may select smaller ranks, which are returned without zero padding.
+            cyclic last entry. ALS keeps this profile fixed. In exact spectral
+            SVD splits these are upper bounds: ``rtol`` may select smaller
+            ranks, returned without zero padding.
             ``None`` discovers ranks using SVDs or spectral multiplicities.
         center : int, optional
             Initial site, or the center of the discovery block. Defaults to
-            the middle site.
+            the middle site. Discovery requires an interior site whose block
+            does not overlap either boundary block.
         loop_opener : str or LoopOpener, optional
             ``"als"`` optimizes local openings. ``"blostr"`` uses complete
             spectral recovery; ``"blostr_svd"`` recovers the first factor
@@ -535,11 +537,11 @@ class TT2TR:  # MARK: TT2TR
             learned gauge. Configured objects accept PyTorch pseudoinverse
             keyword options. Exact BLOSTR conversion does not use transport.
         block_boundaries : bool
-            Group boundary sites into automatic blocks before gauge absorption
-            and SVD splitting. Default is True. False keeps one-site boundaries
-            and requires supplied ``rank`` for optimization openers. The
-            initial block still grows automatically. Exact spectral conversion
-            does not use this option.
+            Group boundary sites into automatic blocks. Default is True.
+            Discovery absorbs gauges and splits these blocks by SVD;
+            prescribed ranks use ALS with separate physical cores. False
+            keeps one-site ends. Discovery still requires three disjoint
+            capacity blocks. Exact spectral conversion ignores this option.
         enrich : bool
             Append orthogonal residual constraints without changing TR ranks.
             Default is True. Exact BLOSTR conversion does not use expansion.
@@ -598,6 +600,10 @@ class TT2TR:  # MARK: TT2TR
             raise TypeError('`center` should be int type')
         if not 0 <= center < count:
             raise ValueError('`center` should identify an input site')
+        if (rank is None) and (center in (0, count - 1)):
+            raise ValueError(
+                'Cannot discover ranks from an endpoint `center`; '
+                'choose an interior site or provide `rank`')
         if rtol is not None:
             if isinstance(rtol, bool) or not isinstance(rtol, (int, float)):
                 raise TypeError('`rtol` should be a number in [0, 1] or None')
@@ -608,11 +614,6 @@ class TT2TR:  # MARK: TT2TR
         verbosity = _normalize_verbosity(verbose)
         observer = _resolve_observer(verbosity, None) if verbosity else None
         opener = resolve_loop_opener(loop_opener)
-        if (not block_boundaries) and (rank is None) and not isinstance(
-                opener, BLOSTRLoopOpener):
-            raise ValueError(
-                '`block_boundaries=False` requires supplied `rank` '
-                'for optimization openers')
 
         # Choose the reference gauge required by the selected transport.
         strategy = _resolve_recursion(recursion)
@@ -799,10 +800,12 @@ def tt2tr(tt: Any, rank: Optional[Union[int, Sequence[int]]] = None,
         Open tensor train, open-boundary MPS or cores in standard TT order.
     rank : int or sequence of int, optional
         Local ALS rank or one right-link rank per core, including the closing
-        link. At SVD splits these are upper bounds; ``rtol`` may reduce them.
+        link. ALS keeps this profile fixed. Exact spectral SVD splits treat
+        these as upper bounds; ``rtol`` may reduce them.
         ``None`` discovers the rank profile. No zero padding is applied.
     center : int, optional
         Initial site or discovery-block center. Defaults to the middle site.
+        Discovery requires an interior site with three disjoint blocks.
     loop_opener : str or LoopOpener, optional
         Local strategy: ``"als"``, ``"blostr"``, ``"blostr_svd"`` or a
         configured opener object.
@@ -810,11 +813,11 @@ def tt2tr(tt: Any, rank: Optional[Union[int, Sequence[int]]] = None,
         ``"adjoint"``, ``"pinv"``, ``"orth"`` or a configured strategy.
         Exact spectral conversion does not use gauge recursion.
     block_boundaries : bool
-        Group boundary sites into automatic blocks before gauge absorption
-        and SVD splitting. Default is True. False keeps one-site boundaries
-        and requires supplied ``rank`` for optimization openers. The
-        initial block still grows automatically. Exact spectral conversion
-        does not use this option.
+        Group boundary sites into automatic blocks. Default is True.
+        Discovery absorbs gauges and splits these blocks by SVD;
+        prescribed ranks use ALS with separate physical cores. False
+        keeps one-site ends. Discovery still requires three disjoint
+        capacity blocks. Exact spectral conversion ignores this option.
     enrich : bool
         Whether to append orthogonal residual constraints. Default is True.
     enrich_rank : int, optional

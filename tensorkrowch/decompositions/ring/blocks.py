@@ -3,7 +3,6 @@ This script contains:
 
     Functions:
         * _select_block
-        * _central_block
         * _spectral_block
         * _split_block
         * _numerical_rank
@@ -256,17 +255,10 @@ def _numerical_rank(matrix: torch.Tensor, rtol: float) -> int:
     return len(truncated_svd(matrix, rtol=rtol)[1])
 
 
-def _central_block(provider: Any, rank: Sequence[int], center: int
-                   ) -> Tuple[int, ...]:
-    """Selects a geometric initial block without consuming separate ends."""
-    count = len(provider.in_dim)
-    bounds = (1, count - 2) if 0 < center < count - 1 else (center, center)
-    return _select_block(provider, rank, center, bounds=bounds)['sites']
-
-
-def _boundary_partition(provider: Any, sites: Sequence[int]
+def _boundary_partition(provider: Any, sites: Sequence[int], *,
+                        discover: bool = False
                         ) -> Tuple[Tuple[int, ...], ...]:
-    """Selects end blocks and merges intersections with the central block."""
+    """Selects end blocks, rejecting discovery overlaps or merging them."""
     cores, dimensions = provider.cores, provider.in_dim
     count = len(cores)
 
@@ -284,6 +276,17 @@ def _boundary_partition(provider: Any, sites: Sequence[int]
     left, right = sites[0], sites[-1]
     left_sites = tuple(range(left_end + 1))
     right_sites = tuple(range(right_start, count))
+    if discover:
+        if (left <= left_end) and (right >= right_start):
+            raise ValueError(
+                'The chain is too small to discover ranks with three '
+                'separate blocks; provide `rank` or use ALS directly')
+        if (left <= left_end) or (right >= right_start):
+            raise ValueError(
+                'Cannot discover ranks because the central block overlaps '
+                'a boundary block; choose a more interior `center` or '
+                'provide `rank`')
+        return tuple(sites), left_sites, right_sites
     if left <= left_end:
         left = 0
         left_sites = ()
@@ -301,17 +304,19 @@ def _discovery_partition(provider: Any, center: int,
     """
     Selects a geometric block, then estimates its ranks from SVD supports.
 
-    TT cuts include the unknown cyclic factor. For selection only, estimate
-    that factor by the rounded square root of the largest TT bond and divide
-    the TT bonds by it, rounding up. This balanced-rank heuristic supplies TR
-    caps to the same selector used for prescribed ranks. Numerical ranks are
-    measured only after selection; full physical rank does not grow the block.
+    Selection uses the external TT bond dimensions. All three blocks must be
+    disjoint before any SVD is computed. Full physical rank does not grow the
+    block. The resulting profile is used by the ordinary prescribed-rank
+    openings, including links inside the central block.
     """
     cores, dimensions = provider.cores, provider.in_dim
+    if center in (0, len(cores) - 1):
+        raise ValueError('Cannot discover ranks from an endpoint `center`; '
+                         'choose an interior site or provide `rank`')
     tt_rank = tuple(core.shape[-1] for core in cores[:-1])
-    cyclic = max(1, round(sqrt(max(tt_rank, default=1))))
-    ranks = tuple((value + cyclic - 1) // cyclic for value in tt_rank)
-    sites = _central_block(provider, (*ranks, cyclic), center)
+    sites = _select_block(provider, (*tt_rank, 1), center)['sites']
+    sites, left_sites, right_sites = _boundary_partition(
+        provider, sites, discover=True)
     target = provider.local_target(sites, {})
     physical = prod(dimensions[site] for site in sites)
 
@@ -322,8 +327,6 @@ def _discovery_partition(provider: Any, center: int,
     cyclic = max(1, round(sqrt(left_dim * right_dim / q)))
     ranks = [max(1, (value + cyclic - 1) // cyclic)
              for value in tt_rank] + [cyclic]
-    sites, left_sites, right_sites = _boundary_partition(
-        provider, sites)
     return (sites, left_sites, right_sites, tuple(ranks), {
         'left_dim': left_dim, 'right_dim': right_dim,
         'physical_rank': q, 'cyclic_rank': cyclic})
@@ -343,11 +346,12 @@ def _ring_partition(provider: Any, rank: Optional[_Rank], center: int,
             provider, center, rtol)
     else:
         ranks = _normalize_rank(rank, count)
-        sites = _central_block(provider, ranks, center)
-        if block_boundaries:
-            sites, left, right = _boundary_partition(provider, sites)
-        else:
-            left = () if sites[0] == 0 else (0,)
-            right = () if sites[-1] == count - 1 else (count - 1,)
+        bounds = (1, count - 2) if 0 < center < count - 1 else (center, center)
+        sites = _select_block(provider, ranks, center, bounds=bounds)['sites']
+        sites, left, right = (_boundary_partition(provider, sites)
+                              if block_boundaries else (sites, (), ()))
         discovery = None
+    if not block_boundaries:
+        left = () if sites[0] == 0 else (0,)
+        right = () if sites[-1] == count - 1 else (count - 1,)
     return sites, left, right, ranks, discovery, rtol

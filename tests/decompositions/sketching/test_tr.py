@@ -77,6 +77,10 @@ class TestTRRSS:  # MARK: TestTRRSS
     @pytest.mark.parametrize('rank', [None, 1, 2])
     def test_single_site_ring_has_no_outward_branch(self, rank):
         target = torch.tensor([1., 2., -1.], dtype=torch.complex128)
+        if rank is None:
+            with pytest.raises(ValueError, match='endpoint'):
+                tk.decompositions.TRRSS(target).fit(_grid(target.shape))
+            return
         result = tk.decompositions.TRRSS(target).fit(
             _grid(target.shape), rank=rank, loop_opener=_opener(30),
             generator=torch.Generator().manual_seed(47))
@@ -252,7 +256,7 @@ class TestTRRSS:  # MARK: TestTRRSS
         generator = torch.Generator().manual_seed(93)
         original = tk.formats.TR([
             torch.randn(2, 2, 2, dtype=torch.complex128,
-                        generator=generator) for _ in range(8)])
+                        generator=generator) for _ in range(11)])
         target = original.contract_dense()
         target = target / target.norm()
         result = tk.decompositions.TRRSS(target).fit(
@@ -263,9 +267,71 @@ class TestTRRSS:  # MARK: TestTRRSS
         assert len(result.metadata['center_block']) > 1
         assert _relative_error(result, target) < 1e-6
 
+    @pytest.mark.parametrize('block_boundaries', [False, True])
+    @pytest.mark.parametrize('count,center,message', [
+        (2, 0, 'endpoint'), (7, 0, 'endpoint'), (7, 6, 'endpoint'),
+        (7, 1, 'overlaps'), (7, 5, 'overlaps'), (5, 2, 'too small')])
+    def test_discovery_rejects_invalid_partitions(
+            self, block_boundaries, count, center, message):
+        cores = make_tr_cores(
+            in_dim=(4,) * count, rank=(2,) * count,
+            dtype=torch.complex128,
+            generator=torch.Generator().manual_seed(318))
+        source = tk.decompositions.FormatSource(tk.formats.TR(cores))
+        samples = torch.randint(4, (64, count),
+                                generator=torch.Generator().manual_seed(319))
+        with pytest.raises(ValueError, match=message):
+            tk.decompositions.TRRSS(source).fit(
+                samples, center=center, block_boundaries=block_boundaries,
+                rtol=1e-12)
+
+    @pytest.mark.parametrize('block_boundaries', [False, True])
+    @pytest.mark.parametrize('discover', [False, True])
+    @pytest.mark.parametrize('ranks,dimension', [
+        ((2,) * 7, 4), ((2, 3, 2, 3, 2, 2, 2), 5)])
+    def test_complete_rank_profiles_use_separate_als_cores(
+            self, block_boundaries, discover, ranks, dimension, monkeypatch):
+        cores = make_tr_cores(
+            in_dim=(dimension,) * 7, rank=ranks, dtype=torch.complex128,
+            generator=torch.Generator().manual_seed(96))
+        ring = tk.formats.TR(cores)
+        ring = ring / ring.norm()
+        samples = torch.randint(dimension, (128, 7),
+                                generator=torch.Generator().manual_seed(319))
+        als = _opener(200)
+        opener = tk.decompositions.QRLoopOpener(als)
+        calls = []
+        solve = als.open
+
+        def record(target, rank, **kwargs):
+            sites = kwargs['context']['sites']
+            calls.append((sites, kwargs['fixed_left'], kwargs['fixed_right']))
+            assert target.shape[1:-1] == (dimension,) * len(sites)
+            assert tuple(rank) == (ranks[sites[0] - 1],
+                                   *(ranks[site] for site in sites), ranks[-1])
+            return solve(target, rank, **kwargs)
+
+        monkeypatch.setattr(als, 'open', record)
+        result = tk.decompositions.TRRSS(
+            tk.decompositions.FormatSource(ring)).fit(
+                samples, rank=None if discover else ranks,
+                block_boundaries=block_boundaries, rtol=1e-12,
+                loop_opener=opener,
+                generator=torch.Generator().manual_seed(101))
+        assert calls[0][0] == result.metadata['center_block']
+        if discover:
+            assert all(len(sites) == 1 for sites, _, _ in calls[1:])
+        else:
+            for boundary in result.metadata['boundary_blocks']:
+                if len(boundary) > 1:
+                    fixed = next(call for call in calls if call[0] == boundary)
+                    assert (fixed[1] is not None) or (fixed[2] is not None)
+        assert result.rank == list(ranks)
+        assert _relative_error(result, ring.contract_dense()) < 1e-6
+
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('center', [1, 3])
-    def test_full_physical_rank_discovery_keeps_single_site(
+    def test_discovery_keeps_physical_cores_and_recovers_cyclic_one(
             self, dtype, center):
         rank = (3, 3, 3, 3, 1)
         cores = make_tr_cores(
@@ -278,9 +344,10 @@ class TestTRRSS:  # MARK: TestTRRSS
             loop_opener=_opener(30),
             generator=torch.Generator().manual_seed(318))
 
-        assert result.metadata['center_block'] == (center,)
+        assert result.metadata['center_block'] == (
+            (1, 2) if center == 1 else (2, 3))
         assert result.metadata['boundary_blocks'] == ((0,), (4,))
-        assert result.metadata['rank_discovery']['physical_rank'] == 5
+        assert result.metadata['rank_discovery']['physical_rank'] == 9
         assert result.metadata['rank_discovery']['cyclic_rank'] == 1
         assert result.rank == list(rank)
         assert _relative_error(result, target) < 1e-10
@@ -400,7 +467,6 @@ class TestTRRSS:  # MARK: TestTRRSS
         ({'rank': 0}, ValueError),
         ({'center': True}, TypeError),
         ({'center': 5}, ValueError),
-        ({'rank': None, 'block_boundaries': False}, ValueError),
         ({'rank': 1, 'block_boundaries': 1}, TypeError),
         ({'rank': 1, 'loop_opener': 'unknown'}, ValueError)])
     def test_invalid_fit_options(self, kwargs, error):

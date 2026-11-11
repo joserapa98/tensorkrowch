@@ -57,9 +57,19 @@ class _SketchCoreProvider(_TTCoreProvider):  # MARK: _SketchCoreProvider
                      context: Mapping[str, Any]) -> torch.Tensor:
         """Contracts existing TT cores for blocks; reuses single-site Phi."""
         sites = tuple(sites)
-        if (not self.central_sites) or \
-                any(site in self.boundary_sites for site in sites):
+        if not self.central_sites:
             return super().local_target(sites, context)
+        if any(site in self.boundary_sites for site in sites):
+            target = super().local_target(sites, context)
+            if (len(sites) > 1) and (context.get('rank_caps') is not None):
+                # Match the incoming sketch gauge without projecting away its
+                # sample-space constraints at a prescribed boundary opening.
+                if sites[0] == 0:
+                    lift = self._sample_environment(sites[-1] + 1, 'right')
+                    return torch.einsum('...b,sb->...s', target, lift)
+                lift = self._sample_environment(sites[0], 'left')
+                return torch.einsum('sa,a...->s...', lift, target)
+            return target
         if sites == self.central_sites:
             return super().local_target(sites, context)
         return self.prepared[sites[0]].coefficients
@@ -215,17 +225,22 @@ class TRRSS(TTRSS):  # MARK: TRRSS
         rank : int or sequence[int], optional
             Shared maximum rank or one right-bond rank per final TR site; the
             last entry is cyclic. Phi TT-cut caps are cyclic rank times each
-            internal rank. ``None`` discovers ranks from truncated TT blocks.
+            internal rank. ``None`` estimates a complete TR profile from three
+            disjoint TT blocks before using the same physical-core ALS solves.
         center : int, optional
             Seed site of the initial block. Defaults to the middle; blocks
-            grow to provide sufficient physical capacity and merge at ends.
+            grow to provide sufficient physical capacity. Discovery requires
+            an interior center and rejects overlap with the capacity end
+            blocks. Prescribed-rank blocks may merge at the ends.
         loop_opener : str or LoopOpener
             Local cyclic factorization, default ``"als"``. Configure ALS
             solvers and convergence through an ``ALSLoopOpener`` object.
             Use ``QRLoopOpener`` for local balancing and refinement.
         block_boundaries : bool
-            Selects injective end blocks. ``False`` keeps single-site ends
-            and requires prescribed ranks.
+            Group boundary sites into capacity blocks. Discovery absorbs
+            gauges and splits these blocks by SVD; prescribed ranks use ALS
+            with separate physical cores. ``False`` keeps single-site ends.
+            Discovery requires three disjoint capacity blocks in either case.
         cutoff : float, optional
             Minimum singular value to keep. Values ``<= cutoff`` are removed.
         atol : float, optional
@@ -233,7 +248,8 @@ class TRRSS(TTRSS):  # MARK: TRRSS
         rtol : float, optional
             Maximum discarded sum of squared singular values divided by their
             total sum of squares. Must lie in ``[0, 1]``. Also controls SVD
-            splitting within end blocks, together with prescribed rank caps.
+            splitting within discovery end blocks. Prescribed ALS ranks stay
+            fixed even when the Phi SVDs select smaller TT dimensions.
             Local ALS convergence is configured independently through the
             loop opener's convergence policy.
         cum_percentage : float, optional
@@ -265,12 +281,14 @@ class TRRSS(TTRSS):  # MARK: TRRSS
         """
         if not isinstance(block_boundaries, bool):
             raise TypeError('`block_boundaries` should be bool type')
-        if (rank is None) and not block_boundaries:
-            raise ValueError('`block_boundaries=False` requires `rank`')
         opener = resolve_loop_opener(loop_opener)
         samples = self._initialize_fit(sketch_samples, generator)
         count = self.outputs.n_sites
         center = self._normalize_center(center, count)
+        if (rank is None) and (center in (0, count - 1)):
+            raise ValueError(
+                'Cannot discover ranks from an endpoint `center`; '
+                'choose an interior site or provide `rank`')
         self._validate_labels(labels, samples.batch_size)
         ranks = self._chain_rank(rank, cyclic=True)
         tt_ranks = (None if ranks is None else

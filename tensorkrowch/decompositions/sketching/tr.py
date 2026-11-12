@@ -229,6 +229,10 @@ class TRRSS(TTRSS):  # MARK: TRRSS
             disjoint TT blocks before using the same physical-core ALS solves.
             Discovery uses the central block's external TT dimensions and
             the SVD-truncated rank of its physical-to-virtual unfolding.
+            The inferred profile selects a separate optimization block using
+            the prescribed-rank capacity criterion. Its sites are recorded
+            in ``metadata['center_block']``; the discovery sites are in
+            ``metadata['rank_discovery']['sites']``.
         center : int, optional
             Seed site of the initial block. Defaults to the middle; blocks
             grow to provide sufficient physical capacity. Discovery requires

@@ -330,7 +330,7 @@ class TestTRRSS:  # MARK: TestTRRSS
         assert _relative_error(result, ring.contract_dense()) < 1e-6
         if discover:
             info = result.metadata['rank_discovery']
-            sites = result.metadata['center_block']
+            sites = info['sites']
             assert info['left_dim'] == ranks[sites[0] - 1] * ranks[-1]
             assert info['right_dim'] == ranks[sites[-1]] * ranks[-1]
             assert info['cyclic_rank'] == ranks[-1]

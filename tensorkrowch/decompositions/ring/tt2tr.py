@@ -502,9 +502,12 @@ class TT2TR:  # MARK: TT2TR
         rank is estimated from that rank and the external TT bond dimensions,
         rounding to the nearest integer without truncating their supports.
         Dividing TT bonds by the cyclic rank, rounded up, gives the complete
-        preliminary TR profile.
-        ALS then uses that profile with separate physical cores, as for
-        prescribed ranks. Discovery end blocks absorb their gauges before
+        preliminary TR profile. That profile selects a new optimization
+        block using the prescribed-rank capacity criterion. ALS keeps its
+        physical cores separate; the discovery block only estimates ranks.
+        ``metadata['rank_discovery']['sites']`` records the discovery block,
+        while ``metadata['center_block']`` records the optimization block.
+        Discovery end blocks absorb their gauges before
         SVD splitting. With ``block_boundaries=False``, both modes absorb
         gauges into single-site ends. Rank discovery remains a heuristic,
         not unique rank recovery.

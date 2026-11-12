@@ -232,7 +232,8 @@ class TestRingPartition:
             for _ in range(7)])
         sites, left, right, ranks, info, rtol = _ring_partition(
             _TTCoreProvider(ring.to_tt()), None, 3, True, 1e-12)
-        assert (sites, left, right) == ((2, 3, 4), (0, 1), (5, 6))
+        assert (sites, left, right) == ((3, 4), (0, 1), (5, 6))
+        assert info['sites'] == (2, 3, 4)
         assert ranks == (2,) * 7
         assert info['cyclic_rank'] == 2
         assert rtol >= 1e-12
@@ -282,8 +283,9 @@ class TestRingPartition:
         monkeypatch.setattr(provider, 'local_target', record)
         sites, left, right, ranks, info, _ = _ring_partition(
             provider, None, 4, boundaries, 1e-12)
-        assert sites == (3, 4, 5)
-        assert requested == [sites]
+        assert sites == (4, 5)
+        assert info['sites'] == (3, 4, 5)
+        assert requested == [info['sites']]
         assert (left, right) == ((0,), (8,))
         assert ranks == rank
         assert info['cyclic_rank'] == 2
@@ -333,10 +335,32 @@ class TestRingPartition:
 
         assert (sites, left, right) == ((2, 3, 4), (0, 1), (5, 6))
         assert svd_shapes == [(64, 16)]
-        assert info == {'left_dim': 4, 'right_dim': 4,
+        assert info == {'sites': sites, 'left_dim': 4, 'right_dim': 4,
                         'physical_rank': 3, 'cyclic_rank': 2}
         # round(sqrt(16 / 3)) is 2; using ceil here would give 3.
         assert ranks == (2, 2, 2, 2, 2, 2, 2)
+
+    @pytest.mark.parametrize('boundaries', [False, True])
+    def test_long_rank_five_chain_reselects_the_prescribed_rank_block(
+            self, boundaries):
+        from tensorkrowch.decompositions.ring.tt2tr import _TTCoreProvider
+
+        generator = torch.Generator().manual_seed(885)
+        ring = tk.formats.TR([
+            torch.randn(5, 4, 5, dtype=torch.complex128, generator=generator)
+            for _ in range(50)])
+        provider = _TTCoreProvider(ring.to_tt())
+        actual = _ring_partition(provider, None, 25, boundaries, 1e-12)
+        prescribed = _ring_partition(provider, 5, 25, boundaries, None)
+        sites, left, right, ranks, info, _ = actual
+
+        assert actual[:4] == prescribed[:4]
+        assert len(info['sites']) == 5
+        assert len(sites) == 3
+        assert 25 in info['sites'] and 25 in sites
+        assert info['cyclic_rank'] == 5
+        assert ranks == (5,) * 50
+        assert not set(sites).intersection(left + right)
 
     def test_discovery_rounds_up_every_tt_cut_including_central_links(self):
         from tensorkrowch.decompositions.ring.tt2tr import _TTCoreProvider

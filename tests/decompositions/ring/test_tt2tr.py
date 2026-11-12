@@ -109,7 +109,8 @@ class TestTT2TR:
         result = tk.decompositions.tt2tr(tt, loop_opener=_opener())
         assert result.metadata['requested_rank'] is None
         assert result.metadata['boundary_blocks'] == ((0, 1), (5, 6))
-        assert result.metadata['center_block'] == (2, 3, 4)
+        assert result.metadata['center_block'] == (3, 4)
+        assert result.metadata['rank_discovery']['sites'] == (2, 3, 4)
         assert result.rank == [2] * 7
         assert _error(tt, result) < 1e-6
 
@@ -146,12 +147,12 @@ class TestTT2TR:
             tt, block_boundaries=block_boundaries, loop_opener=opener,
             rtol=1e-12, collect_metrics=True)
         assert calls[0] == result.metadata['center_block']
-        assert len(calls[0]) > 1
+        assert len(calls[0]) < len(result.metadata['rank_discovery']['sites'])
         assert all(len(sites) == 1 for sites in calls[1:])
         assert result.rank == ranks
         assert _error(tt, result) < 1e-6
         info = result.metadata['rank_discovery']
-        sites = result.metadata['center_block']
+        sites = info['sites']
         assert info['left_dim'] == ranks[sites[0] - 1] * ranks[-1]
         assert info['right_dim'] == ranks[sites[-1]] * ranks[-1]
         assert info['cyclic_rank'] == ranks[-1]

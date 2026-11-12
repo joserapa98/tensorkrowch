@@ -421,8 +421,12 @@ without truncating their numerical supports. The cyclic rank is estimated as
 In ``metadata['rank_discovery']``, ``left_dim`` and ``right_dim`` store these
 TT dimensions, while ``physical_rank`` stores the SVD-truncated rank :math:`q`.
 Dividing all internal TT bonds by :math:`c`, rounded up, gives the preliminary
-TR profile, including links inside the central block. Local ALS then uses the
-same execution as prescribed ranks, keeping all physical cores separate.
+TR profile, including links inside the central block. This profile selects a
+new optimization block with the same capacity criterion as prescribed ranks;
+the larger discovery block does not determine the ALS problem size.
+``metadata['rank_discovery']['sites']`` records the discovery block, while
+``metadata['center_block']`` records the optimization block. Local ALS keeps
+all physical cores separate and otherwise uses the prescribed-rank execution.
 Full physical rank does not cause further block growth. The inferred cyclic
 rank may be one.
 

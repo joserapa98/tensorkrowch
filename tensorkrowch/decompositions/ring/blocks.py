@@ -306,13 +306,13 @@ def _discovery_partition(provider: Any, center: int,
 
     Selection uses the external TT bond dimensions. All three blocks must be
     disjoint before any SVD is computed. Full physical rank does not grow the
-    block. The resulting profile is used by the ordinary prescribed-rank
-    openings, including links inside the central block.
+    block. The resulting profile then selects a separate optimization block
+    through the ordinary prescribed-rank path.
 
-    Diagnostics ``left_dim`` and ``right_dim`` are the external TT bond
-    dimensions. Only ``physical_rank`` is a numerical rank, truncated by
-    ``rtol`` in the physical-to-virtual unfolding. The cyclic estimate rounds
-    to the nearest integer; subsequent TT-to-TR rank divisions round upward.
+    Diagnostics ``sites`` records the discovery block. ``left_dim`` and
+    ``right_dim`` are the external TT bond dimensions. ``physical_rank`` is
+    truncated by ``rtol`` in the physical-to-virtual unfolding. The cyclic
+    estimate rounds to the nearest integer; TT-to-TR rank divisions round up.
     """
     cores, dimensions = provider.cores, provider.in_dim
     if center in (0, len(cores) - 1):
@@ -333,6 +333,7 @@ def _discovery_partition(provider: Any, center: int,
     ranks = [max(1, (value + cyclic - 1) // cyclic)
              for value in tt_rank] + [cyclic]
     return (sites, left_sites, right_sites, tuple(ranks), {
+        'sites': sites,
         'left_dim': left_dim, 'right_dim': right_dim,
         'physical_rank': q, 'cyclic_rank': cyclic})
 
@@ -340,23 +341,24 @@ def _discovery_partition(provider: Any, center: int,
 def _ring_partition(provider: Any, rank: Optional[_Rank], center: int,
                     block_boundaries: bool, rtol: Optional[float]
                     ) -> Tuple[Any, ...]:
-    """Selects shared TT2TR/TR-RSS ranks, center and boundary intervals."""
+    """Discovers ranks if needed, then selects the optimization blocks."""
     count = len(provider.in_dim)
+    discovery = None
     if rank is None:
         precision = torch.finfo(provider.cores[0].real.dtype).eps
         size = max(core.numel() for core in provider.cores)
         rtol = max(1e-12 if rtol is None else rtol,
                    (size * precision) ** 2)
-        sites, left, right, ranks, discovery = _discovery_partition(
+        _, _, _, ranks, discovery = _discovery_partition(
             provider, center, rtol)
     else:
         ranks = _normalize_rank(rank, count)
-        bounds = (1, count - 2) if 0 < center < count - 1 else (center, center)
-        sites = _select_block(provider, ranks, center, bounds=bounds)['sites']
-        sites, left, right = (_boundary_partition(provider, sites)
-                              if block_boundaries else (sites, (), ()))
-        discovery = None
-    if not block_boundaries:
+    bounds = (1, count - 2) if 0 < center < count - 1 else (center, center)
+    sites = _select_block(provider, ranks, center, bounds=bounds)['sites']
+    if block_boundaries:
+        sites, left, right = _boundary_partition(
+            provider, sites, discover=discovery is not None)
+    else:
         left = () if sites[0] == 0 else (0,)
         right = () if sites[-1] == count - 1 else (count - 1,)
     return sites, left, right, ranks, discovery, rtol

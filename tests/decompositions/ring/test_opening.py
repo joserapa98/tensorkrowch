@@ -158,10 +158,12 @@ class TestQRLoopOpener:
     @pytest.mark.parametrize('side', [None, 'left', 'right'])
     @pytest.mark.parametrize('method', [
         'uniform', 'leverage', 'product_leverage'])
+    @pytest.mark.parametrize('zipup', [False, True])
     def test_sampled_refinement_inherits_policy_and_validation(
-            self, dtype, orientation, side, method, monkeypatch):
+            self, dtype, orientation, side, method, zipup, monkeypatch):
         cores, target = _local_problem(dtype)
-        sampler = tk.decompositions.SamplingPolicy(32, method=method)
+        sampler = tk.decompositions.SamplingPolicy(32, method=method,
+                                                   zipup=zipup)
         policy = tk.decompositions.ConvergencePolicy(
             max_sweeps=3, rtol=1e-12, error_samples=5)
         generator = torch.Generator().manual_seed(321)
@@ -193,6 +195,7 @@ class TestQRLoopOpener:
         assert info['n_samples'] == 5
         assert info['seed'] == 322
         assert diagnostics['sampler']['method'] == method
+        assert diagnostics['sampler']['zipup'] is zipup
 
         rng = torch.Generator().manual_seed(322)
         dimensions = target.shape if orientation == 'right' else \

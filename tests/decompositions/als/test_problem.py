@@ -244,6 +244,23 @@ class TestALSProblem:  # MARK: TestALSProblem
 class TestFixedEvaluation:  # MARK: TestFixedEvaluation
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('sampled', [False, True])
+    def test_model_metrics_do_not_retain_contraction_gradients(
+            self, dtype, sampled):
+        target = torch.ones(3, 4, 2, dtype=dtype)
+        problem = tk.decompositions.ALSProblem(
+            tk.decompositions.DenseTensorSource(target), sampled=sampled)
+        if sampled:
+            problem.prepare_evaluation(7)
+        cores = [torch.full((1, dim, 1), 2., dtype=dtype, requires_grad=True)
+                 for dim in target.shape]
+        absolute, relative = problem._model_error(cores, target.reshape(-1))
+        assert not absolute.requires_grad
+        assert not relative.requires_grad
+        torch.testing.assert_close(absolute, 7 * target.norm())
+        assert relative == pytest.approx(7.)
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     def test_uniform_error_uses_cached_weighted_targets(self, dtype):
         calls = []
         tensor = torch.arange(1., 25., dtype=torch.float64).reshape(2, 3, 4)

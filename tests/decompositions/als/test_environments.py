@@ -7,6 +7,7 @@ import torch
 
 import tensorkrowch as tk
 
+from tensorkrowch.decompositions.als import environments as env_module
 from tensorkrowch.decompositions.results import (TRDecomposition,
                                                  TTDecomposition)
 
@@ -247,7 +248,7 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
             cache.design(site)
             cache.update(_empty_update())
 
-        assert calls == {'left': len(cores), 'right': len(cores)}
+        assert calls == {'left': len(cores) - 1, 'right': len(cores) - 1}
 
     def test_sample_generation_and_explicit_invalidation_change_keys(self):
         cores = make_tt_cores(generator=torch.Generator().manual_seed(48))
@@ -684,6 +685,113 @@ class TestEnvironmentContracts:  # MARK: TestEnvironmentContracts
 
     @pytest.mark.parametrize('topology', ['tt', 'tr'])
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('reverse', [False, True])
+    @pytest.mark.parametrize('renormalize', [False, True])
+    @pytest.mark.parametrize('compact', [False, True])
+    def test_sampled_zipup_matches_slice_first_and_preserves_samples(
+            self, topology, dtype, reverse, renormalize, compact):
+        dimensions = (2, 3, 2, 2)
+        make = make_tt_cores if topology == 'tt' else make_tr_cores
+        ranks = (2, 3, 2) if topology == 'tt' else (2, 3, 2, 2)
+        cores = make(dimensions, ranks, dtype,
+                     generator=torch.Generator().manual_seed(880))
+        cache_type = (tk.decompositions.TTEnvironmentCache
+                      if topology == 'tt' else
+                      tk.decompositions.TRSegmentEnvironmentCache)
+        ids = torch.tensor([0, 7, 7, 13, 20, 23])
+        probabilities = torch.full((len(ids),), 1 / prod(dimensions))
+        samples = tk.decompositions.SampleBatch(
+            ids, probabilities, (len(ids) * probabilities).rsqrt(), 3)
+        original = (samples.ids.clone(), samples.probabilities.clone(),
+                    samples.weights.clone())
+        caches = [cache_type(cores, zipup=zipup, renormalize=renormalize)
+                  for zipup in (False, True)]
+        order = tuple(reversed(range(4))) if reverse else tuple(range(4))
+        state = torch.random.get_rng_state()
+        for cache in caches:
+            cache.prepare_sweep(order, samples)
+        for site in order:
+            matrices = [cache.design(site, compact=compact) *
+                        cache.log_scale.exp() for cache in caches]
+            torch.testing.assert_close(matrices[0], matrices[1],
+                                       rtol=1e-12, atol=1e-12)
+            for cache in caches:
+                cache.update({site: cores[site] * 1.01} if site == 1 else {})
+        assert torch.equal(torch.random.get_rng_state(), state)
+        for actual, expected in zip((samples.ids, samples.probabilities,
+                                     samples.weights), original):
+            assert torch.equal(actual, expected)
+
+    @pytest.mark.parametrize('topology', ['tt', 'tr'])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_exact_cache_needs_no_configuration_grid(
+            self, topology, dtype, monkeypatch):
+        dimensions = (2, 3, 2, 2)
+        make = make_tt_cores if topology == 'tt' else make_tr_cores
+        ranks = (2, 3, 2) if topology == 'tt' else (2, 3, 2, 2)
+        cores = make(dimensions, ranks, dtype,
+                     generator=torch.Generator().manual_seed(881))
+        expected = [dense_local_design(cores, site, topology)
+                    for site in range(4)]
+        contract = contract_tt_dense if topology == 'tt' else contract_tr_dense
+        target = contract(cores).reshape(-1)
+
+        def unexpected_grid(*args, **kwargs):
+            pytest.fail('Exact environments enumerated configurations')
+
+        monkeypatch.setattr(env_module, '_unravel_indices', unexpected_grid)
+        torch.testing.assert_close(env_module._evaluate_cores(cores), target)
+        cache_type = (tk.decompositions.TTEnvironmentCache
+                      if topology == 'tt' else
+                      tk.decompositions.TRSegmentEnvironmentCache)
+        cache = cache_type(cores, renormalize=True)
+        cache.prepare_sweep(tuple(range(4)))
+        if topology == 'tr':
+            assert cache._indices is None
+            for (start, stop), (tensor, _) in zip(
+                    cache.segments, cache._summaries):
+                assert tensor.shape == (cores[start].shape[0],
+                                        *dimensions[start:stop],
+                                        cores[stop - 1].shape[-1])
+        else:
+            assert cache._sample_indices is None
+        for site in range(4):
+            matrix = cache.design(site)
+            torch.testing.assert_close(matrix * cache.log_scale.exp(),
+                                       expected[site])
+            cache.update({})
+
+    @pytest.mark.parametrize('topology', ['tt', 'tr'])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('zipup', [False, True])
+    def test_batched_model_evaluation_matches_dense_values(
+            self, topology, dtype, zipup, monkeypatch):
+        dimensions = (2, 3, 2, 2)
+        make = make_tt_cores if topology == 'tt' else make_tr_cores
+        ranks = (2, 3, 2) if topology == 'tt' else (2, 3, 2, 2)
+        cores = make(dimensions, ranks, dtype,
+                     generator=torch.Generator().manual_seed(882))
+        contract = contract_tt_dense if topology == 'tt' else contract_tr_dense
+        target = contract(cores).reshape(-1)
+        sizes = []
+        product = env_module._sampled_product
+
+        def record(environment, *args, **kwargs):
+            sizes.append(environment.shape[0])
+            return product(environment, *args, **kwargs)
+
+        monkeypatch.setattr(env_module, '_sampled_product', record)
+        actual = env_module._evaluate_cores(cores, zipup=zipup, batch_size=7)
+        torch.testing.assert_close(actual, target)
+        ids = torch.tensor([0, 7, 7, 13, 20, 23])
+        indices = env_module._unravel_indices(ids, dimensions)
+        selected = env_module._evaluate_cores(
+            cores, indices, zipup=zipup, batch_size=2)
+        torch.testing.assert_close(selected, target[ids])
+        assert max(sizes) <= 7
+
+    @pytest.mark.parametrize('topology', ['tt', 'tr'])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     def test_one_site_design_and_scale_methods(self, topology, dtype):
         rank = 1 if topology == 'tt' else 2
         core = torch.randn(rank, 3, rank, dtype=dtype)
@@ -721,6 +829,8 @@ class TestEnvironmentContracts:  # MARK: TestEnvironmentContracts
             cache_type(cores, core_versions=(0,))
         with pytest.raises(TypeError, match='renormalize'):
             cache_type(cores, renormalize=1)
+        with pytest.raises(TypeError, match='zipup'):
+            cache_type(cores, zipup=1)
         cache = cache_type(cores)
         with pytest.raises(RuntimeError, match='not prepared'):
             cache.design(0)

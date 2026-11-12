@@ -62,6 +62,9 @@ its factorization is reused for every target column. Masks, residual weights
 and observed entries use independent physical systems without identity blocks.
 Their regularization and numerical scaling are determined for the complete
 core. All physical slices retain the same regularization coefficient.
+Exact caches contract cores with their physical indices open, storing each
+prefix, suffix or segment only on the variables it contains. They do not
+enumerate configurations to reuse sampled contractions.
 :class:`ConvergencePolicy` controls the sweep
 budget, ``atol``, ``rtol``, stability and optional best-state retention.
 ``keep_best=True`` includes the initialization among the candidates. When
@@ -97,6 +100,11 @@ retains immutable probabilities and proposal versions. There is no separate
 sampling-state or core-update container. Local numerical responsibilities
 remain in the backend; the driver only schedules complete site updates.
 QR factorization introduces no rank truncation.
+``SamplingPolicy.zipup=False`` selects physical slices before contraction;
+``True`` contracts each core first and selects its physical slices afterward.
+Both orders use the same samples and probabilities. Selected-entry error
+evaluation uses bounded batches in both TT and TR. Exact error evaluation
+contracts one closure value at a time without configuration enumeration.
 
 ``collect_metrics=True`` records local solves and sweep measurements in the
 result's metrics. ``metadata["error_evaluation"]`` identifies estimated errors

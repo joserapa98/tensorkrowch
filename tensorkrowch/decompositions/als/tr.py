@@ -8,8 +8,6 @@ This script contains:
 
     Functions:
         * _standard_tr_cores
-        * _contract_standard_tr
-        * _evaluate_standard_tr
         * _tr_gauge_core_update
         * _normalize_tr_core_update
         * tr_als
@@ -83,27 +81,6 @@ def _standard_tr_cores(cores: Union[TRDecomposition, Sequence[torch.Tensor]],
             raise ValueError(
                 '`initial_cores` input dimensions should match the source')
     return TRSegmentEnvironmentCache._validate_cores(cores)
-
-
-def _contract_standard_tr(cores: Sequence[torch.Tensor]) -> torch.Tensor:
-    """
-    Contracts standard cyclic ``cores`` without constructing a model graph.
-    """
-    result = cores[0]
-    for core in cores[1:]:
-        result = torch.einsum('a...b,bpc->a...pc', result, core)
-    return result.diagonal(dim1=0, dim2=-1).sum(-1)
-
-
-def _evaluate_standard_tr(cores: Sequence[torch.Tensor],
-                          indices: torch.Tensor) -> torch.Tensor:
-    """Evaluates standard cyclic ``cores`` at packed configurations."""
-    selected = cores[0][:, indices[:, 0], :].permute(1, 0, 2)
-    environment = selected
-    for site, core in enumerate(cores[1:], 1):
-        selected = core[:, indices[:, site], :].permute(1, 0, 2)
-        environment = torch.bmm(environment, selected)
-    return environment.diagonal(dim1=-2, dim2=-1).sum(-1)
 
 
 def _tr_gauge_core_update(cores: Sequence[torch.Tensor],
@@ -263,18 +240,7 @@ class _TRALSBackend:  # MARK: _TRALSBackend
                           problem: ALSProblem) -> Tuple[
             torch.Tensor, torch.Tensor]:
         """Measures the complete-sweep objective on its fixed entries."""
-        if problem.sampled:
-            approximation = _evaluate_standard_tr(
-                self.cores, problem._evaluation_indices)
-            return problem.evaluation_error(approximation)
-        if problem.observations is not None:
-            indices = problem.observations.support.values.to(
-                self.cache.cores[0].device)
-            approximation = _evaluate_standard_tr(self.cache.cores, indices)
-            return problem.objective_error(approximation)
-
-        approximation = _contract_standard_tr(self.cache.cores).reshape(-1)
-        return problem._objective_error(approximation, self.full_target)
+        return problem._model_error(self.cores, self.full_target)
 
     def snapshot(self) -> Sequence[torch.Tensor]:
         """Returns the cores forming the current approximation."""
@@ -285,7 +251,7 @@ class _TRALSBackend:  # MARK: _TRALSBackend
         self.cache = TRSegmentEnvironmentCache(
             cores,
             n_segments=len(self.cache.segments),
-            renormalize=self.cache.renormalize)
+            renormalize=self.cache.renormalize, zipup=self.cache.zipup)
 
 
 class _TRSampledALSBackend:  # MARK: _TRSampledALSBackend
@@ -375,7 +341,8 @@ class _TRSampledALSBackend:  # MARK: _TRSampledALSBackend
         indices = _unravel_indices(
             batch.ids, tuple(core.shape[1] for core in self._cores))
 
-        environment = DirectTREnvironment(self._cores).design(
+        environment = DirectTREnvironment(
+            self._cores, zipup=self.sampling_policy.zipup).design(
             site, samples=batch, compact=True)
         log_scale = environment.real.new_zeros(())
         if self.renormalize:
@@ -421,11 +388,8 @@ class _TRSampledALSBackend:  # MARK: _TRSampledALSBackend
                           problem: ALSProblem) -> Tuple[
             torch.Tensor, torch.Tensor]:
         """Measures the complete-sweep objective on its fixed entries."""
-        if problem.sampled:
-            approximation = _evaluate_standard_tr(
-                self.cores, problem._evaluation_indices)
-            return problem.evaluation_error(approximation)
-        raise RuntimeError('Sampled sweeps require prepared evaluation')
+        return problem._model_error(self.cores,
+                                    zipup=self.sampling_policy.zipup)
 
     def snapshot(self) -> Sequence[torch.Tensor]:
         """Returns the cores forming the current approximation."""

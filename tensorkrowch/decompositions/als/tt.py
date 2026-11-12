@@ -10,8 +10,6 @@ This script contains:
         * _standard_tt_cores
         * _result_tt_cores
         * _feasible_tt_rank
-        * _contract_standard_tt
-        * _evaluate_standard_tt
         * _prepare_tt_cores
         * _gauge_core_update
         * _direct_sampled_tt_design
@@ -36,7 +34,8 @@ from tensorkrowch.decompositions.als.driver import (ALSBackend,
 from tensorkrowch.decompositions.als.environments import (_updated_cores,
                                                           TTEnvironmentCache,
                                                           _environment_norm,
-                                                          _fiber_indices)
+                                                          _fiber_indices,
+                                                          _sampled_product)
 from tensorkrowch.decompositions.als.gauges import (_absorb_factor,
                                                     _factor_core)
 from tensorkrowch.decompositions.als.problem import ALSProblem
@@ -146,24 +145,6 @@ def _feasible_tt_rank(in_dim: Sequence[int],
     for site in reversed(range(len(ranks) - 1)):
         ranks[site] = min(ranks[site], ranks[site + 1] * in_dim[site + 1])
     return tuple(ranks)
-
-
-def _contract_standard_tt(cores: Sequence[torch.Tensor]) -> torch.Tensor:
-    """Contracts standard OBC ``cores`` without constructing a model graph."""
-    result = cores[0].squeeze(0)
-    for core in cores[1:]:
-        result = torch.einsum('...a,apb->...pb', result, core)
-    return result.squeeze(-1)
-
-
-def _evaluate_standard_tt(cores: Sequence[torch.Tensor],
-                          indices: torch.Tensor) -> torch.Tensor:
-    """Evaluates standard OBC ``cores`` at packed discrete configurations."""
-    environment = cores[0][:, indices[:, 0], :].squeeze(0)
-    for site, core in enumerate(cores[1:], 1):
-        selected = core[:, indices[:, site], :].permute(1, 0, 2)
-        environment = torch.einsum('ja,jab->jb', environment, selected)
-    return environment.squeeze(-1)
 
 
 def _prepare_tt_cores(cores: Sequence[torch.Tensor],
@@ -298,19 +279,7 @@ class _TTALSBackend:  # MARK: _TTALSBackend
                           problem: ALSProblem) -> Tuple[
             torch.Tensor, torch.Tensor]:
         """Measures the complete-sweep objective on its fixed entries."""
-        if problem.sampled:
-            approximation = _evaluate_standard_tt(
-                self.cores, problem._evaluation_indices)
-            return problem.evaluation_error(approximation)
-        if problem.observations is not None:
-            indices = problem.observations.support.values.to(
-                self.cache.cores[0].device)
-            approximation = _evaluate_standard_tt(
-                self.cache.cores, indices)
-            return problem.objective_error(approximation)
-
-        approximation = _contract_standard_tt(self.cache.cores).reshape(-1)
-        return problem._objective_error(approximation, self.full_target)
+        return problem._model_error(self.cores, self.full_target)
 
     def snapshot(self) -> Sequence[torch.Tensor]:
         """Returns the cores forming the current approximation."""
@@ -319,14 +288,15 @@ class _TTALSBackend:  # MARK: _TTALSBackend
     def restore(self, cores: Sequence[torch.Tensor]) -> None:
         """Restores a saved approximation and refreshes its dependent state."""
         self.cache = TTEnvironmentCache(
-            cores, renormalize=self.cache.renormalize)
+            cores, renormalize=self.cache.renormalize, zipup=self.cache.zipup)
 
 
 def _direct_sampled_tt_design(cores: Sequence[torch.Tensor],
                               site: int,
                               indices: torch.Tensor,
                               renormalize: bool,
-                              compact: bool = False) -> Tuple[
+                              compact: bool = False,
+                              zipup: bool = False) -> Tuple[
             torch.Tensor, torch.Tensor]:
     """
     Builds correlated sampled TT rows for one independently drawn ``site``.
@@ -341,16 +311,18 @@ def _direct_sampled_tt_design(cores: Sequence[torch.Tensor],
     log_scale = cores[0].real.new_zeros(())
 
     for current in range(site):
-        selected = cores[current][:, indices[:, current], :].permute(1, 0, 2)
-        left = torch.einsum('ja,jab->jb', left, selected)
+        left = _sampled_product(
+            left.unsqueeze(1), cores[current], indices[:, current],
+            zipup=zipup).squeeze(1)
         if renormalize:
             norm = _environment_norm(left, n_copies)
             if norm > 0:
                 left = left / norm
                 log_scale = log_scale + norm.log()
     for current in reversed(range(site + 1, len(cores))):
-        selected = cores[current][:, indices[:, current], :].permute(1, 0, 2)
-        right = torch.einsum('jab,jb->ja', selected, right)
+        right = _sampled_product(
+            right.unsqueeze(-1), cores[current], indices[:, current],
+            prepend=True, zipup=zipup).squeeze(-1)
         if renormalize:
             norm = _environment_norm(right, n_copies)
             if norm > 0:
@@ -474,7 +446,8 @@ class _TTSampledALSBackend:  # MARK: _TTSampledALSBackend
         indices = _unravel_indices(
             batch.ids, tuple(core.shape[1] for core in self._cores))
         environment, log_scale = _direct_sampled_tt_design(
-            self._cores, site, indices, self.renormalize, compact=True)
+            self._cores, site, indices, self.renormalize, compact=True,
+            zipup=self.sampling_policy.zipup)
         proposal, record = _solve_local_proposal(
             solver=self.solver, environment=environment, target=target,
             current=self._cores[site], site=site, sweep=sweep,
@@ -505,11 +478,8 @@ class _TTSampledALSBackend:  # MARK: _TTSampledALSBackend
                           problem: ALSProblem) -> Tuple[
             torch.Tensor, torch.Tensor]:
         """Measures the complete-sweep objective on its fixed entries."""
-        if problem.sampled:
-            approximation = _evaluate_standard_tt(
-                self.cores, problem._evaluation_indices)
-            return problem.evaluation_error(approximation)
-        raise RuntimeError('Sampled sweeps require prepared evaluation')
+        return problem._model_error(self.cores,
+                                    zipup=self.sampling_policy.zipup)
 
     def snapshot(self) -> Sequence[torch.Tensor]:
         """Returns the cores forming the current approximation."""
@@ -607,7 +577,6 @@ class TTALS:  # MARK: TTALS
         self._problem = problem
         self._out_device = None if out_device is None else torch.device(
             out_device)
-        self._configurations = None
         self._target = None
 
     @property
@@ -681,18 +650,14 @@ class TTALS:  # MARK: TTALS
                 'The tensor source should return only finite values')
         return value
 
-    def _exact_target(self) -> Tuple[ConfigurationBatch, torch.Tensor]:
-        """Enumerates and caches the scalar source in global row order."""
+    def _exact_target(self) -> torch.Tensor:
+        """Materializes and caches the scalar source in global site order."""
         if self._target is None:
             if self._problem.source is None:
                 raise ValueError(
                     'Completion does not define unknown target entries')
-            flat_ids = torch.arange(
-                prod(self.in_dim), device=self._problem.source.device)
-            indices = _unravel_indices(flat_ids, self.in_dim)
-            configurations = ConfigurationBatch(indices, kind='indices')
-            target = self._problem.source.evaluate(configurations)
-            if target.shape != (flat_ids.numel(),):
+            target = self._problem.source.contract_dense()
+            if tuple(target.shape) != self.in_dim:
                 raise ValueError(
                     'TT-ALS currently requires a scalar tensor source')
             if not (target.is_floating_point() or target.is_complex()):
@@ -702,9 +667,8 @@ class TTALS:  # MARK: TTALS
             if not torch.isfinite(target).all():
                 raise ValueError(
                     'The tensor source should return only finite values')
-            self._configurations = configurations
             self._target = target.reshape(self.in_dim)
-        return self._configurations, self._target
+        return self._target
 
     def _random_cores(self,
                       ranks: Sequence[int],
@@ -957,7 +921,6 @@ class TTALS:  # MARK: TTALS
         collect_metrics = collect_metrics or bool(verbosity)
         fit_observer = _resolve_observer(
             verbosity, None) if verbosity else None
-        configurations = None
         target = None
         problem = self._problem
         n_samples = None if sampler is None else sampler.n_samples
@@ -966,7 +929,7 @@ class TTALS:  # MARK: TTALS
             runtime_reference = problem.observations.support_values
         elif sampler is None:
             sampling = 'exact'
-            configurations, target = self._exact_target()
+            target = self._exact_target()
             runtime_reference = target
         else:
             sampling = sampler.method
@@ -1020,8 +983,8 @@ class TTALS:  # MARK: TTALS
                            'rcond': solver.rcond,
                            'column_scaling': solver.column_scaling,
                            'system_scaling': solver.system_scaling},
-                'exact_configurations': None if configurations is None
-                else configurations.batch_size,
+                'exact_configurations': None if target is None
+                else target.numel(),
             })
         result = _result_from_source(result, self._source)
         if fit_observer is not None:

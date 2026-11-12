@@ -14,6 +14,10 @@ This script contains:
         * _environment_norm
         * _normalize_environment
         * _tr_sample_indices
+        * _sampled_product
+        * _evaluate_cores
+        * _exact_design
+        * _tr_exact_design
 """
 
 from math import prod, sqrt
@@ -116,9 +120,86 @@ def _normalize_environment(environment: torch.Tensor,
     return environment / safe_norm, log_scale + safe_norm.log()
 
 
+def _sampled_product(environment: torch.Tensor, core: torch.Tensor,
+                      indices: torch.Tensor, *, prepend: bool = False,
+                      zipup: bool = False) -> torch.Tensor:
+    """Contracts matrices, selecting physical slices before or afterward."""
+    if zipup:
+        product_ = (torch.einsum('apb,jbc->japc', core, environment)
+                    if prepend else
+                    torch.einsum('jab,bpc->japc', environment, core))
+        rows = torch.arange(len(indices), device=indices.device)
+        return product_[rows, :, indices, :]
+    selected = core[:, indices, :].permute(1, 0, 2)
+    return (torch.bmm(selected, environment) if prepend else
+            torch.bmm(environment, selected))
+
+
+def _evaluate_cores(cores: Sequence[torch.Tensor],
+                     indices: Optional[torch.Tensor] = None, *,
+                     zipup: bool = False, batch_size: int = 1024
+                     ) -> torch.Tensor:
+    """Contracts tensors exactly or evaluates selected entries in batches."""
+    if indices is None:
+        if len(cores) == 1:
+            return cores[0].diagonal(dim1=0, dim2=-1).sum(-1)
+        # Closing one cyclic index at a time avoids an output-sized pair of
+        # virtual axes. TT is the same contraction with one closure value.
+        result = None
+        for closure in range(cores[0].shape[0]):
+            tensor = cores[0][closure]
+            for core in cores[1:-1]:
+                tensor = torch.tensordot(tensor, core, dims=([-1], [0]))
+            tensor = torch.tensordot(
+                tensor, cores[-1][:, :, closure], dims=([-1], [0]))
+            result = tensor if result is None else result + tensor
+        return result.reshape(-1)
+    count = indices.shape[0]
+    # Bound selected-core and zip-up temporaries as well as the sample count.
+    closure = cores[0].shape[0]
+    width = max(max(core.shape[0] * core.shape[-1],
+                    closure * core.shape[-1] *
+                    (core.shape[1] if zipup else 1)) for core in cores)
+    batch_size = min(batch_size, max(1, 2 ** 20 // width))
+    values = []
+    for start in range(0, count, batch_size):
+        batch = indices[start:start + batch_size]
+        environment = cores[0][:, batch[:, 0], :].permute(1, 0, 2)
+        for site, core in enumerate(cores[1:], 1):
+            environment = _sampled_product(
+                environment, core, batch[:, site], zipup=zipup)
+        values.append(environment.diagonal(dim1=-2, dim2=-1).sum(-1))
+    return torch.cat(values) if values else cores[0].new_empty(0)
+
+
+def _exact_design(environment: torch.Tensor, dimension: int,
+                   compact: bool) -> torch.Tensor:
+    """Shares an external environment over all active physical values."""
+    left_size, right_size, left_rank, right_rank = environment.shape
+    if compact:
+        return environment.reshape(left_size * right_size, -1)
+    identity = torch.eye(dimension, dtype=environment.dtype,
+                         device=environment.device)
+    matrix = torch.einsum('lrab,pi->lpraib', environment, identity)
+    return matrix.reshape(left_size * dimension * right_size,
+                          left_rank * dimension * right_rank)
+
+
+def _tr_exact_design(environment: torch.Tensor, site: int,
+                      in_dim: Sequence[int], compact: bool) -> torch.Tensor:
+    """Orders an exact cyclic environment by the original physical sites."""
+    count = len(in_dim)
+    left_rank, right_rank = environment.shape[-1], environment.shape[0]
+    axes = (*range(count - site, count),
+            *range(1, count - site), count, 0)
+    environment = environment.permute(axes).reshape(
+        prod(in_dim[:site]), prod(in_dim[site + 1:]), left_rank, right_rank)
+    return _exact_design(environment, in_dim[site], compact)
+
+
 class TTEnvironmentCache:  # MARK: TTEnvironmentCache
     """
-    Zip-up TT environment cache for exact and sampled ALS sweeps.
+    Directional TT environment cache for exact and sampled ALS sweeps.
 
     A forward sweep precomputes old right suffixes and grows a prefix from
     committed cores. A reverse sweep mirrors the process. Cores touched by a
@@ -136,6 +217,10 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
     renormalize : bool, optional
         Whether intermediate prefixes/suffixes are divided by one global norm.
         The active design's accumulated scale is retained as ``log_scale``.
+    zipup : bool, optional
+        Whether sampled contractions select physical slices after contracting
+        the next core. Defaults to ``False``, selecting before contraction.
+        Exact contractions keep all physical indices open in either case.
 
     Examples
     --------
@@ -149,9 +234,12 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
     def __init__(self,
                  cores: Sequence[torch.Tensor],
                  core_versions: Optional[Sequence[int]] = None,
-                 renormalize: bool = False) -> None:
+                 renormalize: bool = False,
+                 zipup: bool = False) -> None:
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')
+        if not isinstance(zipup, bool):
+            raise TypeError('`zipup` should be bool type')
         if isinstance(cores, (str, bytes)) or not isinstance(cores, Sequence):
             raise TypeError('`cores` should be a sequence of torch.Tensor')
         self._cores = self._validate_cores(tuple(cores))
@@ -169,6 +257,7 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
                     '`core_versions` should contain non-negative integers')
         self._versions = versions
         self.renormalize = renormalize
+        self.zipup = zipup
         self._prepared = False
         self._active_site = None
         self._invalidation_reason = None
@@ -245,10 +334,9 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
             environment = torch.einsum(
                 'la,apb->lpb', environment, core).reshape(-1, core.shape[-1])
         else:
-            ids = self._sample_indices[:, site]
-            selected = core[:, ids, :].permute(1, 0, 2)
-            environment = torch.einsum(
-                'ja,jab->jb', environment, selected)
+            environment = _sampled_product(
+                environment.unsqueeze(1), core, self._sample_indices[:, site],
+                zipup=self.zipup).squeeze(1)
         return self._normalize(environment, log_scale)
 
     def _extend_right(self,
@@ -261,10 +349,10 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
             environment = torch.einsum(
                 'apb,qb->pqa', core, environment).reshape(-1, core.shape[0])
         else:
-            ids = self._sample_indices[:, site]
-            selected = core[:, ids, :].permute(1, 0, 2)
-            environment = torch.einsum(
-                'jab,jb->ja', selected, environment)
+            environment = _sampled_product(
+                environment.unsqueeze(-1), core,
+                self._sample_indices[:, site], prepend=True,
+                zipup=self.zipup).squeeze(-1)
         return self._normalize(environment, log_scale)
 
     def _prepare_samples(self,
@@ -388,7 +476,7 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
             self._right_logs = [None] * (len(self._cores) + 1)
             self._right[-1], self._right_logs[-1] = \
                 self._boundary_environment(n_rows)
-            for site in reversed(range(len(self._cores))):
+            for site in reversed(range(1, len(self._cores))):
                 self._right[site], self._right_logs[site] = \
                     self._extend_right(
                         self._right[site + 1],
@@ -401,7 +489,7 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
             self._left_logs = [None] * (len(self._cores) + 1)
             self._left[0], self._left_logs[0] = \
                 self._boundary_environment(n_rows)
-            for site in range(len(self._cores)):
+            for site in range(len(self._cores) - 1):
                 self._left[site + 1], self._left_logs[site + 1] = \
                     self._extend_left(
                         self._left[site], self._left_logs[site], site)
@@ -469,16 +557,8 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
             matrix = torch.einsum('ja,jp,jb->japb', left, basis, right)
             self.matrix = matrix.reshape(matrix.shape[0], -1)
             return self.matrix
-        if compact:
-            self.matrix = torch.einsum('la,rb->lrab', left, right).reshape(
-                left.shape[0] * right.shape[0], -1)
-            return self.matrix
-        identity = torch.eye(dimension, device=left.device, dtype=left.dtype)
-        matrix = (left[:, None, None, :, None, None] *
-                  identity[None, :, None, None, :, None] *
-                  right[None, None, :, None, None, :])
-        self.matrix = matrix.reshape(
-            left.shape[0] * dimension * right.shape[0], -1)
+        environment = torch.einsum('la,rb->lrab', left, right)
+        self.matrix = _exact_design(environment, dimension, compact)
         return self.matrix
 
     def update(self, replacements: Mapping[int, torch.Tensor]) -> None:
@@ -492,6 +572,10 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
         site = self._active_site
         self._cores = validated_cores
         self._versions = tuple(candidate_versions)
+        if self._cursor == len(self._order) - 1:
+            self._active_site = None
+            self._cursor += 1
+            return
         if self._direction == 'forward':
             self._rebuild_forward_dependencies(site, tuple(replacements))
             self._running, self._running_log = self._extend_left(
@@ -541,12 +625,20 @@ class DirectTREnvironment:  # MARK: DirectTREnvironment
     cores : sequence of torch.Tensor
         Standard cyclic cores with matching neighboring ranks. This direct
         contraction is the reference for the segmented cache.
+    zipup : bool, optional
+        Whether sampled contractions select physical slices after contracting
+        the next core. Defaults to ``False``, selecting before contraction.
+        Exact contractions keep all physical indices open in either case.
     """
 
-    def __init__(self, cores: Sequence[torch.Tensor]) -> None:
+    def __init__(self, cores: Sequence[torch.Tensor],
+                 zipup: bool = False) -> None:
         if isinstance(cores, (str, bytes)) or not isinstance(cores, Sequence):
             raise TypeError('`cores` should be a sequence of torch.Tensor')
+        if not isinstance(zipup, bool):
+            raise TypeError('`zipup` should be bool type')
         self._cores = TRSegmentEnvironmentCache._validate_cores(tuple(cores))
+        self.zipup = zipup
 
     def design(self, site: int,
                samples: Optional[Union[ConfigurationBatch,
@@ -573,49 +665,40 @@ class DirectTREnvironment:  # MARK: DirectTREnvironment
         if not isinstance(compact, bool):
             raise TypeError('`compact` should be bool type')
         in_dim = tuple(core.shape[1] for core in self._cores)
-        if compact and (samples is None):
-            external_dim = in_dim[:site] + in_dim[site + 1:]
-            external = _unravel_indices(torch.arange(
-                prod(external_dim), device=self._cores[0].device),
-                external_dim)
-            indices = torch.cat((external[:, :site],
-                                 external.new_zeros((len(external), 1)),
-                                 external[:, site:]), dim=1)
-            sampled = False
-        else:
-            indices, _, sampled = _tr_sample_indices(
-                samples=samples, in_dim=in_dim,
-                device=self._cores[0].device)
-            if compact:
-                indices = _fiber_indices(indices, site, in_dim)
+        indices, _, sampled = _tr_sample_indices(
+            samples=samples, in_dim=in_dim, device=self._cores[0].device)
+        if compact and sampled:
+            indices = _fiber_indices(indices, site, in_dim)
         order = (*range(site + 1, n_sites), *range(site))
-        environment = None
+        rank = self._cores[site].shape[-1]
+        environment = torch.eye(rank, dtype=self._cores[0].dtype,
+                                device=self._cores[0].device)
+        if sampled:
+            environment = environment.expand(len(indices), -1, -1)
         for other_site in order:
             core = self._cores[other_site]
-            selected = core[:, indices[:, other_site], :].permute(1, 0, 2)
-            environment = selected if environment is None else \
-                torch.bmm(environment, selected)
-        if environment is None:
-            rank = self._cores[site].shape[0]
-            environment = torch.eye(
-                rank,
-                dtype=self._cores[0].dtype,
-                device=self._cores[0].device).expand(indices.shape[0], -1, -1)
+            environment = (_sampled_product(
+                environment, core, indices[:, other_site], zipup=self.zipup)
+                           if sampled else torch.tensordot(
+                               environment, core, dims=([-1], [0])))
         self.log_scale = environment.real.new_zeros(())
         self.sampled = sampled
-        self.matrix = _tr_design(environment, self._cores[site].shape[1],
-                                 indices[:, site], compact=compact)
+        if sampled:
+            self.matrix = _tr_design(environment, in_dim[site],
+                                     indices[:, site], compact=compact)
+        else:
+            self.matrix = _tr_exact_design(environment, site, in_dim, compact)
         return self.matrix
 
 
 def _tr_sample_indices(
         samples: Optional[Union[ConfigurationBatch, SampleBatch]],
         in_dim: Sequence[int],
-        device: torch.device) -> Tuple[torch.Tensor, Optional[int], bool]:
-    """Normalizes exact and sampled TR rows to packed discrete indices."""
+        device: torch.device) -> Tuple[Optional[torch.Tensor], Optional[int],
+                                      bool]:
+    """Normalizes sampled TR rows; exact contractions need no indices."""
     if samples is None:
-        ids = torch.arange(prod(in_dim), device=device, dtype=torch.long)
-        return _unravel_indices(ids, in_dim), None, False
+        return None, None, False
     if isinstance(samples, SampleBatch):
         if samples.ids.device != device:
             raise ValueError('Samples and TR cores should share a device')
@@ -632,13 +715,14 @@ def _tr_sample_indices(
 
 class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
     """
-    Segmented zip-up cache for exact and sampled TR ALS sweeps.
+    Segmented cache for exact and sampled TR ALS sweeps.
 
     Sites are partitioned into contiguous segments. Within the active segment,
     old suffixes are combined with a growing updated prefix (and conversely in
     reverse sweeps). Segment summaries provide the remaining cyclic path. All
     products follow the ring orientation and no inverse or pseudoinverse is
-    used.
+    used. Exact products retain only the physical axes of their segment;
+    sampled products retain one matrix per requested configuration.
 
     Parameters
     ----------
@@ -651,6 +735,10 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
     renormalize : bool, optional
         Whether intermediate matrix products remove one global norm and retain
         the accumulated scale logarithmically.
+    zipup : bool, optional
+        Whether sampled contractions select physical slices after contracting
+        the next core. Defaults to ``False``, selecting before contraction.
+        Exact contractions keep all physical indices open in either case.
 
     Examples
     --------
@@ -665,9 +753,12 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
                  cores: Sequence[torch.Tensor],
                  n_segments: Optional[int] = None,
                  core_versions: Optional[Sequence[int]] = None,
-                 renormalize: bool = False) -> None:
+                 renormalize: bool = False,
+                 zipup: bool = False) -> None:
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')
+        if not isinstance(zipup, bool):
+            raise TypeError('`zipup` should be bool type')
         if isinstance(cores, (str, bytes)) or not isinstance(cores, Sequence):
             raise TypeError('`cores` should be a sequence of torch.Tensor')
         self._cores = self._validate_cores(tuple(cores))
@@ -697,6 +788,7 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
                     '`core_versions` should contain non-negative integers')
         self._versions = versions
         self.renormalize = renormalize
+        self.zipup = zipup
         self._prepared = False
         self._active_site = None
         self._invalidation_reason = None
@@ -763,11 +855,11 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
         return tuple(segments)
 
     def _identity(self, rank: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Creates one batched identity and zero log-scale."""
+        """Creates an exact or sampled identity and zero log-scale."""
         identity = torch.eye(
-            rank, dtype=self._cores[0].dtype,
-            device=self._cores[0].device).expand(
-                self._indices.shape[0], -1, -1)
+            rank, dtype=self._cores[0].dtype, device=self._cores[0].device)
+        if self._sampled:
+            identity = identity.expand(self._indices.shape[0], -1, -1)
         return identity, identity.real.new_zeros(())
 
     def _normalize(self,
@@ -779,19 +871,15 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
             return environment, log_scale
         return _normalize_environment(environment, log_scale)
 
-    def _selected(self, site: int) -> torch.Tensor:
-        """Returns all selected matrix slices for one core."""
-        core = self._cores[site]
-        return core[:, self._indices[:, site], :].permute(1, 0, 2)
-
     def _multiply(self,
                   left: torch.Tensor,
                   left_log: torch.Tensor,
                   right: torch.Tensor,
                   right_log: torch.Tensor) -> Tuple[
             torch.Tensor, torch.Tensor]:
-        """Multiplies compatible batches following the ring orientation."""
-        product_ = torch.bmm(left, right)
+        """Contracts neighboring virtual bonds in the ring orientation."""
+        product_ = (torch.bmm(left, right) if self._sampled else
+                    torch.tensordot(left, right, dims=([-1], [0])))
         return self._normalize(product_, left_log + right_log)
 
     def _append_core(self,
@@ -799,18 +887,28 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
                      log_scale: torch.Tensor,
                      site: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """Appends a selected core to an oriented product."""
-        zero = log_scale.new_zeros(())
-        return self._multiply(
-            product_, log_scale, self._selected(site), zero)
+        if self._sampled:
+            product_ = _sampled_product(
+                product_, self._cores[site], self._indices[:, site],
+                zipup=self.zipup)
+        else:
+            product_ = torch.tensordot(
+                product_, self._cores[site], dims=([-1], [0]))
+        return self._normalize(product_, log_scale)
 
     def _prepend_core(self,
                       product_: torch.Tensor,
                       log_scale: torch.Tensor,
                       site: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """Prepends a selected core to an oriented product."""
-        zero = log_scale.new_zeros(())
-        return self._multiply(
-            self._selected(site), zero, product_, log_scale)
+        if self._sampled:
+            product_ = _sampled_product(
+                product_, self._cores[site], self._indices[:, site],
+                prepend=True, zipup=self.zipup)
+        else:
+            product_ = torch.tensordot(
+                self._cores[site], product_, dims=([-1], [0]))
+        return self._normalize(product_, log_scale)
 
     def _segment_summary(self,
                          segment: int) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -824,25 +922,24 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
 
     def _prepare_segment_products(self) -> None:
         """Builds segment summaries and old outer prefix/suffix products."""
-        self._summaries = [
-            self._segment_summary(segment)
-            for segment in range(len(self._segments))]
+        n_segments = len(self._segments)
+        self._summaries = [self._segment_summary(segment)
+                           if n_segments > 1 else None
+                           for segment in range(n_segments)]
         closure_rank = self._cores[0].shape[0]
         if self._direction == 'forward':
-            n_segments = len(self._segments)
             self._segment_right = [None] * (n_segments + 1)
             self._segment_right[n_segments] = self._identity(closure_rank)
-            for segment in reversed(range(n_segments)):
+            for segment in reversed(range(1, n_segments)):
                 summary, summary_log = self._summaries[segment]
                 product_, product_log = self._segment_right[segment + 1]
                 self._segment_right[segment] = self._multiply(
                     summary, summary_log, product_, product_log)
             self._segment_running = self._identity(closure_rank)
         else:
-            n_segments = len(self._segments)
             self._segment_left = [None] * (n_segments + 1)
             self._segment_left[0] = self._identity(closure_rank)
-            for segment in range(n_segments):
+            for segment in range(n_segments - 1):
                 product_, product_log = self._segment_left[segment]
                 summary, summary_log = self._summaries[segment]
                 self._segment_left[segment + 1] = self._multiply(
@@ -857,19 +954,17 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
             self._inside_right = [None] * (stop - start + 1)
             self._inside_right[-1] = self._identity(
                 self._cores[stop - 1].shape[-1])
-            for site in reversed(range(start, stop)):
-                selected = self._selected(site)
-                zero = selected.real.new_zeros(())
+            for site in reversed(range(start + 1, stop)):
                 tail, tail_log = self._inside_right[site - start + 1]
-                self._inside_right[site - start] = self._multiply(
-                    selected, zero, tail, tail_log)
+                self._inside_right[site - start] = self._prepend_core(
+                    tail, tail_log, site)
             self._inside_running = self._identity(
                 self._cores[start].shape[0])
         else:
             self._inside_left = [None] * (stop - start + 1)
             self._inside_left[0] = self._identity(
                 self._cores[start].shape[0])
-            for site in range(start, stop):
+            for site in range(start, stop - 1):
                 head, head_log = self._inside_left[site - start]
                 self._inside_left[site - start + 1] = self._append_core(
                     head, head_log, site)
@@ -1011,17 +1106,12 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
         self._active_site = site
         self.log_scale = log_scale
         self.sampled = self._sampled
-        if compact and not self._sampled:
-            # The cache enumerates all entries; remove the repeated active
-            # index before building the shared external design.
-            left_size = prod(self.in_dim[:site])
-            right_size = prod(self.in_dim[site + 1:])
-            environment = environment.reshape(
-                left_size, self.in_dim[site], right_size,
-                *environment.shape[1:])[:, 0].reshape(
-                    left_size * right_size, *environment.shape[1:])
-        self.matrix = _tr_design(environment, self.in_dim[site],
-                                 self._indices[:, site], compact=compact)
+        if self._sampled:
+            self.matrix = _tr_design(environment, self.in_dim[site],
+                                     self._indices[:, site], compact=compact)
+        else:
+            self.matrix = _tr_exact_design(
+                environment, site, self.in_dim, compact)
         return self.matrix
 
     def update(self, replacements: Mapping[int, torch.Tensor]) -> None:
@@ -1037,6 +1127,10 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
         start, stop = self._segments[segment]
         self._cores = validated_cores
         self._versions = tuple(candidate_versions)
+        if self._cursor == len(self._order) - 1:
+            self._active_site = None
+            self._cursor += 1
+            return
         if self._direction == 'forward':
             running, running_log = self._inside_running
             self._inside_running = self._append_core(

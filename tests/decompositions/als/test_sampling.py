@@ -38,6 +38,69 @@ def _owner(n_rows, core_versions, device='cpu'):
 
 class TestSamplingPolicy:  # MARK: TestSamplingPolicy
 
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('engine,method,reuse', [
+        (tk.decompositions.TTALS, 'uniform', 0),
+        (tk.decompositions.TTALS, 'uniform', 2),
+        (tk.decompositions.TTALS, 'leverage', 0),
+        (tk.decompositions.TRALS, 'uniform', 0),
+        (tk.decompositions.TRALS, 'uniform', 2),
+        (tk.decompositions.TRALS, 'leverage', 0),
+        (tk.decompositions.TRALS, 'product_leverage', 0),
+    ])
+    def test_zipup_preserves_draws_probabilities_and_fitted_tensor(
+            self, dtype, engine, method, reuse, monkeypatch):
+        tensor = torch.einsum(
+            'i,j,k->ijk', torch.arange(1., 4.), torch.arange(2., 5.),
+            torch.arange(3., 6.)).to(dtype)
+        if dtype.is_complex:
+            tensor = tensor * (1 + .3j)
+        sampler_type = {
+            'uniform': tk.decompositions.UniformRows,
+            'product_leverage': tk.decompositions.TRProductLeverageRows,
+            'leverage': (tk.decompositions.TTLeverageRows
+                         if engine is tk.decompositions.TTALS else
+                         tk.decompositions.TRExactLeverageRows),
+        }[method]
+        draw = sampler_type.draw
+        records = []
+
+        def record(*args, **kwargs):
+            batch = draw(*args, **kwargs)
+            records.append((batch.ids.clone(), batch.probabilities.clone(),
+                            batch.weights.clone()))
+            return batch
+
+        monkeypatch.setattr(sampler_type, 'draw', record)
+        fitted = []
+        draws = []
+        states = []
+        for zipup in (False, True):
+            records.clear()
+            generator = torch.Generator().manual_seed(883)
+            fitted.append(engine(tensor).fit(
+                rank=1, sampler=tk.decompositions.SamplingPolicy(
+                    32, method=method, n_reuse_sweeps=reuse, zipup=zipup),
+                generator=generator,
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=2, keep_best=True, error_samples=7),
+                collect_metrics=True))
+            draws.append(list(records))
+            states.append(generator.get_state())
+            assert fitted[-1].metadata['sampler']['zipup'] is zipup
+            torch.testing.assert_close(fitted[-1].contract_dense(), tensor)
+        assert len(draws[0]) == len(draws[1]) > 0
+        assert torch.equal(states[0], states[1])
+        for before, after in zip(draws[0], draws[1]):
+            assert torch.equal(before[0], after[0])
+            torch.testing.assert_close(before[1], after[1])
+            torch.testing.assert_close(before[2], after[2])
+        torch.testing.assert_close(fitted[0].contract_dense(),
+                                   fitted[1].contract_dense())
+        torch.testing.assert_close(fitted[0].metrics.errors[0].absolute,
+                                   fitted[1].metrics.errors[0].absolute,
+                                   rtol=1e-10, atol=1e-10)
+
     @pytest.mark.parametrize(
         'method', ['uniform', 'leverage', 'product_leverage']
     )
@@ -52,6 +115,7 @@ class TestSamplingPolicy:  # MARK: TestSamplingPolicy
         assert policy.n_samples == 12
         assert policy.n_reuse_sweeps == 0
         assert policy.uniform_mix == 0
+        assert policy.zipup is False
 
     @pytest.mark.parametrize('kwargs,error', [
         ({'n_samples': True}, TypeError),
@@ -69,6 +133,9 @@ class TestSamplingPolicy:  # MARK: TestSamplingPolicy
         ({'uniform_mix': -0.1}, ValueError),
         ({'uniform_mix': 1.1}, ValueError),
         ({'uniform_mix': 0.1}, ValueError),
+        ({'zipup': None}, TypeError),
+        ({'zipup': 1}, TypeError),
+        ({'zipup': 'true'}, TypeError),
         ({'method': 'product_leverage', 'n_reuse_sweeps': 2}, ValueError),
         ({'method': 'leverage', 'n_reuse_sweeps': 2}, ValueError),
         ({'method': 'leverage', 'n_reuse_sweeps': 1}, ValueError),

@@ -65,6 +65,10 @@ class SamplingPolicy:  # MARK: SamplingPolicy
     uniform_mix : float, optional
         Uniform component mixed into a leverage proposal, in ``[0, 1]``.
         Defaults to ``0``. Uniform sampling requires ``0``.
+    zipup : bool, optional
+        Whether to contract each core before selecting its sampled physical
+        slices. Defaults to ``False``, selecting slices before contraction.
+        This changes contraction order only, not samples or probabilities.
 
     Examples
     --------
@@ -77,8 +81,11 @@ class SamplingPolicy:  # MARK: SamplingPolicy
     method: str = 'uniform'  # Uniform or topology-specific leverage proposal
     n_reuse_sweeps: int = 0  # Zero draws at each site; positive shares a base
     uniform_mix: float = 0.0  # Uniform fraction in a leverage proposal
+    zipup: bool = False  # Contract before selecting sampled physical slices
 
     def __post_init__(self) -> None:
+        if not isinstance(self.zipup, bool):
+            raise TypeError('`zipup` should be bool type')
         for name in ('n_samples', 'n_reuse_sweeps'):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int):

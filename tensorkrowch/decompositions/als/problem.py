@@ -10,7 +10,7 @@ This script contains:
 
 from dataclasses import dataclass
 from math import prod, sqrt
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 import torch
 
@@ -18,6 +18,7 @@ from tensorkrowch.utils import safe_divide
 
 from tensorkrowch.decompositions._utils import (_ravel_indices,
                                                 _unravel_indices)
+from tensorkrowch.decompositions.als.environments import _evaluate_cores
 from tensorkrowch.decompositions.sources import (BaseSource,
                                                  ConfigurationBatch,
                                                  SparseTensorSource)
@@ -392,6 +393,28 @@ class ALSProblem:  # MARK: ALSProblem
             indices = _discrete_indices(configurations, self.in_dim,
                                         self.source.device)
         return self._objective_error(approximation, target, indices)
+
+    def _model_error(self, cores: Sequence[torch.Tensor],
+                      target: Optional[torch.Tensor] = None, *,
+                      zipup: bool = False) -> Tuple[
+            torch.Tensor, torch.Tensor]:
+        """Measures standard TT/TR cores on this fit's comparable objective."""
+        if self.sampled:
+            indices = (self._evaluation_indices
+                       if (self._evaluation_seed is not None) or
+                       (self.observations is not None) else None)
+        elif self.observations is not None:
+            indices = self.observations.support.values.to(cores[0].device)
+        else:
+            indices = None
+        # Metrics never differentiate the model; release each batch's graph.
+        with torch.no_grad():
+            approximation = _evaluate_cores(cores, indices, zipup=zipup)
+        if self.sampled:
+            return self.evaluation_error(approximation)
+        if self.observations is not None:
+            return self.objective_error(approximation)
+        return self._objective_error(approximation, target)
 
     def _row_weights(self, indices: Optional[torch.Tensor] = None
                      ) -> Optional[torch.Tensor]:

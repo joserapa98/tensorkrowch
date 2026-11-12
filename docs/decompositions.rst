@@ -361,6 +361,14 @@ target values. Values greater than one also reuse those targets across that
 many directional sweeps. Fixed observations remain restricted to their
 known entries and never expand unknown fibers.
 
+``SamplingPolicy(zipup=False)`` selects physical slices before contracting
+each core, which is the default. With ``zipup=True``, contraction with the
+accumulated environment precedes physical selection. This changes only the
+contraction order: samples, probabilities and residual weights are unchanged.
+The option also applies to model evaluation, which uses bounded batches to
+limit temporary memory. Exact ALS instead contracts cores with their physical
+indices open, caching each prefix, suffix or segment only on its own variables.
+
 Stopping errors are measured on a separate fixed uniform evaluation set,
 not on each changing training sample. ``ConvergencePolicy.error_samples``
 sets its budget; ``None`` requests exact evaluation. Estimated measurements

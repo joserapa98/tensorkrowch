@@ -131,6 +131,13 @@ provide differently sized feature vectors at different sites.
    embedded_values = tt.evaluate(features)
    torch.testing.assert_close(indexed_values, embedded_values)
 
+``zipup=False`` evaluates each core's selected physical axes before contracting
+its virtual bond with the accumulated environment. ``zipup=True`` reverses
+that order. Both give the same values, up to floating-point precision, with
+different computation and temporary-memory costs depending on dimensions.
+The option is available for vectors, matrices and the Quantics evaluation
+methods.
+
 Use ``in_sites`` to evaluate only some variables or change their input order.
 Configuration columns follow the order of that selection. Remaining axes
 are returned in their original chain order, after the data and structural

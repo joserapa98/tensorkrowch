@@ -6,6 +6,34 @@ import torch
 import tensorkrowch as tk
 
 
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_zipup_is_forwarded_by_all_quantics_evaluations(
+        make_format, topology, dtype):
+    format = make_format(topology, 4, quantized=True, dtype=dtype)
+    matrix = format.out_dim is not None
+    layout = format.in_layout if matrix else format.layout
+    coordinate_map = (format.in_coordinate_map if matrix else
+                      format.coordinate_map)
+    generator = torch.Generator().manual_seed(304)
+    indices = torch.stack([torch.randint(size, (7,), generator=generator)
+                           for size in layout.grid_size], dim=-1)
+    arguments = [(layout.encode_indices(indices),), (indices,),
+                 (coordinate_map.from_indices(indices),)]
+    if matrix:
+        output = torch.stack([torch.randint(size, (7,), generator=generator)
+                              for size in format.out_layout.grid_size], dim=-1)
+        for position, values in enumerate((
+                format.out_layout.encode_indices(output), output,
+                format.out_coordinate_map.from_indices(output))):
+            arguments[position] += (values,)
+    for method, values in zip(('evaluate_digits', 'evaluate_indices',
+                               'evaluate_coordinates'), arguments):
+        evaluate = getattr(format, method)
+        torch.testing.assert_close(evaluate(*values, zipup=True),
+                                   evaluate(*values))
+
+
 # Mutations
 
 

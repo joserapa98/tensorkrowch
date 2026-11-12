@@ -8,6 +8,130 @@ import torch
 import tensorkrowch as tk
 
 
+# Evaluation
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('n_sites', [1, 4])
+@pytest.mark.parametrize('core_batches', [0, 1])
+@pytest.mark.parametrize('mode', ['indices', 'embedded', 'partial', 'open'])
+def test_zipup_preserves_evaluation_and_open_axes(
+        make_format, topology, dtype, n_sites, core_batches, mode):
+    format = make_format(topology, n_sites,
+                         n_batches=core_batches, dtype=dtype)
+    real_dtype = format.cores[0].real.dtype
+    format.bonds = [torch.linspace(.5, 1.5, rank, dtype=real_dtype)
+                    for rank in format.rank]
+    generator = torch.Generator().manual_seed(301)
+    sites = (tuple(range(n_sites)) if mode in ('indices', 'embedded') else
+             (n_sites - 1, 0) if (mode == 'partial') and (n_sites > 1) else ())
+
+    def data(dimensions, selected):
+        if not selected:
+            return None
+        if mode == 'embedded':
+            return [torch.randn(2, 3, dimensions[site], dtype=dtype,
+                                generator=generator) for site in selected]
+        return [torch.randint(dimensions[site], (2, 3), generator=generator)
+                for site in selected]
+
+    inputs = data(format.in_dim, sites)
+    arguments = (inputs,)
+    options = {'n_batches': 2, 'in_sites': sites}
+    if format.out_dim is not None:
+        out_sites = (1,) if mode == 'partial' else sites
+        if n_sites == 1:
+            out_sites = sites
+        arguments += (data(format.out_dim, out_sites),)
+        options['out_sites'] = out_sites
+    expected = format.evaluate(*arguments, **options)
+    actual = format.evaluate(*arguments, zipup=True, **options)
+    torch.testing.assert_close(actual, expected, rtol=1e-10, atol=1e-10)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_zipup_preserves_gradients_and_call(make_format, topology, dtype):
+    format = make_format(topology, 3, dtype=dtype)
+    for core in format.cores:
+        core.requires_grad_()
+    generator = torch.Generator().manual_seed(302)
+    inputs = [torch.randn(4, size, dtype=dtype, generator=generator,
+                           requires_grad=True) for size in format.in_dim]
+    arguments = (inputs,)
+    variables = (*format.cores, *inputs)
+    if format.out_dim is not None:
+        outputs = [torch.randn(4, size, dtype=dtype, generator=generator,
+                                requires_grad=True) for size in format.out_dim]
+        arguments += (outputs,)
+        variables += tuple(outputs)
+    expected = format(*arguments)
+    actual = format(*arguments, zipup=True)
+    first = torch.autograd.grad(expected.abs().square().sum(), variables)
+    second = torch.autograd.grad(actual.abs().square().sum(), variables)
+    torch.testing.assert_close(actual, expected)
+    for before, after in zip(first, second):
+        torch.testing.assert_close(after, before, rtol=1e-9, atol=1e-9)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_zipup_promotes_dtype_before_bond_contraction(
+        make_format, topology, dtype):
+    format = make_format(topology, 2, dtype=torch.float32)
+    generator = torch.Generator().manual_seed(305)
+    inputs = torch.randn(5, 1, format.in_dim[1], dtype=dtype,
+                          generator=generator)
+    arguments = (inputs,)
+    options = {'in_sites': (1,)}
+    if format.out_dim is not None:
+        arguments += (torch.randn(5, 1, format.out_dim[1], dtype=dtype,
+                                  generator=generator),)
+        options['out_sites'] = (1,)
+    expected = format.evaluate(*arguments, **options)
+    actual = format.evaluate(*arguments, zipup=True, **options)
+    assert actual.dtype == expected.dtype == dtype
+    torch.testing.assert_close(actual, expected, rtol=1e-10, atol=1e-10)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('zipup', [None, 1, 'true'])
+def test_zipup_rejects_non_boolean_options(make_format, topology, zipup):
+    format = make_format(topology)
+    arguments = (torch.zeros(2, 3, dtype=torch.long),)
+    if format.out_dim is not None:
+        arguments += arguments
+    with pytest.raises(TypeError, match='zipup'):
+        format.evaluate(*arguments, zipup=zipup)
+
+
+@pytest.mark.parametrize('embedded', [False, True])
+def test_zipup_changes_contraction_cost_and_temporary_memory(embedded):
+    generator = torch.Generator().manual_seed(303)
+    format = tk.formats.TT([
+        torch.randn(2, 32, dtype=torch.float64, generator=generator),
+        torch.randn(32, 2, 32, dtype=torch.float64, generator=generator),
+        torch.randn(32, 2, dtype=torch.float64, generator=generator)])
+    indices = torch.randint(2, (64, 3), generator=generator)
+    data = (torch.nn.functional.one_hot(indices, 2).double()
+            if embedded else indices)
+    values, flops, allocations = [], [], []
+    for zipup in (False, True):
+        with torch.profiler.profile(
+                activities=[torch.profiler.ProfilerActivity.CPU],
+                profile_memory=True, with_flops=True) as profile:
+            values.append(format.evaluate(data, zipup=zipup))
+        flops.append(sum(event.flops for event in profile.key_averages()))
+        allocations.append(max(event.cpu_memory_usage
+                                for event in profile.events()))
+    torch.testing.assert_close(values[0], values[1])
+    assert allocations[1] < allocations[0]
+    # Selecting indices avoids the extra physical-axis contractions; embedded
+    # vectors instead benefit from contracting with the smaller environment.
+    assert (flops[1] < flops[0]) if embedded else (flops[1] > flops[0])
+
+
 # Adapters
 
 

@@ -2405,8 +2405,12 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
                         in_sites: Sequence[int],
                         out_data: Optional[EvaluationData],
                         out_sites: Sequence[int],
-                        n_batches: int) -> torch.Tensor:
+                        n_batches: int,
+                        zipup: bool = False) -> torch.Tensor:
         """Contracts axes at ``in_sites`` and ``out_sites``, leaving others open."""
+        if not isinstance(zipup, bool):
+            raise TypeError('`zipup` should be bool type')
+
         in_out_data = []
         data_batch_shape = None
         for data, sites, dimensions in ((in_data, in_sites, self._in_dim),
@@ -2432,6 +2436,19 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             left, in_dim, right, out_dim = core.shape[-4:]
             core = core.reshape(batch, 1, left, in_dim, right, out_dim).expand(
                 batch, data_batch, left, in_dim, right, out_dim)
+
+            if zipup and (state is not None):
+                # Keep this site's physical axes open until after the bond
+                # contraction. Fold earlier open axes into the left dimension.
+                dtype = torch.promote_types(state.dtype, core.dtype)
+                for dict_data, discrete in in_out_data:
+                    if not discrete and (site in dict_data):
+                        dtype = torch.promote_types(
+                            dtype, dict_data[site].dtype)
+                core = torch.einsum('bdlpr,bdriqo->bdlpiqo',
+                                    state.to(dtype), core.to(dtype)).reshape(
+                    batch, data_batch, state.shape[2] * state.shape[3],
+                    in_dim, right, out_dim)
 
             for axis, (dict_data, discrete) in zip((3, 5), in_out_data):
                 # If in/out site is left open
@@ -2465,6 +2482,9 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             core = core.movedim(-1, -2).flatten(-3, -2)
             if state is None:
                 state = core
+            elif zipup:
+                state = core.reshape(batch, data_batch, state.shape[2],
+                                     state.shape[3] * core.shape[3], right)
             else:
                 dtype = torch.promote_types(state.dtype, core.dtype)
                 state = torch.einsum('bdlpr,bdriq->bdlpiq',
@@ -2673,7 +2693,8 @@ class _VectorFormat1D(TensorFormat1D):  # MARK: _VectorFormat1D
                  data: Optional[EvaluationData] = None,
                  n_batches: int = 1,
                  *,
-                 in_sites: Optional[Sequence[int]] = None) -> torch.Tensor:
+                 in_sites: Optional[Sequence[int]] = None,
+                 zipup: bool = False) -> torch.Tensor:
         """
         Evaluates sites in ``in_sites`` using indices or embedded vectors.
 
@@ -2692,6 +2713,10 @@ class _VectorFormat1D(TensorFormat1D):  # MARK: _VectorFormat1D
             The index or embedded vector at position ``i`` evaluates
             ``in_sites[i]``. Defaults to the stored ``in_sites``; a new format
             includes all sites in increasing order.
+        zipup : bool, optional
+            Whether to contract each core with the accumulated environment
+            before evaluating its selected physical axes. Defaults to
+            ``False``, evaluating the physical axes first.
 
         Returns
         -------
@@ -2711,7 +2736,7 @@ class _VectorFormat1D(TensorFormat1D):  # MARK: _VectorFormat1D
         """
         in_sites = self.in_sites if in_sites is None else \
             self._validate_sites(in_sites, 'in_sites')
-        return self._evaluate_sites(data, in_sites, None, (), n_batches)
+        return self._evaluate_sites(data, in_sites, None, (), n_batches, zipup)
 
     def __call__(self,
                  data: Optional[EvaluationData] = None,
@@ -3218,7 +3243,8 @@ class _MatrixFormat1D(TensorFormat1D):  # MARK: _MatrixFormat1D
                  n_batches: int = 1,
                  *,
                  in_sites: Optional[Sequence[int]] = None,
-                 out_sites: Optional[Sequence[int]] = None) -> torch.Tensor:
+                 out_sites: Optional[Sequence[int]] = None,
+                 zipup: bool = False) -> torch.Tensor:
         """
         Evaluates sites in ``in_sites`` and ``out_sites``, leaving other axes
         open.
@@ -3242,6 +3268,10 @@ class _MatrixFormat1D(TensorFormat1D):  # MARK: _MatrixFormat1D
             ``j`` in ``out_data`` evaluates ``out_sites[j]``. Omitted
             arguments use the stored lists. Both default to all sites in
             increasing order.
+        zipup : bool, optional
+            Whether to contract each core with the accumulated environment
+            before evaluating its selected physical axes. Defaults to
+            ``False``, evaluating the physical axes first.
 
         Returns
         -------
@@ -3262,7 +3292,7 @@ class _MatrixFormat1D(TensorFormat1D):  # MARK: _MatrixFormat1D
         out_sites = self.out_sites if out_sites is None else \
             self._validate_sites(out_sites, 'out_sites')
         return self._evaluate_sites(in_data, in_sites, out_data, out_sites,
-                                    n_batches)
+                                    n_batches, zipup)
 
     def __call__(self,
                  in_data: EvaluationData,
@@ -3275,7 +3305,8 @@ class _MatrixFormat1D(TensorFormat1D):  # MARK: _MatrixFormat1D
         if out_data is None:
             if kwargs:
                 raise TypeError(
-                    '`in_sites` and `out_sites` should be passed to `evaluate`')
+                    '`in_sites`, `out_sites` and `zipup` should be passed '
+                    'to `evaluate`')
             return self.apply(in_data, n_batches=n_batches)
         return self.evaluate(in_data, out_data, n_batches=n_batches, **kwargs)
 

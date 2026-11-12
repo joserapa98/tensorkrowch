@@ -336,7 +336,10 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
         self._in_sites = self._validate_sites(self._in_sites, 'in_sites')
         return self
 
-    def evaluate_digits(self, digits: torch.Tensor) -> torch.Tensor:
+    def evaluate_digits(self,
+                        digits: torch.Tensor,
+                        *,
+                        zipup: bool = False) -> torch.Tensor:
         """
         Evaluates complete digit configurations at ``in_sites``.
 
@@ -348,6 +351,10 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
             its site base. Digit ``digits[..., i]`` evaluates the core at
             ``in_sites[i]``; the layout orders the digit values, while
             ``in_sites`` locates their cores.
+        zipup : bool, optional
+            Whether to contract each core with the accumulated environment
+            before evaluating its selected physical axes. Defaults to
+            ``False``, evaluating the physical axes first.
 
         Returns
         -------
@@ -362,9 +369,12 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
         [1.0, 0.0, 1.0]
         """
         digits = self.layout._validate_digits(digits).to(self.device)
-        return self.evaluate(digits, n_batches=digits.ndim - 1)
+        return self.evaluate(digits, n_batches=digits.ndim - 1, zipup=zipup)
 
-    def evaluate_indices(self, indices: torch.Tensor) -> torch.Tensor:
+    def evaluate_indices(self,
+                         indices: torch.Tensor,
+                         *,
+                         zipup: bool = False) -> torch.Tensor:
         """
         Evaluates original coordinate index configurations.
 
@@ -377,6 +387,10 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
         indices : torch.Tensor
             Integer grid indices with shape ``(*data_batch, n_coordinates)``;
             each value lies in ``[0, grid_size[coordinate] - 1]``.
+        zipup : bool, optional
+            Whether to contract each core with the accumulated environment
+            before evaluating its selected physical axes. Defaults to
+            ``False``, evaluating the physical axes first.
 
         Returns
         -------
@@ -393,9 +407,13 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
         >>> format.evaluate_indices(torch.tensor([[0], [3]])).tolist()
         [1.0, 1.0]
         """
-        return self.evaluate_digits(self.layout.encode_indices(indices))
+        return self.evaluate_digits(self.layout.encode_indices(indices),
+                                    zipup=zipup)
 
-    def evaluate_coordinates(self, coordinates: torch.Tensor) -> torch.Tensor:
+    def evaluate_coordinates(self,
+                             coordinates: torch.Tensor,
+                             *,
+                             zipup: bool = False) -> torch.Tensor:
         """
         Evaluates coordinate configurations in the domain.
 
@@ -409,6 +427,10 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
             ``(*data_batch, n_coordinates)``. A coordinate map is required.
             Coordinates are quantized to the computational grid; no
             interpolation of the represented function is performed.
+        zipup : bool, optional
+            Whether to contract each core with the accumulated environment
+            before evaluating its selected physical axes. Defaults to
+            ``False``, evaluating the physical axes first.
 
         Returns
         -------
@@ -425,7 +447,7 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
         [1.0, 1.0]
         """
         indices = self.coordinate_map.to_indices(coordinates)
-        return self.evaluate_indices(indices)
+        return self.evaluate_indices(indices, zipup=zipup)
 
     def contract_dense_grid_axes(self) -> torch.Tensor:
         """
@@ -853,7 +875,9 @@ class _QuanticsMatrix(_QuanticsFormat):  # MARK: _QuanticsMatrix
 
     def evaluate_digits(self,
                         in_digits: torch.Tensor,
-                        out_digits: torch.Tensor) -> torch.Tensor:
+                        out_digits: torch.Tensor,
+                        *,
+                        zipup: bool = False) -> torch.Tensor:
         """
         Evaluates matrix entries using paired digits.
 
@@ -869,6 +893,10 @@ class _QuanticsMatrix(_QuanticsFormat):  # MARK: _QuanticsMatrix
             ordered by ``out_layout`` and within the output site bases.
             Digit ``out_digits[..., i]`` evaluates the output axis at
             ``out_sites[i]``. Data batches match the inputs.
+        zipup : bool, optional
+            Whether to contract each core with the accumulated environment
+            before evaluating its selected physical axes. Defaults to
+            ``False``, evaluating the physical axes first.
 
         Returns
         -------
@@ -880,11 +908,13 @@ class _QuanticsMatrix(_QuanticsFormat):  # MARK: _QuanticsMatrix
         in_digits = self.in_layout._validate_digits(in_digits)
         out_digits = self.out_layout._validate_digits(out_digits)
         return self.evaluate(in_digits, out_digits,
-                             n_batches=in_digits.ndim - 1)
+                             n_batches=in_digits.ndim - 1, zipup=zipup)
 
     def evaluate_indices(self,
                          in_indices: torch.Tensor,
-                         out_indices: torch.Tensor) -> torch.Tensor:
+                         out_indices: torch.Tensor,
+                         *,
+                         zipup: bool = False) -> torch.Tensor:
         """
         Evaluates matrix entries using paired indices.
 
@@ -897,6 +927,10 @@ class _QuanticsMatrix(_QuanticsFormat):  # MARK: _QuanticsMatrix
             Output indices with shape
             ``(*data_batch, out_layout.n_coordinates)``, within the output grid
             bounds. Data batches match the inputs.
+        zipup : bool, optional
+            Whether to contract each core with the accumulated environment
+            before evaluating its selected physical axes. Defaults to
+            ``False``, evaluating the physical axes first.
 
         Returns
         -------
@@ -904,11 +938,14 @@ class _QuanticsMatrix(_QuanticsFormat):  # MARK: _QuanticsMatrix
             Values with shape ``(*core_batch, *data_batch, *out_shape)``.
         """
         return self.evaluate_digits(self.in_layout.encode_indices(in_indices),
-                                    self.out_layout.encode_indices(out_indices))
+                                    self.out_layout.encode_indices(out_indices),
+                                    zipup=zipup)
 
     def evaluate_coordinates(self,
                              in_coordinates: torch.Tensor,
-                             out_coordinates: torch.Tensor) -> torch.Tensor:
+                             out_coordinates: torch.Tensor,
+                             *,
+                             zipup: bool = False) -> torch.Tensor:
         """
         Evaluates matrix entries using paired coordinates.
 
@@ -923,6 +960,10 @@ class _QuanticsMatrix(_QuanticsFormat):  # MARK: _QuanticsMatrix
             ``(*data_batch, out_layout.n_coordinates)``, with matching data
             batches. An output coordinate map with an inverse or grid lookup is
             required.
+        zipup : bool, optional
+            Whether to contract each core with the accumulated environment
+            before evaluating its selected physical axes. Defaults to
+            ``False``, evaluating the physical axes first.
 
         Returns
         -------
@@ -933,7 +974,7 @@ class _QuanticsMatrix(_QuanticsFormat):  # MARK: _QuanticsMatrix
         """
         in_indices = self.in_coordinate_map.to_indices(in_coordinates)
         out_indices = self.out_coordinate_map.to_indices(out_coordinates)
-        return self.evaluate_indices(in_indices, out_indices)
+        return self.evaluate_indices(in_indices, out_indices, zipup=zipup)
 
     def contract_dense_grid_axes(self) -> torch.Tensor:
         """

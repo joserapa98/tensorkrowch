@@ -256,7 +256,7 @@ def _numerical_rank(matrix: torch.Tensor, rtol: float) -> int:
 
 
 def _boundary_partition(provider: Any, sites: Sequence[int], *,
-                        discover: bool = False
+                        discover: bool = False, merge_center: bool = True
                         ) -> Tuple[Tuple[int, ...], ...]:
     """Selects end blocks, rejecting discovery overlaps or merging them."""
     cores, dimensions = provider.cores, provider.in_dim
@@ -287,6 +287,9 @@ def _boundary_partition(provider: Any, sites: Sequence[int], *,
                 'a boundary block; choose a more interior `center` or '
                 'provide `rank`')
         return tuple(sites), left_sites, right_sites
+    if not merge_center:
+        return (tuple(sites), tuple(range(min(left_end + 1, left))),
+                tuple(range(max(right_start, right + 1), count)))
     if left <= left_end:
         left = 0
         left_sites = ()
@@ -339,7 +342,8 @@ def _discovery_partition(provider: Any, center: int,
 
 
 def _ring_partition(provider: Any, rank: Optional[_Rank], center: int,
-                    block_boundaries: bool, rtol: Optional[float]
+                    block_boundaries: bool, rtol: Optional[float], *,
+                    block_center: bool = True
                     ) -> Tuple[Any, ...]:
     """Discovers ranks if needed, then selects the optimization blocks."""
     count = len(provider.in_dim)
@@ -354,10 +358,12 @@ def _ring_partition(provider: Any, rank: Optional[_Rank], center: int,
     else:
         ranks = _normalize_rank(rank, count)
     bounds = (1, count - 2) if 0 < center < count - 1 else (center, center)
-    sites = _select_block(provider, ranks, center, bounds=bounds)['sites']
+    sites = (_select_block(provider, ranks, center, bounds=bounds)['sites']
+             if block_center else (center,))
     if block_boundaries:
         sites, left, right = _boundary_partition(
-            provider, sites, discover=discovery is not None)
+            provider, sites, discover=discovery is not None,
+            merge_center=block_center)
     else:
         left = () if sites[0] == 0 else (0,)
         right = () if sites[-1] == count - 1 else (count - 1,)

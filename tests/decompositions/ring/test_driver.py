@@ -39,11 +39,13 @@ class SyntheticOpenProvider(SyntheticProvider):
         super().__init__(in_dim)
         self.sites, self.left, self.right = sites, left, right
 
-    def partition(self, rank, center, block_boundaries, rtol):
+    def partition(self, rank, center, block_boundaries, rtol, *,
+                  block_center=True):
         from tensorkrowch.decompositions.ring.blocks import _select_block
         sites = self.sites
         if sites is None:
-            sites = _select_block(self, rank, center)['sites']
+            sites = (_select_block(self, rank, center)['sites']
+                     if block_center else (center,))
         left = self.left
         right = self.right
         if left is None:

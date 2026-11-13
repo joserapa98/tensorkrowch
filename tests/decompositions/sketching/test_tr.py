@@ -41,6 +41,31 @@ def _rank_one_problem(n_sites=5):
 
 class TestTRRSS:  # MARK: TestTRRSS
 
+    @pytest.mark.parametrize('rank', [1, None])
+    @pytest.mark.parametrize('boundaries', [False, True])
+    def test_single_site_center_option_recovers_rank_one_chain(
+            self, rank, boundaries):
+        cores = make_tr_cores((3,) * 7, (1,) * 7, torch.complex128,
+                              torch.Generator().manual_seed(887))
+        ring = tk.formats.TR(cores)
+        samples = torch.randint(3, (32, 7),
+                                generator=torch.Generator().manual_seed(888))
+        result = tk.decompositions.tr_rss(
+            tk.decompositions.FormatSource(ring), samples, rank=rank,
+            center=3, block_center=False, block_boundaries=boundaries,
+            loop_opener=_opener(30), rtol=1e-12,
+            generator=torch.Generator().manual_seed(889))
+        assert result.metadata['center_block'] == (3,)
+        assert result.metadata['block_center'] is False
+        assert result.rank == [1] * 7
+        assert _relative_error(result, ring.contract_dense()) < 1e-10
+
+    @pytest.mark.parametrize('value', [None, 0, 1, 'false'])
+    def test_invalid_block_center(self, value):
+        with pytest.raises(TypeError, match='block_center'):
+            tk.decompositions.TRRSS(torch.ones(2, 2, 2)).fit(
+                _grid((2, 2, 2)), rank=1, block_center=value)
+
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('n_sites', [1, 5])
     def test_shared_transform_indices_preserve_rank_one_recovery(

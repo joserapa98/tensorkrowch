@@ -201,6 +201,7 @@ class TRRSS(TTRSS):  # MARK: TRRSS
             rank: Optional[_Rank] = None, *,
             center: Optional[int] = None,
             loop_opener: Union[str, LoopOpener] = 'als',
+            block_center: bool = True,
             block_boundaries: bool = True,
             cutoff: Optional[float] = None,
             atol: Optional[float] = None,
@@ -242,6 +243,10 @@ class TRRSS(TTRSS):  # MARK: TRRSS
             Local cyclic factorization, default ``"als"``. Configure ALS
             solvers and convergence through an ``ALSLoopOpener`` object.
             Use ``QRLoopOpener`` for local balancing and refinement.
+        block_center : bool
+            Grow an optimization block around ``center`` when needed.
+            Defaults to ``True``. ``False`` starts from ``center`` alone.
+            Rank discovery always constructs and validates its own block.
         block_boundaries : bool
             Group boundary sites into capacity blocks. Discovery absorbs
             gauges and splits these blocks by SVD; prescribed ranks use ALS
@@ -285,8 +290,10 @@ class TRRSS(TTRSS):  # MARK: TRRSS
         >>> result.in_dim
         (2, 3, 2, 3)
         """
-        if not isinstance(block_boundaries, bool):
-            raise TypeError('`block_boundaries` should be bool type')
+        for name, value in (('block_center', block_center),
+                            ('block_boundaries', block_boundaries)):
+            if not isinstance(value, bool):
+                raise TypeError(f'`{name}` should be bool type')
         opener = resolve_loop_opener(loop_opener)
         samples = self._initialize_fit(sketch_samples, generator)
         count = self.outputs.n_sites
@@ -311,7 +318,7 @@ class TRRSS(TTRSS):  # MARK: TRRSS
                             getattr(self._source_like, 'is_matrix', False)
                             else ranks),
             center=center, loop_opener=opener,
-            block_boundaries=block_boundaries)
+            block_center=block_center, block_boundaries=block_boundaries)
         return self._execute(context)
 
     def _decompose(self, context: _SketchingFitContext) -> TRDecomposition:
@@ -339,6 +346,7 @@ class TRRSS(TTRSS):  # MARK: TRRSS
         result = driver.fit(
             provider, prescribed, context.state['loop_opener'], provider,
             center=center, block_boundaries=context.state['block_boundaries'],
+            block_center=context.state['block_center'],
             rtol=context.spec.rtol,
             context={'generator': context.generator,
                      'collect_metrics': context.need_diagnostics})
@@ -372,7 +380,8 @@ class TRRSS(TTRSS):  # MARK: TRRSS
                          ) -> TRDecomposition:
         """Stores ranks, construction blocks and optional evaluation error."""
         metadata = {name: context.state[name] for name in (
-            'center', 'center_block', 'boundary_blocks', 'rank_discovery',
+            'center', 'center_block', 'block_center', 'boundary_blocks',
+            'rank_discovery',
             'order')}
         metadata.update(algorithm='tr_rss',
                         requested_rank=context.state['requested_rank'],
@@ -424,6 +433,7 @@ def tr_rss(source: Any, sketch_samples: Samples,
            out_position: Optional[Union[int, Sequence[int]]] = None,
            center: Optional[int] = None,
            loop_opener: Union[str, LoopOpener] = 'als',
+           block_center: bool = True,
            block_boundaries: bool = True,
            transform: Optional[Callable] = None,
            cutoff: Optional[float] = None,
@@ -456,7 +466,8 @@ def tr_rss(source: Any, sketch_samples: Samples,
         device=device, dtype=dtype, out_device=out_device,
         transform=transform).fit(
             sketch_samples, labels, rank, center=center,
-            loop_opener=loop_opener, block_boundaries=block_boundaries,
+            loop_opener=loop_opener, block_center=block_center,
+            block_boundaries=block_boundaries,
             cutoff=cutoff, atol=atol, rtol=rtol, cum_percentage=cum_percentage,
             batch_size=batch_size, generator=generator, verbose=verbose,
             collect_metrics=collect_metrics)
@@ -467,6 +478,7 @@ def qtr_rss(source: CallableQuanticsSource, sketch_samples: Samples, *,
             sample_space: str = 'coordinates',
             rank: Optional[_Rank] = None, center: Optional[int] = None,
             loop_opener: Union[str, LoopOpener] = 'als',
+            block_center: bool = True,
             block_boundaries: bool = True,
             transform: Optional[Callable] = None,
             cutoff: Optional[float] = None,
@@ -501,6 +513,10 @@ def qtr_rss(source: CallableQuanticsSource, sketch_samples: Samples, *,
         Initial digit site, defaulting to the middle site.
     loop_opener : str or LoopOpener
         Local factorization, configured as in :meth:`TRRSS.fit`.
+    block_center : bool
+        Grow an optimization block around ``center`` when needed.
+        Defaults to ``True``. ``False`` starts from ``center`` alone.
+        Rank discovery always constructs and validates its own block.
     block_boundaries : bool
         Whether to group boundary sites into automatic blocks.
     transform : callable, optional
@@ -533,7 +549,8 @@ def qtr_rss(source: CallableQuanticsSource, sketch_samples: Samples, *,
         sketch_samples = ConfigurationBatch(values, kind='indices')
     return TRRSS(source, transform=transform, out_device=out_device).fit(
         sketch_samples, rank=rank, center=center, loop_opener=loop_opener,
-        block_boundaries=block_boundaries, cutoff=cutoff, atol=atol, rtol=rtol,
+        block_center=block_center, block_boundaries=block_boundaries,
+        cutoff=cutoff, atol=atol, rtol=rtol,
         cum_percentage=cum_percentage, batch_size=batch_size,
         generator=generator, verbose=verbose, collect_metrics=collect_metrics)
 

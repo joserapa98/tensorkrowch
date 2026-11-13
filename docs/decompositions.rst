@@ -435,6 +435,11 @@ the larger discovery block does not determine the ALS problem size.
 ``metadata['rank_discovery']['sites']`` records the discovery block, while
 ``metadata['center_block']`` records the optimization block. Local ALS keeps
 all physical cores separate and otherwise uses the prescribed-rank execution.
+``block_center=False`` disables optimization blocking and starts from the
+single site ``center`` with either prescribed or discovered ranks. The
+discovery block and its separation checks are still required. Boundary blocks
+cannot absorb the selected center in this mode. This option does not change
+TT2TR's exact BLOSTR block selection.
 Full physical rank does not cause further block growth. The inferred cyclic
 rank may be one.
 
@@ -679,6 +684,8 @@ with separate physical cores. Discovery end blocks absorb gauges and split by
 SVD; prescribed end blocks use constrained ALS. ``block_boundaries=False``
 keeps single-site ends in either mode, retaining the discovery checks.
 The block and rank conventions follow ``TT2TR``.
+``block_center=False`` also starts TR-RSS optimization from one site without
+disabling the block needed for discovery.
 Recursive steps transport gauges through sketch evaluations, retaining the
 inherited sample coordinates. Local ALS stopping criteria belong to the
 opener's convergence policy, while ``fit`` truncation criteria control SVDs.

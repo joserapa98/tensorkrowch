@@ -196,6 +196,42 @@ class TestSplitBlock:
 
 class TestRingPartition:
 
+    @pytest.mark.parametrize('boundaries', [False, True])
+    @pytest.mark.parametrize('rank', [2, None])
+    def test_single_site_center_preserves_discovery_and_boundaries(
+            self, boundaries, rank):
+        from tensorkrowch.decompositions.ring.tt2tr import _TTCoreProvider
+
+        rng = torch.Generator().manual_seed(886)
+        ring = tk.formats.TR([torch.randn(2, 4, 2, dtype=torch.complex128,
+                                          generator=rng) for _ in range(7)])
+        provider = _TTCoreProvider(ring.to_tt())
+        sites, left, right, ranks, info, _ = _ring_partition(
+            provider, rank, 3, boundaries, 1e-12, block_center=False)
+        assert sites == (3,)
+        assert ranks == (2,) * 7
+        assert (left, right) == (((0, 1), (5, 6)) if boundaries else
+                                 ((0,), (6,)))
+        if rank is None:
+            assert info['sites'] == (2, 3, 4)
+            with pytest.raises(ValueError, match='overlaps'):
+                _ring_partition(provider, None, 1, boundaries, 1e-12,
+                                 block_center=False)
+        else:
+            assert info is None
+
+    @pytest.mark.parametrize('center', [0, 1, 2])
+    def test_disabling_center_blocks_prevents_boundary_merges(self, center):
+        from tensorkrowch.decompositions.ring.tt2tr import _TTCoreProvider
+
+        provider = _TTCoreProvider(tk.formats.TR(
+            [torch.ones(2, 4, 2, dtype=torch.float64)] * 3).to_tt())
+        sites, left, right, _, _, _ = _ring_partition(
+            provider, 2, center, True, None, block_center=False)
+        assert sites == (center,)
+        assert not set(sites).intersection(left + right)
+        assert set(sites + left + right) == set(range(3))
+
     @pytest.mark.parametrize('count', [1, 2, 3, 7])
     @pytest.mark.parametrize('boundaries', [False, True])
     def test_prescribed_caps_and_merged_boundaries(self, count, boundaries):

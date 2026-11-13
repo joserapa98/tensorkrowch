@@ -57,6 +57,25 @@ def _prepare(tt, mode):
 
 class TestTT2TR:
 
+    @pytest.mark.parametrize('rank', [1, None])
+    @pytest.mark.parametrize('boundaries', [False, True])
+    def test_single_site_center_option_recovers_rank_one_chain(
+            self, rank, boundaries):
+        tt = _ring(7, ranks=1, dimension=3).to_tt()
+        result = tk.decompositions.tt2tr(
+            tt, rank=rank, center=3, block_center=False,
+            block_boundaries=boundaries, loop_opener=_opener())
+        assert result.metadata['center_block'] == (3,)
+        assert result.metadata['block_center'] is False
+        assert result.rank == [1] * 7
+        assert _error(tt, result) < 1e-10
+
+    @pytest.mark.parametrize('value', [None, 0, 1, 'false'])
+    def test_invalid_block_center(self, value):
+        with pytest.raises(TypeError, match='block_center'):
+            tk.decompositions.TT2TR(_ring().to_tt()).fit(
+                rank=2, block_center=value)
+
     @pytest.mark.parametrize('length', [1, 2, 3, 7])
     @pytest.mark.parametrize('rank', [1, None])
     def test_minimal_and_general_rank_one(self, length, rank):

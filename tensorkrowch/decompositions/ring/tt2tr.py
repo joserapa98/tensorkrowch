@@ -142,9 +142,11 @@ class _TTCoreProvider:  # MARK: _TTCoreProvider
         self.boundary_sites = (*left, *right)
 
     def partition(self, rank: Any, center: int, block_boundaries: bool,
-                  rtol: Optional[float]) -> Tuple[Any, ...]:
+                  rtol: Optional[float], *, block_center: bool = True
+                  ) -> Tuple[Any, ...]:
         """Measures the shared TT2TR/TR-RSS rank and block partition."""
-        return _ring_partition(self, rank, center, block_boundaries, rtol)
+        return _ring_partition(self, rank, center, block_boundaries, rtol,
+                                block_center=block_center)
 
     def local_rank(self,
                    sites: Sequence[int],
@@ -482,6 +484,7 @@ class TT2TR:  # MARK: TT2TR
             loop_opener: Union[str, LoopOpener] = 'als',
             recursion: Union[str, GaugeRecursion] = 'adjoint',
             *,
+            block_center: bool = True,
             block_boundaries: bool = True,
             enrich: bool = True,
             enrich_rank: Optional[int] = None,
@@ -542,6 +545,11 @@ class TT2TR:  # MARK: TT2TR
             ``"pinv"`` uses TT-core pseudoinverses; ``"orth"`` dualizes the
             learned gauge. Configured objects accept PyTorch pseudoinverse
             keyword options. Exact BLOSTR conversion does not use transport.
+        block_center : bool
+            Grow an optimization block around ``center`` when needed.
+            Defaults to ``True``. ``False`` starts from ``center`` alone.
+            Rank discovery always constructs and validates its own block.
+            Exact BLOSTR conversion uses its own spectral block selection.
         block_boundaries : bool
             Group boundary sites into automatic blocks. Default is True.
             Discovery absorbs gauges and splits these blocks by SVD;
@@ -594,7 +602,8 @@ class TT2TR:  # MARK: TT2TR
         """
         # Validate controls before preparing reference coordinates or local
         # fits.
-        for name, value in (('block_boundaries', block_boundaries),
+        for name, value in (('block_center', block_center),
+                            ('block_boundaries', block_boundaries),
                             ('enrich', enrich),
                             ('collect_metrics', collect_metrics)):
             if not isinstance(value, bool):
@@ -661,6 +670,7 @@ class TT2TR:  # MARK: TT2TR
                         strategy, enrich_rank, enrich_rtol)
                 result = BidirectionalRingDriver().fit(
                     provider, ranks, opener, strategy, center=center,
+                    block_center=block_center,
                     block_boundaries=block_boundaries, rtol=rtol,
                     context=context)
             fidelity = _fidelity_error(self._tt, result)
@@ -684,7 +694,8 @@ class TT2TR:  # MARK: TT2TR
                     'requested_rank': None if rank is None else list(ranks),
                     'recursion': (recursion if isinstance(recursion, str)
                                   else type(recursion).__name__),
-                    'enrich': enrich, 'block_boundaries': block_boundaries}
+                    'enrich': enrich, 'block_center': block_center,
+                    'block_boundaries': block_boundaries}
         if isinstance(provider, _VidalCoreProvider):
             metadata['vidal_powers'] = provider.powers
         result = TRDecomposition(
@@ -789,7 +800,8 @@ def tt2tr(tt: Any, rank: Optional[Union[int, Sequence[int]]] = None,
           center: Optional[int] = None,
           loop_opener: Union[str, LoopOpener] = 'als',
           recursion: Union[str, GaugeRecursion] = 'adjoint',
-          *, block_boundaries: bool = True, enrich: bool = True,
+          *, block_center: bool = True, block_boundaries: bool = True,
+          enrich: bool = True,
           enrich_rank: Optional[int] = None,
           enrich_rtol: float = 1e-12, rtol: Optional[float] = None,
           out_device: _Device = 'cpu', collect_metrics: bool = False,
@@ -818,6 +830,11 @@ def tt2tr(tt: Any, rank: Optional[Union[int, Sequence[int]]] = None,
     recursion : str or GaugeRecursion, optional
         ``"adjoint"``, ``"pinv"``, ``"orth"`` or a configured strategy.
         Exact spectral conversion does not use gauge recursion.
+    block_center : bool
+        Grow an optimization block around ``center`` when needed.
+        Defaults to ``True``. ``False`` starts from ``center`` alone.
+        Rank discovery always constructs and validates its own block.
+        Exact BLOSTR conversion uses its own spectral block selection.
     block_boundaries : bool
         Group boundary sites into automatic blocks. Default is True.
         Discovery absorbs gauges and splits these blocks by SVD;
@@ -853,6 +870,7 @@ def tt2tr(tt: Any, rank: Optional[Union[int, Sequence[int]]] = None,
     """
     return TT2TR(tt, out_device=out_device).fit(
         rank, center, loop_opener, recursion,
-        block_boundaries=block_boundaries, enrich=enrich,
+        block_center=block_center, block_boundaries=block_boundaries,
+        enrich=enrich,
         enrich_rank=enrich_rank, enrich_rtol=enrich_rtol, rtol=rtol,
         collect_metrics=collect_metrics, verbose=verbose)

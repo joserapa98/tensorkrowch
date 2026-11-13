@@ -424,6 +424,7 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
             recursion: GaugeRecursion,
             *,
             center: Optional[int] = None,
+            block_center: bool = True,
             block_boundaries: bool = True,
             rtol: Optional[float] = None,
             boundary_opener: Optional[LoopOpener] = None,
@@ -446,6 +447,10 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
             Builds the fixed gauge inherited by each subsequent opening.
         center : int, optional
             Seed site for automatic central-block selection.
+        block_center : bool
+            Grow an optimization block around ``center`` when needed.
+            Defaults to ``True``. ``False`` starts from ``center`` alone.
+            Rank discovery always constructs and validates its own block.
         block_boundaries : bool
             Whether an open provider may combine endpoint sites into blocks.
             Defaults to ``True``.
@@ -468,6 +473,14 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
             this driver for inspection.
         """
         in_dim = _validate_provider(provider)
+        if not isinstance(block_center, bool):
+            raise TypeError('`block_center` should be bool type')
+        if not block_center:
+            center = len(in_dim) // 2 if center is None else center
+            if isinstance(center, bool) or not isinstance(center, int):
+                raise TypeError('`center` should be int type')
+            if (center < 0) or (center >= len(in_dim)):
+                raise ValueError('`center` should identify an input site')
         if not isinstance(opener, LoopOpener):
             raise TypeError('`opener` should implement LoopOpener')
         if not isinstance(recursion, GaugeRecursion):
@@ -493,7 +506,8 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
                 raise TypeError('An open provider should implement '
                                 '`close_boundary`')
             sites, left, right, rank, self.rank_discovery, rtol = \
-                provider.partition(rank, center, block_boundaries, rtol)
+                provider.partition(rank, center, block_boundaries, rtol,
+                                   block_center=block_center)
             self.boundary_blocks = (left, right)
             context.update(left_boundary=left, right_boundary=right,
                            rank_caps=None if self.rank_discovery is not None
@@ -504,8 +518,9 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
                 configure(sites, left, right)
             selection = {'sites': sites, 'feasible': True}
         else:
-            selection = _select_block(provider, rank, center=center,
-                                      bounds=bounds)
+            selection = (_select_block(provider, rank, center=center,
+                                       bounds=bounds) if block_center else
+                         {'sites': (center,), 'feasible': True})
         if not selection['feasible']:
             raise ValueError(
                 'Could not select a refinable central block: '

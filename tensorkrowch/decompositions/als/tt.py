@@ -25,8 +25,7 @@ import torch
 from tensorkrowch.formats.formats1d import TensorFormat1D, _MatrixFormat1D
 from tensorkrowch.formats.quantics import _QuanticsVector, _QuanticsMatrix
 
-from tensorkrowch.decompositions._utils import (_normalize_rank,
-                                                _unravel_indices)
+from tensorkrowch.decompositions._utils import (_normalize_rank)
 from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
 from tensorkrowch.decompositions.als.driver import (ALSBackend,
                                                     ALSSweepDriver,
@@ -443,8 +442,9 @@ class _TTSampledALSBackend:  # MARK: _TTSampledALSBackend
                     return_record: bool) -> Optional[LocalSolveRecord]:
         """Builds one local proposal and its atomic gauge update."""
         batch, target = self._site_batch(site)
-        indices = _unravel_indices(
-            batch.ids, tuple(core.shape[1] for core in self._cores))
+        indices = batch._get_indices(
+            tuple(core.shape[1] for core in self._cores),
+            self._cores[0].device)
         environment, log_scale = _direct_sampled_tt_design(
             self._cores, site, indices, self.renormalize, compact=True,
             zipup=self.sampling_policy.zipup)

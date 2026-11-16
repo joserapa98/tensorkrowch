@@ -8,6 +8,8 @@ import torch
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.als import environments as env_module
+from tensorkrowch.decompositions.als import sampling as sampling_module
+from tensorkrowch.decompositions._utils import _unravel_indices
 from tensorkrowch.decompositions.results import (TRDecomposition,
                                                  TTDecomposition)
 
@@ -739,7 +741,8 @@ class TestEnvironmentContracts:  # MARK: TestEnvironmentContracts
         def unexpected_grid(*args, **kwargs):
             pytest.fail('Exact environments enumerated configurations')
 
-        monkeypatch.setattr(env_module, '_unravel_indices', unexpected_grid)
+        monkeypatch.setattr(
+            sampling_module, '_unravel_indices', unexpected_grid)
         torch.testing.assert_close(env_module._evaluate_cores(cores), target)
         cache_type = (tk.decompositions.TTEnvironmentCache
                       if topology == 'tt' else
@@ -784,7 +787,7 @@ class TestEnvironmentContracts:  # MARK: TestEnvironmentContracts
         actual = env_module._evaluate_cores(cores, zipup=zipup, batch_size=7)
         torch.testing.assert_close(actual, target)
         ids = torch.tensor([0, 7, 7, 13, 20, 23])
-        indices = env_module._unravel_indices(ids, dimensions)
+        indices = _unravel_indices(ids, dimensions)
         selected = env_module._evaluate_cores(
             cores, indices, zipup=zipup, batch_size=2)
         torch.testing.assert_close(selected, target[ids])

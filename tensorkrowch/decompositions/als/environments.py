@@ -28,7 +28,6 @@ import torch.nn.functional as nnf
 
 from tensorkrowch.utils import stable_norm
 
-from tensorkrowch.decompositions._utils import _unravel_indices
 from tensorkrowch.decompositions.als.sampling import (SampleBatch,
                                                       _expand_fibers)
 from tensorkrowch.decompositions.sources import ConfigurationBatch
@@ -359,19 +358,15 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
                          samples: Optional[
                              Union[ConfigurationBatch, SampleBatch]]) -> None:
         """
-        Normalizes exact, configuration and flat-id sample specifications.
+        Normalizes exact, configuration and sampled-row specifications.
         """
         if samples is None:
             self._sample_indices = None
             self._sample_generation = None
             return
         if isinstance(samples, SampleBatch):
-            if samples.ids.device != self._cores[0].device:
-                raise ValueError('Samples and TT cores should share a device')
-            if samples.ids.max() >= prod(self.in_dim):
-                raise ValueError('A sampled row id is out of bounds')
-            self._sample_indices = _unravel_indices(
-                samples.ids.to(torch.long), self.in_dim)
+            self._sample_indices = samples._get_indices(
+                self.in_dim, self._cores[0].device)
             self._sample_generation = samples.generation
             return
         if not isinstance(samples, ConfigurationBatch):
@@ -700,13 +695,7 @@ def _tr_sample_indices(
     if samples is None:
         return None, None, False
     if isinstance(samples, SampleBatch):
-        if samples.ids.device != device:
-            raise ValueError('Samples and TR cores should share a device')
-        if samples.ids.max() >= prod(in_dim):
-            raise ValueError('A sampled row id is out of bounds')
-        return (_unravel_indices(samples.ids.to(torch.long), in_dim),
-                samples.generation,
-                True)
+        return samples._get_indices(in_dim, device), samples.generation, True
     if not isinstance(samples, ConfigurationBatch):
         raise TypeError(
             '`samples` should be ConfigurationBatch, SampleBatch or None')

@@ -1,5 +1,6 @@
 """Tests for ALS row sampling and refresh semantics."""
 
+from dataclasses import replace
 from math import prod
 from types import SimpleNamespace
 
@@ -7,6 +8,7 @@ import pytest
 import torch
 
 import tensorkrowch as tk
+from tensorkrowch.decompositions.als import sampling as sampling_module
 
 from tests.decompositions.als._oracles import dense_local_design, make_tr_cores
 
@@ -37,6 +39,110 @@ def _owner(n_rows, core_versions, device='cpu'):
 
 
 class TestSamplingPolicy:  # MARK: TestSamplingPolicy
+
+    @pytest.mark.parametrize('engine,method,reuse', [
+        (tk.decompositions.TTALS, 'uniform', 2),
+        (tk.decompositions.TTALS, 'leverage', 0),
+        (tk.decompositions.TRALS, 'uniform', 2),
+        (tk.decompositions.TRALS, 'leverage', 0),
+        (tk.decompositions.TRALS, 'product_leverage', 0),
+    ])
+    def test_coordinate_and_legacy_batches_give_same_updates(
+            self, engine, method, reuse, monkeypatch):
+        tensor = torch.arange(1., 4., dtype=torch.float64)
+        tensor = torch.einsum('i,j,k->ijk', tensor, tensor, tensor)
+        build = sampling_module._sample_batch
+        legacy = False
+        draws = []
+
+        def sample(*args, **kwargs):
+            batch = build(*args, **kwargs)
+            draws.append((batch.ids.clone(), batch.probabilities.clone(),
+                          batch.weights.clone()))
+            return replace(batch, indices=None) if legacy else batch
+
+        monkeypatch.setattr(sampling_module, '_sample_batch', sample)
+        fits, states, records = [], [], []
+        for legacy in (False, True):
+            draws.clear()
+            generator = torch.Generator().manual_seed(933)
+            fits.append(engine(tensor).fit(
+                rank=1, sampler=tk.decompositions.SamplingPolicy(
+                    12, method=method, n_reuse_sweeps=reuse),
+                generator=generator,
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=2, error_samples=7)))
+            states.append(generator.get_state())
+            records.append(list(draws))
+        assert torch.equal(*states)
+        assert len(records[0]) == len(records[1]) > 0
+        for first, second in zip(*records):
+            for actual, expected in zip(first, second):
+                assert torch.equal(actual, expected)
+        for first, second in zip(fits[0].cores, fits[1].cores):
+            torch.testing.assert_close(first, second)
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('engine,method,reuse,mix', [
+        (tk.decompositions.TTALS, 'uniform', 0, 0.),
+        (tk.decompositions.TTALS, 'uniform', 2, 0.),
+        (tk.decompositions.TTALS, 'leverage', 0, .2),
+        (tk.decompositions.TRALS, 'uniform', 0, 0.),
+        (tk.decompositions.TRALS, 'uniform', 2, 0.),
+        (tk.decompositions.TRALS, 'leverage', 0, .2),
+        (tk.decompositions.TRALS, 'product_leverage', 0, .2),
+    ])
+    def test_large_input_space_uses_coordinates(
+            self, dtype, engine, method, reuse, mix, monkeypatch):
+        factors = torch.linspace(.99, 1.01, 200).reshape(20, 10).to(dtype)
+        if dtype.is_complex:
+            factors = factors * (1 + .01j)
+
+        def evaluate(indices):
+            return factors[torch.arange(20), indices].prod(-1)
+
+        source = tk.decompositions.CallableTensorSource(
+            evaluate, in_dim=(10,) * 20, out_shape=(), dtype=dtype)
+
+        def forbidden(*args, **kwargs):
+            raise AssertionError('Sampling must not materialize the tensor')
+
+        monkeypatch.setattr(source, 'contract_dense', forbidden)
+        monkeypatch.setattr(sampling_module, '_ravel_indices', forbidden)
+        monkeypatch.setattr(sampling_module, '_unravel_indices', forbidden)
+        sampler_type = (tk.decompositions.UniformRows if method == 'uniform'
+                        else tk.decompositions.TTLeverageRows
+                        if engine is tk.decompositions.TTALS else
+                        tk.decompositions.TRProductLeverageRows
+                        if method == 'product_leverage' else
+                        tk.decompositions.TRExactLeverageRows)
+        draw = sampler_type.draw
+
+        def check_batch(*args, **kwargs):
+            batch = draw(*args, **kwargs)
+            assert batch.ids is None
+            fibers = batch.indices.reshape(8, 10, 20)
+            expected = torch.arange(10).expand(8, -1)
+            assert torch.equal(fibers[:, :, batch.site], expected)
+            assert batch.probabilities.shape == (80,)
+            torch.testing.assert_close(
+                batch.weights, (80 * batch.probabilities).rsqrt())
+            return batch
+
+        monkeypatch.setattr(sampler_type, 'draw', check_batch)
+        result = engine(source).fit(
+            rank=1, sampler=tk.decompositions.SamplingPolicy(
+                8, method=method, n_reuse_sweeps=reuse, uniform_mix=mix),
+            generator=torch.Generator().manual_seed(931),
+            convergence=tk.decompositions.ConvergencePolicy(
+                max_sweeps=2, error_samples=11), collect_metrics=True)
+        indices = torch.randint(10, (13, 20),
+                                generator=torch.Generator().manual_seed(932))
+        actual = result.to_format().evaluate(indices)
+        torch.testing.assert_close(actual, evaluate(indices),
+                                   rtol=1e-8, atol=1e-8)
+        assert all(torch.all(core.abs().sum((0, 2)) > 0)
+                   for core in result.to_format()._effective_cores())
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('engine,method,reuse', [
@@ -201,6 +307,30 @@ class TestSampleBatch:  # MARK: TestSampleBatch
         assert batch.is_exact_for((1, 4, 2))
         assert not batch.is_exact_for((1, 5, 2))
         assert not approximate.is_exact_for((1, 4, 2))
+
+    def test_coordinate_batches_match_legacy_ids(self):
+        indices = torch.tensor([[0, 1], [1, 2], [1, 0]])
+        ids = torch.tensor([1, 5, 3])
+        probabilities = torch.full((3,), 1 / 6, dtype=torch.float64)
+        weights = (3 * probabilities).rsqrt()
+        legacy = tk.decompositions.SampleBatch(ids, probabilities, weights, 0)
+        coordinates = tk.decompositions.SampleBatch(
+            None, probabilities, weights, 0, indices=indices)
+        for batch in (legacy, coordinates):
+            torch.testing.assert_close(batch._get_indices((2, 3), ids.device),
+                                       indices)
+        cores = [torch.ones(1, 2, 1), torch.ones(1, 3, 1)]
+        for cls in (tk.decompositions.TTEnvironmentCache,
+                    tk.decompositions.TRSegmentEnvironmentCache):
+            environments = []
+            for batch in (legacy, coordinates):
+                cache = cls(cores)
+                cache.prepare_sweep((0, 1), samples=batch)
+                environments.append(cache.design(0))
+            torch.testing.assert_close(*environments)
+        environments = [tk.decompositions.DirectTREnvironment(cores).design(
+            0, samples=batch) for batch in (legacy, coordinates)]
+        torch.testing.assert_close(*environments)
 
     @pytest.mark.parametrize('field,value,error', [
         ('ids', [0, 1], TypeError),
@@ -687,6 +817,26 @@ class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
 
 
 class TestTRExactLeverageRows:  # MARK: TestTRExactLeverageRows
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('mix', [0., .2])
+    def test_large_rank_two_ring_keeps_coordinates(self, dtype, mix):
+        cores = make_tr_cores((10,) * 20, (2,) * 20, dtype,
+                              generator=torch.Generator().manual_seed(934))
+        owner = SimpleNamespace(cores=cores, core_versions=(0,) * 20)
+        sampler = tk.decompositions.TRProductLeverageRows(
+            lambda: cores, uniform_mix=mix)
+        batch = sampler.draw(owner, 10, 7,
+                             generator=torch.Generator().manual_seed(935))
+        assert batch.ids is None
+        assert batch.indices.shape == (70, 20)
+        assert torch.all((batch.indices >= 0) & (batch.indices < 10))
+        assert torch.equal(batch.indices[:, 10].reshape(7, 10),
+                           torch.arange(10).expand(7, -1))
+        expected = sampler._mixed_probabilities(
+            sampler._site_probabilities(cores, 10), batch.indices, 10**20)
+        torch.testing.assert_close(batch.probabilities, expected)
+        torch.testing.assert_close(batch.weights, (70 * expected).rsqrt())
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     def test_probabilities_match_dense_design_leverage(self, dtype):

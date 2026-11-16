@@ -19,8 +19,7 @@ import torch
 
 from tensorkrowch.formats.formats1d import TensorFormat1D
 
-from tensorkrowch.decompositions._utils import (_normalize_rank,
-                                                _unravel_indices)
+from tensorkrowch.decompositions._utils import (_normalize_rank)
 from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
 from tensorkrowch.decompositions.als.driver import ALSBackend
 from tensorkrowch.decompositions.als.environments import (
@@ -338,8 +337,9 @@ class _TRSampledALSBackend:  # MARK: _TRSampledALSBackend
             batch = self.sampler.draw(
                 self, site, self.n_samples, self.generator)
             target = _evaluate_fibers(self.problem.source, batch)
-        indices = _unravel_indices(
-            batch.ids, tuple(core.shape[1] for core in self._cores))
+        indices = batch._get_indices(
+            tuple(core.shape[1] for core in self._cores),
+            self._cores[0].device)
 
         environment = DirectTREnvironment(
             self._cores, zipup=self.sampling_policy.zipup).design(

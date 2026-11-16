@@ -14,6 +14,7 @@ This script contains:
 
     Functions:
         * _sample_batch
+        * _uniform_indices
         * _expand_fibers
         * _evaluate_fibers
         * _region_metrics
@@ -161,8 +162,10 @@ class SampleBatch:  # MARK: SampleBatch
 
     Parameters
     ----------
-    ids : torch.Tensor
-        Integer global row identifiers with shape ``(n_rows,)``.
+    ids : torch.Tensor or None
+        Integer global row identifiers with shape ``(n_rows,)``, when the
+        complete input space fits int64. Otherwise ``None``; ``indices``
+        supplies the sampled configurations.
     probabilities : torch.Tensor
         Positive draw probabilities with shape ``(n_rows,)``.
     weights : torch.Tensor
@@ -177,43 +180,62 @@ class SampleBatch:  # MARK: SampleBatch
         ``True``; product-leverage proposals use ``False``.
     site : int, optional
         Active site associated with the proposal.
+    indices : torch.Tensor, optional
+        Integer configurations with shape ``(n_rows, n_sites)``. Samplers
+        retain these coordinates for evaluation and environment contractions.
+        Legacy batches containing only ``ids`` are decoded when used.
     """
 
-    ids: torch.Tensor  # Global row identifiers drawn by the sampler
+    ids: Optional[torch.Tensor]  # Global row identifiers when representable
     probabilities: torch.Tensor  # Original draw probabilities
     weights: torch.Tensor  # Multiplicative residual weights in row order
     generation: int  # Sampling generation number
     # Core versions used to build the sampling proposal
     proposal_core_versions: Tuple[int, ...] = ()
     proposal_exact: bool = True  # Exact proposal for the recorded design
-    site: Optional[int] = None  # Optional zero-based active site
+    site: Optional[int] = None  # Optional active site
+    indices: Optional[torch.Tensor] = None  # Multidimensional sampled rows
 
     def __post_init__(self) -> None:
-        if not isinstance(self.ids, torch.Tensor):
-            raise TypeError('`ids` should be torch.Tensor type')
-        if (self.ids.ndim != 1) or (self.ids.dtype not in _INTEGER_DTYPES):
-            raise TypeError('`ids` should be a one-dimensional integer tensor')
-        if self.ids.numel() < 1:
-            raise ValueError('`ids` should contain at least one sampled row')
+        rows = self.indices if self.indices is not None else self.ids
+        if not isinstance(rows, torch.Tensor):
+            raise TypeError('`ids` or `indices` should be torch.Tensor type')
+        ndim = 2 if self.indices is not None else 1
+        if (rows.ndim != ndim) or (rows.dtype not in _INTEGER_DTYPES):
+            raise TypeError('Sampled rows should be integer indices')
+        if rows.shape[0] < 1:
+            raise ValueError('Samples should contain at least one row')
+        if torch.any(rows < 0):
+            raise ValueError('Sampled indices should be non-negative')
+        if self.ids is not None:
+            if not isinstance(self.ids, torch.Tensor) or \
+                    (self.ids.ndim != 1) or \
+                    (self.ids.dtype not in _INTEGER_DTYPES):
+                raise TypeError(
+                    '`ids` should be a one-dimensional integer tensor')
+            if (self.ids.shape != (rows.shape[0],)) or \
+                    (self.ids.device != rows.device):
+                raise ValueError('`ids` should match the sampled rows')
+            if torch.any(self.ids < 0):
+                raise ValueError('`ids` should be non-negative')
         for name in ('probabilities', 'weights'):
             value = getattr(self, name)
             if not isinstance(value, torch.Tensor):
                 raise TypeError(f'`{name}` should be torch.Tensor type')
-            if value.shape != self.ids.shape:
-                raise ValueError(f'`{name}` should contain one value per id')
-            if value.device != self.ids.device:
-                raise ValueError(f'`{name}` and `ids` should share a device')
+            if value.shape != (rows.shape[0],):
+                raise ValueError(
+                    f'`{name}` should contain one value per sampled row')
+            if value.device != rows.device:
+                raise ValueError(
+                    f'`{name}` and sampled indices should share a device')
             if (not value.is_floating_point()) or value.is_complex():
                 raise TypeError(f'`{name}` should have a real floating dtype')
             if not torch.isfinite(value).all():
                 raise ValueError(f'`{name}` should contain finite values')
             if torch.any(value <= 0):
                 raise ValueError(f'`{name}` should contain positive values')
-        if torch.any(self.ids < 0):
-            raise ValueError('`ids` should be non-negative')
-
         expected_weights = (
-            self.ids.numel() * self.probabilities).rsqrt()
+            rows.shape[0] * self.probabilities).rsqrt()
         if not torch.allclose(
                 self.weights,
                 expected_weights,
@@ -240,6 +262,21 @@ class SampleBatch:  # MARK: SampleBatch
                     (not isinstance(self.site, int)) or (self.site < 0):
                 raise ValueError('`site` should be a non-negative integer')
 
+    def _get_indices(self, in_dim: Sequence[int],
+                     device: torch.device) -> torch.Tensor:
+        """Validates stored coordinates or decodes legacy global row ids."""
+        indices = self.indices
+        if (indices is not None) and (indices.device != device):
+            raise ValueError('Samples and cores should share a device')
+        if indices is None:
+            if self.ids.device != device:
+                raise ValueError('Samples and cores should share a device')
+            if int(self.ids.max()) >= prod(in_dim):
+                raise ValueError('A sampled row id is out of bounds')
+            indices = _unravel_indices(self.ids.to(torch.long), in_dim)
+        return _discrete_indices(ConfigurationBatch(indices, kind='indices'),
+                                 in_dim, device)
+
     def is_exact_for(self, current_core_versions: Sequence[int]) -> bool:
         """
         Reports whether the exact proposal still matches the core versions.
@@ -261,6 +298,8 @@ class SampleBatch:  # MARK: SampleBatch
             torch.Tensor, torch.Tensor]:
         """
         Selects global rows and applies their sampling weights.
+
+        Requires representable global ``ids``.
 
         Parameters
         ----------
@@ -286,6 +325,9 @@ class SampleBatch:  # MARK: SampleBatch
         if target.shape[0] != environment.shape[0]:
             raise ValueError(
                 '`target` and `environment` should have matching rows')
+        if self.ids is None:
+            raise ValueError(
+                'Global row selection requires representable `ids`')
         if (environment.device != self.ids.device) or \
                 (target.device != self.ids.device):
             raise ValueError('Sampled tensors and ids should share a device')
@@ -342,14 +384,19 @@ class RowSampler:  # MARK: RowSampler
         raise NotImplementedError
 
 
-def _sample_batch(ids: torch.Tensor,
+def _sample_batch(rows: torch.Tensor,
                   probabilities: torch.Tensor,
                   sampler: RowSampler,
                   site: int,
                   proposal_core_versions: Tuple[int, ...] = (),
-                  proposal_exact: bool = True) -> SampleBatch:
+                  proposal_exact: bool = True,
+                  in_dim: Optional[Sequence[int]] = None) -> SampleBatch:
     """Builds weights from immutable draw ``probabilities``."""
-    weights = (ids.numel() * probabilities).rsqrt()
+    indices = rows if rows.ndim == 2 else None
+    ids = rows if indices is None else (
+        _ravel_indices(indices, in_dim)
+        if prod(in_dim) - 1 <= torch.iinfo(torch.int64).max else None)
+    weights = (probabilities.numel() * probabilities).rsqrt()
     return SampleBatch(
         ids=ids,
         probabilities=probabilities,
@@ -357,7 +404,21 @@ def _sample_batch(ids: torch.Tensor,
         generation=sampler.generation,
         proposal_core_versions=proposal_core_versions,
         proposal_exact=proposal_exact,
-        site=site)
+        site=site,
+        indices=indices)
+
+
+def _uniform_indices(in_dim: Sequence[int], n_samples: int,
+                     device: torch.device,
+                     generator: Optional[torch.Generator]) -> torch.Tensor:
+    """Draws uniform coordinates, retaining representable flat draws."""
+    if prod(in_dim) <= torch.iinfo(torch.int64).max:
+        ids = torch.randint(prod(in_dim), (n_samples,), device=device,
+                            generator=generator)
+        return _unravel_indices(ids, in_dim)
+    return torch.stack([torch.randint(dim, (n_samples,), device=device,
+                                      generator=generator)
+                        for dim in in_dim], dim=1)
 
 
 def _expand_fibers(indices: torch.Tensor, site: int,
@@ -374,7 +435,7 @@ def _evaluate_fibers(source: Any, batch: SampleBatch) -> torch.Tensor:
     """Evaluates complete fibers through the source's specialized access."""
     site = batch.site
     in_dim = source.in_dim
-    indices = _unravel_indices(batch.ids, in_dim)[::in_dim[site]]
+    indices = batch._get_indices(in_dim, source.device)[::in_dim[site]]
     target = source.fiber(ConfigurationBatch(indices, kind='indices'), site)
     if target.shape != (indices.shape[0], in_dim[site]):
         raise ValueError('`source` should return one scalar per configuration')
@@ -419,6 +480,8 @@ class ExactRows(RowSampler):  # MARK: ExactRows
         if (n_samples is not None) and (n_samples != self.n_rows):
             raise ValueError(
                 '`n_samples` should equal all rows for ExactRows')
+        if self.n_rows > torch.iinfo(torch.int64).max:
+            raise ValueError('Exact row enumeration exceeds int64 capacity')
         ids = torch.arange(
             self.n_rows, device=self.device, dtype=torch.long)
         probabilities = torch.full(
@@ -464,7 +527,7 @@ class ObservedRows(RowSampler):  # MARK: ObservedRows
              n_samples: Optional[int] = None,
              generator: Optional[torch.Generator] = None) -> SampleBatch:
         """
-        Returns every fixed observed id with unit effective weights.
+        Returns every fixed observed row with unit effective weights.
 
         Parameters
         ----------
@@ -493,14 +556,14 @@ class ObservedRows(RowSampler):  # MARK: ObservedRows
         if (n_samples is not None) and (n_samples != n_observations):
             raise ValueError(
                 '`n_samples` should equal all observations for ObservedRows')
-        ids = _ravel_indices(
-            indices, self.observations.in_dim).to(self.device)
+        indices = indices.to(self.device)
         probabilities = torch.full(
             (n_observations,),
             1 / n_observations,
             device=self.device,
             dtype=torch.get_default_dtype())
-        return _sample_batch(ids, probabilities, self, site)
+        return _sample_batch(indices, probabilities, self, site,
+                             in_dim=self.observations.in_dim)
 
 
 class UniformRows(RowSampler):  # MARK: UniformRows
@@ -565,11 +628,10 @@ class UniformRows(RowSampler):  # MARK: UniformRows
         else:
             indices = self._base_indices
         indices = _expand_fibers(indices, site, in_dim)
-        ids = _ravel_indices(indices, in_dim)
         probabilities = torch.full(
-            (ids.numel(),), 1 / self.n_rows, device=self.device,
+            (indices.shape[0],), 1 / self.n_rows, device=self.device,
             dtype=torch.get_default_dtype())
-        return _sample_batch(ids, probabilities, self, site)
+        return _sample_batch(indices, probabilities, self, site, in_dim=in_dim)
 
     def sample(self, owner: Any, site: int, n_samples: int,
                generator: Optional[torch.Generator], generation: int,
@@ -585,10 +647,9 @@ class UniformRows(RowSampler):  # MARK: UniformRows
                 return self._batches[site], False
             if self._base_indices is None:
                 self._prepare_draw(owner, site, n_samples)
-                ids = torch.randint(self.n_rows, (n_samples,),
-                                    device=self.device, generator=generator)
-                self._base_indices = _unravel_indices(
-                    ids, tuple(core.shape[1] for core in owner.cores))
+                self._base_indices = _uniform_indices(
+                    tuple(core.shape[1] for core in owner.cores), n_samples,
+                    self.device, generator)
         batch = self.draw(owner, site, n_samples, generator)
         if reuse:
             self._batches[site] = batch
@@ -902,10 +963,8 @@ class TTLeverageRows(RowSampler):  # MARK: TTLeverageRows
         in_dim = tuple(core.shape[1] for core in cores)
         if self.uniform_mix > 0:
             external_dim = in_dim[:site] + in_dim[site + 1:]
-            uniform_ids = torch.randint(
-                prod(external_dim), (n_samples,), device=self.device,
-                generator=generator)
-            external_indices = _unravel_indices(uniform_ids, external_dim)
+            external_indices = _uniform_indices(
+                external_dim, n_samples, self.device, generator)
             uniform_indices = leverage_indices.clone()
             uniform_indices[:, :site] = external_indices[:, :site]
             uniform_indices[:, site + 1:] = external_indices[:, site:]
@@ -917,7 +976,6 @@ class TTLeverageRows(RowSampler):  # MARK: TTLeverageRows
         else:
             indices = leverage_indices
         indices = _expand_fibers(indices, site, in_dim)
-        ids = _ravel_indices(indices, in_dim)
         if self.uniform_mix == 0:
             environment_probability = (left_probability.to(cores[0].real) *
                                        right_probability.to(cores[0].real))
@@ -930,9 +988,10 @@ class TTLeverageRows(RowSampler):  # MARK: TTLeverageRows
             raise ValueError(
                 'Drawn leverage rows should have positive support')
         return _sample_batch(
-            ids=ids,
+            rows=indices,
             probabilities=probabilities,
             sampler=self,
+            in_dim=in_dim,
             site=site,
             proposal_core_versions=self.core_versions,
             proposal_exact=True)
@@ -1148,17 +1207,11 @@ class TRProductLeverageRows(RowSampler):  # MARK: TRProductLeverageRows
                     replacement=True,
                     generator=generator)
         if self.uniform_mix > 0:
-            environment_rows = self.n_rows // cores[site].shape[1]
-            uniform_ids = torch.randint(
-                environment_rows,
-                (n_samples,),
-                device=self.device,
-                generator=generator)
             environment_dim = tuple(
                 core.shape[1] for current, core in enumerate(cores)
                 if current != site)
-            uniform_environment = _unravel_indices(
-                uniform_ids, environment_dim)
+            uniform_environment = _uniform_indices(
+                environment_dim, n_samples, self.device, generator)
             uniform_indices = product_indices.clone()
             uniform_indices[:, :site] = uniform_environment[:, :site]
             uniform_indices[:, site + 1:] = uniform_environment[:, site:]
@@ -1173,16 +1226,16 @@ class TRProductLeverageRows(RowSampler):  # MARK: TRProductLeverageRows
 
         in_dim = tuple(core.shape[1] for core in cores)
         indices = _expand_fibers(indices, site, in_dim)
-        ids = _ravel_indices(indices, in_dim)
         probabilities = self._mixed_probabilities(
             marginals, indices, self.n_rows)
         if torch.any(probabilities <= 0):
             raise ValueError(
                 'Drawn product-leverage rows should have positive support')
         return _sample_batch(
-            ids=ids,
+            rows=indices,
             probabilities=probabilities,
             sampler=self,
+            in_dim=in_dim,
             site=site,
             proposal_core_versions=self.core_versions,
             proposal_exact=False)
@@ -1484,16 +1537,16 @@ class TRExactLeverageRows(RowSampler):  # MARK: TRExactLeverageRows
             self.uniform_mix / environment_rows)
 
         indices = _expand_fibers(indices, site, in_dim)
-        ids = _ravel_indices(indices, in_dim)
         probabilities = mixed_environment.repeat_interleave(
             in_dim[site]) / in_dim[site]
         if torch.any(probabilities <= 0):
             raise ValueError(
                 'Drawn exact-leverage rows should have positive support')
         return _sample_batch(
-            ids=ids,
+            rows=indices,
             probabilities=probabilities,
             sampler=self,
+            in_dim=in_dim,
             site=site,
             proposal_core_versions=self.core_versions,
             proposal_exact=True)

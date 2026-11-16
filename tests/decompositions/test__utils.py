@@ -79,3 +79,15 @@ class TestIndexConversions:  # MARK: TestIndexConversions
         empty_indices = torch.empty(0, 2, dtype=torch.long)
         assert _ravel_indices(empty_indices, (2, 3)).shape == (0,)
         assert _unravel_indices(empty_ids, (2, 3)).shape == (0, 2)
+
+
+def test_ravel_indices_rejects_unrepresentable_global_space():
+    with pytest.raises(ValueError, match='int64 capacity'):
+        _ravel_indices(torch.zeros(2, 20, dtype=torch.long), (10,) * 20)
+
+
+def test_ravel_indices_preserves_int64_boundary():
+    indices = torch.ones(1, 63, dtype=torch.long)
+    flat = _ravel_indices(indices, (2,) * 63)
+    assert flat.item() == torch.iinfo(torch.int64).max
+    torch.testing.assert_close(_unravel_indices(flat, (2,) * 63), indices)

@@ -57,9 +57,13 @@ def _normalize_rank(rank: Union[int, Sequence[int]],
 def _ravel_indices(indices: torch.Tensor,
                    dimensions: Sequence[int]) -> torch.Tensor:
     """Flattens valid row-major multi-indices, including scalar shapes."""
-    strides = indices.new_tensor([
-        prod(dimensions[site + 1:]) for site in range(len(dimensions))])
-    return (indices * strides).sum(dim=1)
+    if prod(dimensions) - 1 > torch.iinfo(torch.int64).max:
+        raise ValueError('Global row ids exceed int64 capacity; use indices')
+    flat = torch.zeros(indices.shape[0], dtype=torch.long,
+                       device=indices.device)
+    for site, dimension in enumerate(dimensions):
+        flat = flat * dimension + indices[:, site]
+    return flat
 
 
 def _unravel_indices(flat_ids: torch.Tensor,

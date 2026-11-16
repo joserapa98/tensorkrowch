@@ -627,6 +627,21 @@ class TestQRLoopOpener:
 
 class TestBLOSTROpeners:
 
+    @pytest.mark.parametrize('cls', [tk.decompositions.BLOSTRLoopOpener,
+                                   tk.decompositions.BLOSTRSVDLoopOpener])
+    def test_forwards_clustering_and_svd_controls(self, cls):
+        generator = torch.Generator().manual_seed(303)
+        cores = make_tr_cores(
+            (4, 4, 4), (2, 2, 2), dtype=torch.complex128,
+            generator=generator)
+        tensor = contract_tr_dense(cores)
+        opener = cls({'cluster_atol': 1e-8, 'cutoff': 1e-12,
+                      'atol': 1e-20, 'rtol': 1e-12,
+                      'cum_percentage': 1 - 1e-12})
+        result = opener.decompose(tensor, rank=2, context={
+            'generator': torch.Generator().manual_seed(81)})
+        torch.testing.assert_close(result.contract_dense(), tensor)
+
     @pytest.mark.parametrize('name', ['blostr', 'blostr_svd'])
     @pytest.mark.parametrize('orientation', ['left', 'right'])
     def test_exact_rank_one_opening(self, name, orientation):

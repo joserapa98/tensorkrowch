@@ -570,13 +570,34 @@ reevaluating the source:
    result = engine.fit(rank=2, projection='gaussian')
 
 ``rank=None`` discovers spectral multiplicities using balanced k-means.
-``spectral_atol`` controls spectral acceptance, ``n_attempts`` limits the
+Before each spectral ratio, both projected matrices are truncated to the
+product of the cyclic and adjacent ranks. The eigendecomposition is performed
+in that reduced space and its eigenvectors are lifted to the physical axis.
+With ``rank=None``, the common numerical slice rank is estimated first by
+applying ``cutoff``, ``atol``, ``rtol`` and ``cum_percentage`` to the four
+projected matrices and taking the minimum retained numerical rank. These
+controls have the same meaning as in :func:`~tensorkrowch.utils.truncated_svd`.
+With prescribed TR ranks, the corresponding spectral rank must survive all
+four truncations; otherwise that projection attempt is rejected.
+
+``cluster_atol`` bounds the absolute within-cluster dispersion when discovering
+multiplicities. Numerically null singular values and eigenvalues are filtered
+using scale-dependent machine-precision thresholds. ``n_attempts`` limits the
 projection attempts, and ``n_iters``/``n_restarts`` configure clustering.
+Balanced clustering uses an experimental CPU Hungarian solver with repeated
+center slots. Each assignment minimizes squared distances subject to equal
+group sizes; the full clustering still depends on its initialization. For
+``q`` eigenvalues, each assignment costs :math:`O(q^3)` time and
+:math:`O(q^2)` memory. This implementation is intended for modest ranks and
+is not optimized for large spectral problems.
+
 ``generator``, ``collect_metrics`` and ``verbose`` have their usual fit roles.
-:class:`BLOSTRSVD` has the same interface, adding ``cutoff``, ``atol``,
-``rtol`` and ``cum_percentage`` for its tail SVDs. Both preserve the source's
-matrix grouping, Quantics coordinates and input-site selection in the result.
-Structural batches and continuous sources are unsupported.
+:class:`BLOSTRSVD` uses the same SVD controls both in the spectral projections
+and in its tail TT-SVD. Without explicit tail controls or ranks, a numerical
+threshold accounts for the conditioning of the recovered first core. Both
+engines preserve the source's matrix grouping, Quantics coordinates and
+input-site selection in the result. Structural batches and continuous sources
+are unsupported.
 
 The functions :func:`tr_blostr` and :func:`tr_blostr_svd` delegate to these
 engines and accept the same sources, including a tensor directly. Configured

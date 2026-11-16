@@ -13,8 +13,10 @@ This script contains:
         * _FirstCore
 
     Internal functions:
+        * _linear_assignment
         * _balanced_order
         * _spectral_order
+        * _ratio_eigen
         * _first_core
         * _recover_cores
 """
@@ -26,7 +28,7 @@ from warnings import warn
 
 import torch
 
-from tensorkrowch.utils import safe_divide
+from tensorkrowch.utils import safe_divide, truncated_svd
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions._truncation import _TruncationSpec
@@ -60,6 +62,70 @@ class _FirstCore:
     cluster_error: torch.Tensor
 
 
+def _linear_assignment(cost: torch.Tensor) -> torch.Tensor:
+    """
+    Minimizes a finite square real cost matrix using the Hungarian algorithm.
+
+    Returns one column per row, on the input device. The experimental solver
+    runs on CPU with :math:`O(n^3)` time and :math:`O(n^2)` memory; it targets
+    small spectral problems rather than large TR ranks.
+    """
+    if (cost.ndim != 2) or (cost.shape[0] != cost.shape[1]):
+        raise ValueError('`cost` should be a square matrix')
+    if not torch.isfinite(cost).all():
+        raise ValueError('`cost` should contain finite values')
+    costs = cost.detach().cpu().tolist()
+    size = len(costs)
+    row_potential = [0.] * (size + 1)
+    column_potential = [0.] * (size + 1)
+    matching = [0] * (size + 1)
+    predecessor = [0] * (size + 1)
+
+    # Column zero is the unmatched starting point of each augmenting path.
+    for row in range(1, size + 1):
+        matching[0] = row
+        column = 0
+        minimum = [float('inf')] * (size + 1)
+        visited = [False] * (size + 1)
+        while True:
+            visited[column] = True
+            active_row = matching[column]
+            delta, next_column = float('inf'), 0
+            for candidate in range(1, size + 1):
+                if visited[candidate]:
+                    continue
+                reduced = (costs[active_row - 1][candidate - 1] -
+                           row_potential[active_row] -
+                           column_potential[candidate])
+                if reduced < minimum[candidate]:
+                    minimum[candidate] = reduced
+                    predecessor[candidate] = column
+                if minimum[candidate] < delta:
+                    delta, next_column = minimum[candidate], candidate
+
+            # Update dual potentials until another column can join the path.
+            for candidate in range(size + 1):
+                if visited[candidate]:
+                    row_potential[matching[candidate]] += delta
+                    column_potential[candidate] -= delta
+                else:
+                    minimum[candidate] -= delta
+            column = next_column
+            if matching[column] == 0:
+                break
+
+        # Reverse the path, increasing the matching by one assigned row.
+        while column:
+            previous = predecessor[column]
+            matching[column] = matching[previous]
+            column = previous
+
+    assignment = [0] * size
+    for column in range(1, size + 1):
+        assignment[matching[column] - 1] = column - 1
+    return torch.tensor(assignment, dtype=torch.long, device=cost.device)
+
+
 def _balanced_order(values: torch.Tensor,
                     cluster_size: int,
                     n_clusters: int,
@@ -84,15 +150,11 @@ def _balanced_order(values: torch.Tensor,
             centers = torch.stack([
                 features[labels == cluster].mean(0)
                 for cluster in range(n_clusters)])
-            distances = torch.cdist(features, centers)
-            new_labels = torch.empty_like(labels)
-            capacity = torch.zeros(n_clusters, dtype=torch.long)
-            for index in distances.min(dim=1).values.argsort().tolist():
-                for cluster in distances[index].argsort().tolist():
-                    if capacity[cluster] < cluster_size:
-                        new_labels[index] = cluster
-                        capacity[cluster] += 1
-                        break
+            # Subtract directly to resolve nearby values with a large offset.
+            costs = (features[:, None, :] - centers).square().sum(-1)
+            # Each center has one identical assignment column per free slot.
+            costs = costs.repeat_interleave(cluster_size, dim=1)
+            new_labels = _linear_assignment(costs) // cluster_size
             if torch.equal(new_labels, labels):
                 break
             labels = new_labels
@@ -110,7 +172,7 @@ def _balanced_order(values: torch.Tensor,
 
 def _spectral_order(values: torch.Tensor,
                     ranks: Optional[Tuple[int, int]],
-                    spectral_atol: float,
+                    cluster_atol: float,
                     n_iters: int,
                     n_restarts: int,
                     generator: Optional[torch.Generator]
@@ -125,12 +187,13 @@ def _spectral_order(values: torch.Tensor,
     scale = values.abs().square().sum().clamp_min(
         torch.finfo(values.real.dtype).tiny)
     tolerance = max(
-        spectral_atol, 10 * len(values) * torch.finfo(values.real.dtype).eps)
+        cluster_atol, 10 * len(values) *
+        torch.finfo(values.real.dtype).eps * scale.sqrt())
     for cyclic, adjacent in candidates:
         order, cost = _balanced_order(
             values, cyclic, adjacent, n_iters, n_restarts, generator)
         relative = (cost / scale).sqrt()
-        if (ranks is not None) or (relative <= tolerance):
+        if (ranks is not None) or (cost.sqrt() <= tolerance):
             # Interleave equal-eigenvalue blocks to expose TR bond indices.
             interleave = torch.cat([
                 cyclic * torch.arange(adjacent, device=values.device) + offset
@@ -194,14 +257,31 @@ def _validate_slices(slices: Sequence[Sequence[int]],
     return tuple(configurations)
 
 
+def _ratio_eigen(numerator: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+                 denominator: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+                 rank: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Diagonalizes a rank-limited ratio from its two compact SVDs."""
+    u, s, vh = numerator
+    other_u, other_s, other_vh = denominator
+    u, s, vh = u[:, :rank], s[:rank], vh[:rank]
+
+    # Represent A_q @ pinv(B_q) in the left singular basis of A_q. The caller
+    # has checked both supports, so no numerically null value is inverted.
+    reduced = (s[:, None] * (vh @ other_vh[:rank].mH)) / other_s[:rank]
+    reduced = reduced @ (other_u[:, :rank].mH @ u)
+    values, vectors = torch.linalg.eig(reduced)
+    return values, u.to(dtype=vectors.dtype) @ vectors
+
+
 def _first_core(tensor: torch.Tensor,
                 ranks: Optional[Sequence[int]],
                 slices: Optional[Sequence[Sequence[int]]],
                 projection: str,
-                spectral_atol: float,
+                cluster_atol: float,
                 n_iters: int,
                 n_restarts: int,
-                generator: Optional[torch.Generator]) -> _FirstCore:
+                generator: Optional[torch.Generator],
+                truncation: _TruncationSpec) -> _FirstCore:
     """Recovers the first core by simultaneous block diagonalization."""
     # Both projection modes leave the first and last physical axes open.
     if projection == 'slices':
@@ -218,28 +298,40 @@ def _first_core(tensor: torch.Tensor,
             'amb,sm->sab', tensor.reshape(tensor.shape[0], -1,
                                          tensor.shape[-1]), weights)
 
-    # Two independent ratios expose repeated spectral subspaces.
-    ratios = (matrices[0] @ torch.linalg.pinv(matrices[1]),
-              matrices[2] @ torch.linalg.pinv(matrices[3]))
-    spaces = []
+    # Truncate both matrices before inversion, rather than selecting a few
+    # eigenvalues of a full noisy quotient. Discovery uses a common slice rank.
     pair = None if ranks is None else (ranks[-1], ranks[0])
-    for matrix in ratios:
-        values, vectors = torch.linalg.eig(matrix)
+    options = truncation.as_kwargs()
+    options['rank'] = None if pair is None else prod(pair)
+    factors = [truncated_svd(matrix, **options) for matrix in matrices]
+    slice_ranks = []
+    for matrix, (_, s, _) in zip(matrices, factors):
+        threshold = max(matrix.shape) * torch.finfo(s.dtype).eps * s[0]
+        slice_ranks.append(int((s > threshold).sum()))
+    spectral_rank = min(slice_ranks) if pair is None else prod(pair)
+    if not spectral_rank:
+        raise RuntimeError('BLOSTR found no nonzero eigenvalues')
+    if min(slice_ranks) < spectral_rank:
+        raise RuntimeError('BLOSTR found too few nonzero eigenvalues '
+                           'for `rank`: a projected slice is rank deficient')
+    spaces = []
+    for index in (0, 2):
+        values, vectors = _ratio_eigen(
+            factors[index], factors[index + 1], spectral_rank)
         selected = values.abs().argsort(descending=True)
-        threshold = max(
-            spectral_atol, max(matrix.shape) *
-            torch.finfo(values.real.dtype).eps * values.abs().max())
+        threshold = max(tensor.shape[0], tensor.shape[-1]) * \
+            torch.finfo(values.real.dtype).eps * values.abs().max()
         selected = selected[values[selected].abs() > threshold]
         if pair is not None:
-            size = prod(pair)
-            if len(selected) < size:
+            spectral_rank = prod(pair)
+            if len(selected) < spectral_rank:
                 raise RuntimeError('BLOSTR found too few nonzero eigenvalues '
                                    'for `rank`')
-            selected = selected[:size]
+            selected = selected[:spectral_rank]
         if not len(selected):
             raise RuntimeError('BLOSTR found no nonzero eigenvalues')
         order, cyclic, adjacent, error = _spectral_order(
-            values[selected], pair, spectral_atol, n_iters, n_restarts,
+            values[selected], pair, cluster_atol, n_iters, n_restarts,
             generator)
         pair = cyclic, adjacent
         spaces.append(vectors[:, selected[order]])
@@ -319,8 +411,11 @@ class BLOSTR:  # MARK: BLOSTR
     Recovers a tensor ring from a finite source using spectral BLOSTR.
 
     Two pairs of interior projections identify the first core through blockwise
-    simultaneous diagonalization. Each remaining core is recovered by a linear
-    solve with its physical axis and the previous one left open. Slice
+    simultaneous diagonalization. Both matrices of each spectral ratio are
+    first truncated to the product of the cyclic and adjacent ranks. The
+    eigendecomposition uses this reduced space and lifts the eigenvectors
+    back to the first physical axis. Each remaining core is recovered by a
+    linear solve with its physical axis and the previous one left open. Slice
     projection uses discrete indices throughout, following Section 3 of `A
     Provably Efficient Method for Tensor Ring Decomposition and Its
     Applications <https://arxiv.org/abs/2512.01016>`_. Gaussian projection is
@@ -336,6 +431,13 @@ class BLOSTR:  # MARK: BLOSTR
     needed, is left to the caller. :class:`BLOSTRSVD` instead requires
     injectivity only at its two external physical axes. No accuracy guarantee
     is made for approximate inputs or rank-deficient recovery environments.
+
+    Balanced clustering uses an experimental CPU Hungarian assignment with
+    squared distances and repeated center slots. For ``q`` eigenvalues it
+    costs :math:`O(q^3)` time and :math:`O(q^2)` memory per iteration and
+    restart. Each assignment is optimal, but the full clustering can converge
+    to a local minimum. This implementation is not optimized for large TR
+    ranks.
 
     Parameters
     ----------
@@ -411,8 +513,8 @@ class BLOSTR:  # MARK: BLOSTR
 
     def _recover(self, first: torch.Tensor,
                  rank: Optional[Sequence[int]], projection: str,
-                 spectral_atol: float, generator: Optional[torch.Generator],
-                 truncation: Optional[_TruncationSpec],
+                 generator: Optional[torch.Generator],
+                 truncation: _TruncationSpec,
                  metrics: Optional[DecompositionMetrics]
                  ) -> Tuple[torch.Tensor, ...]:
         """Recovers every remaining core by the full spectral construction."""
@@ -426,10 +528,10 @@ class BLOSTR:  # MARK: BLOSTR
         return _recover_cores(self._tensor, first, projection, generator)
 
     def _fit(self, rank: _Rank, *, projection: str,
-             slices: Optional[Sequence[Sequence[int]]], spectral_atol: float,
+             slices: Optional[Sequence[Sequence[int]]], cluster_atol: float,
              n_attempts: int, n_iters: int, n_restarts: int,
              generator: Optional[torch.Generator],
-             truncation: Optional[_TruncationSpec] = None,
+             truncation: _TruncationSpec,
              collect_metrics: bool, verbose: Union[bool, int]
              ) -> TensorDecomposition:
         """Retains the smallest reconstruction error over spectral attempts."""
@@ -442,12 +544,12 @@ class BLOSTR:  # MARK: BLOSTR
             raise ValueError('Explicit `slices` require `projection="slices"`')
         if slices is not None:
             slices = _validate_slices(slices, self._tensor.shape)
-        if isinstance(spectral_atol, bool) or not isinstance(
-                spectral_atol, (int, float)):
-            raise TypeError('`spectral_atol` should be a non-negative number')
-        if (spectral_atol < 0) or (not isfinite(spectral_atol)):
+        if isinstance(cluster_atol, bool) or not isinstance(
+                cluster_atol, (int, float)):
+            raise TypeError('`cluster_atol` should be a non-negative number')
+        if (cluster_atol < 0) or (not isfinite(cluster_atol)):
             raise ValueError(
-                '`spectral_atol` should be finite and non-negative')
+                '`cluster_atol` should be finite and non-negative')
         for name, value in (('n_attempts', n_attempts), ('n_iters', n_iters),
                             ('n_restarts', n_restarts)):
             _normalize_positive_int(value, name)
@@ -477,11 +579,10 @@ class BLOSTR:  # MARK: BLOSTR
                 local_metrics = DecompositionMetrics()
                 try:
                     first = _first_core(active, ranks, slices, projection,
-                                        spectral_atol, n_iters, n_restarts,
-                                        generator)
+                                        cluster_atol, n_iters, n_restarts,
+                                        generator, truncation)
                     cores = self._recover(
-                        first.core, ranks, projection, spectral_atol,
-                        generator, truncation,
+                        first.core, ranks, projection, generator, truncation,
                         local_metrics if collect_metrics else None)
                     candidate = TRDecomposition(cores)
                     approximation = candidate.contract_dense()
@@ -543,10 +644,14 @@ class BLOSTR:  # MARK: BLOSTR
             *,
             projection: str = 'slices',
             slices: Optional[Sequence[Sequence[int]]] = None,
-            spectral_atol: float = 1e-10,
+            cluster_atol: float = 1e-10,
             n_attempts: int = 8,
             n_iters: int = 50,
             n_restarts: int = 10,
+            cutoff: Optional[float] = None,
+            atol: Optional[float] = None,
+            rtol: Optional[float] = None,
+            cum_percentage: Optional[float] = None,
             generator: Optional[torch.Generator] = None,
             collect_metrics: bool = False,
             verbose: Union[bool, int] = 0) -> TensorDecomposition:
@@ -557,9 +662,10 @@ class BLOSTR:  # MARK: BLOSTR
         ----------
         rank : int or sequence[int], optional
             Prescribed right-link ranks, including the cyclic last entry. Full
-            BLOSTR requires equal ranks. With ``None``, balanced k-means
-            discovers the multiplicities of the nonzero spectrum and requires
-            them to imply equal cyclic and adjacent ranks.
+            BLOSTR requires equal ranks. With ``None``, the common numerical
+            rank of the four projected slices is estimated first. Balanced
+            k-means then discovers spectral multiplicities, which must imply
+            equal cyclic and adjacent ranks.
         slices : sequence of four index sequences, optional
             Configurations fixing every interior axis for the two spectral
             ratios. With ``None``, configurations are drawn using
@@ -570,10 +676,11 @@ class BLOSTR:  # MARK: BLOSTR
             indices with ``"slices"``, or independent dense known/unknown
             contractions with ``"gaussian"``. BLOSTR-SVD instead splits the
             tail with SVDs. Explicit ``slices`` require ``"slices"``.
-        spectral_atol : float
-            Absolute eigenvalue cutoff and relative within-cluster tolerance
-            used when discovering balanced spectral multiplicities. A
-            machine-precision floor is applied to both tests. Default is 1e-10.
+        cluster_atol : float
+            Absolute tolerance for balanced clustering: the square root of
+            the summed squared distances to cluster centers must not exceed
+            this value when discovering multiplicities. A scale-dependent
+            machine-precision floor is applied. Default is 1e-10.
         n_attempts : int
             Number of independent spectral attempts. Default is 8; explicit
             ``slices`` use one attempt. The smallest reconstruction error is
@@ -581,6 +688,15 @@ class BLOSTR:  # MARK: BLOSTR
         n_iters, n_restarts : int
             Balanced k-means iteration and restart budgets. Defaults are 50 and
             10.
+        cutoff : float, optional
+            Singular values at or below this value are discarded in the four
+            projected-slice SVDs. BLOSTR-SVD also applies it to tail TT-SVD.
+        atol, rtol, cum_percentage : float, optional
+            Absolute or relative discarded-energy tolerance, or retained
+            squared singular-value fraction, in the projected-slice SVDs.
+            BLOSTR-SVD uses the same controls in tail TT-SVD. A prescribed
+            spectral rank must survive all four slice truncations; otherwise
+            the projection attempt is rejected.
         generator : torch.Generator, optional
             Controls spectral projections, balanced clustering and recovery
             projections.
@@ -604,11 +720,14 @@ class BLOSTR:  # MARK: BLOSTR
             Both conditions still raise an error; blocking meets a necessary
             dimension condition, but does not guarantee numerical injectivity.
         """
+        truncation = _TruncationSpec(cutoff=cutoff, atol=atol, rtol=rtol,
+                                     cum_percentage=cum_percentage)
         return self._fit(
             rank, projection=projection, slices=slices,
-            spectral_atol=spectral_atol, n_attempts=n_attempts,
+            cluster_atol=cluster_atol, n_attempts=n_attempts,
             n_iters=n_iters, n_restarts=n_restarts, generator=generator,
-            collect_metrics=collect_metrics, verbose=verbose)
+            truncation=truncation, collect_metrics=collect_metrics,
+            verbose=verbose)
 
 
 class BLOSTRSVD(BLOSTR):  # MARK: BLOSTRSVD
@@ -651,8 +770,8 @@ class BLOSTRSVD(BLOSTR):  # MARK: BLOSTRSVD
 
     def _recover(self, first: torch.Tensor,
                  rank: Optional[Sequence[int]], projection: str,
-                 spectral_atol: float, generator: Optional[torch.Generator],
-                 truncation: Optional[_TruncationSpec],
+                 generator: Optional[torch.Generator],
+                 truncation: _TruncationSpec,
                  metrics: Optional[DecompositionMetrics]
                  ) -> Tuple[torch.Tensor, ...]:
         """Removes the first factor and splits the remaining open chain."""
@@ -670,7 +789,7 @@ class BLOSTRSVD(BLOSTR):  # MARK: BLOSTRSVD
             precision = (10 * max(self._tensor.shape) *
                          torch.finfo(self._tensor.real.dtype).eps *
                          torch.linalg.cond(first_matrix))
-            options['rtol'] = min(max(spectral_atol, float(precision))**2, 1)
+            options['rtol'] = min(float(precision)**2, 1)
         tail_cores = _split_block(
             tail, self._tensor.shape[1:],
             rank=None if rank is None else rank[1:-1],
@@ -684,7 +803,7 @@ class BLOSTRSVD(BLOSTR):  # MARK: BLOSTRSVD
             *,
             projection: str = 'slices',
             slices: Optional[Sequence[Sequence[int]]] = None,
-            spectral_atol: float = 1e-10,
+            cluster_atol: float = 1e-10,
             n_attempts: int = 8,
             n_iters: int = 50,
             n_restarts: int = 10,
@@ -702,8 +821,9 @@ class BLOSTRSVD(BLOSTR):  # MARK: BLOSTRSVD
         ----------
         rank : int or sequence[int], optional
             Prescribed right-link ranks, including the cyclic last entry. With
-            ``None``, balanced k-means discovers the first cyclic and adjacent
-            ranks; TT-SVD discovers the remaining bonds numerically.
+            ``None``, the common numerical rank of the four projected slices
+            is estimated first. Balanced k-means then discovers the cyclic
+            and adjacent ranks; TT-SVD discovers the remaining bonds.
         slices : sequence of four index sequences, optional
             Configurations fixing every interior axis for the two spectral
             ratios. With ``None``, configurations are drawn using
@@ -714,10 +834,11 @@ class BLOSTRSVD(BLOSTR):  # MARK: BLOSTRSVD
             indices with ``"slices"``, or independent dense known/unknown
             contractions with ``"gaussian"``. BLOSTR-SVD instead splits the
             tail with SVDs. Explicit ``slices`` require ``"slices"``.
-        spectral_atol : float
-            Absolute eigenvalue cutoff and relative within-cluster tolerance
-            used when discovering balanced spectral multiplicities. A
-            machine-precision floor is applied to both tests. Default is 1e-10.
+        cluster_atol : float
+            Absolute tolerance for balanced clustering: the square root of
+            the summed squared distances to cluster centers must not exceed
+            this value when discovering multiplicities. A scale-dependent
+            machine-precision floor is applied. Default is 1e-10.
         n_attempts : int
             Number of independent spectral attempts. Default is 8; explicit
             ``slices`` use one attempt. The smallest reconstruction error is
@@ -726,15 +847,14 @@ class BLOSTRSVD(BLOSTR):  # MARK: BLOSTRSVD
             Balanced k-means iteration and restart budgets. Defaults are 50 and
             10.
         cutoff : float, optional
-            Singular values at or below this value are discarded in tail
-            TT-SVD.
+            Singular values at or below this value are discarded in the four
+            projected-slice SVDs. BLOSTR-SVD also applies it to tail TT-SVD.
         atol, rtol, cum_percentage : float, optional
             Absolute or relative discarded-energy tolerance, or retained
-            squared singular-value fraction, in tail TT-SVD. With no rank or
-            tolerance, a numerical threshold accounts for the precision and
-            conditioning of the recovered first core. A supplied rank is an
-            upper bound; smaller retained ranks are returned without zero
-            padding.
+            squared singular-value fraction, in the projected-slice SVDs.
+            BLOSTR-SVD uses the same controls in tail TT-SVD. A prescribed
+            spectral rank must survive all four slice truncations; otherwise
+            the projection attempt is rejected.
         generator : torch.Generator, optional
             Controls spectral projections, balanced clustering and recovery
             projections.
@@ -754,7 +874,7 @@ class BLOSTRSVD(BLOSTR):  # MARK: BLOSTRSVD
                                      cum_percentage=cum_percentage)
         return self._fit(
             rank, projection=projection, slices=slices,
-            spectral_atol=spectral_atol, n_attempts=n_attempts,
+            cluster_atol=cluster_atol, n_attempts=n_attempts,
             n_iters=n_iters, n_restarts=n_restarts, generator=generator,
             truncation=truncation,
             collect_metrics=collect_metrics, verbose=verbose)
@@ -765,10 +885,14 @@ def tr_blostr(source: SourceLike,
               *,
               slices: Optional[Sequence[Sequence[int]]] = None,
               projection: str = 'slices',
-              spectral_atol: float = 1e-10,
+              cluster_atol: float = 1e-10,
               n_attempts: int = 8,
               n_iters: int = 50,
               n_restarts: int = 10,
+              cutoff: Optional[float] = None,
+              atol: Optional[float] = None,
+              rtol: Optional[float] = None,
+              cum_percentage: Optional[float] = None,
               generator: Optional[torch.Generator] = None,
               out_device: _Device = 'cpu',
               collect_metrics: bool = False,
@@ -786,8 +910,9 @@ def tr_blostr(source: SourceLike,
         Finite source, format or dense tensor to decompose.
     rank : int or sequence[int], optional
         Prescribed right-link ranks, including the cyclic last entry. Full
-        BLOSTR requires equal ranks. With ``None``, balanced k-means discovers
-        the multiplicities of the nonzero spectrum and requires them to imply
+        BLOSTR requires equal ranks. With ``None``, the common numerical
+        rank of the four projected slices is estimated first. Balanced
+        k-means then discovers spectral multiplicities, which must imply
         equal cyclic and adjacent ranks.
     slices : sequence of four index sequences, optional
         Configurations fixing every interior axis for the two spectral ratios.
@@ -798,15 +923,25 @@ def tr_blostr(source: SourceLike,
         ``"slices"``, or independent dense known/unknown contractions with
         ``"gaussian"``. BLOSTR-SVD instead splits the tail with SVDs. Explicit
         ``slices`` require ``"slices"``.
-    spectral_atol : float
-        Absolute eigenvalue cutoff and relative within-cluster tolerance used
-        when discovering balanced spectral multiplicities. A machine-precision
-        floor is applied to both tests. Default is 1e-10.
+    cluster_atol : float
+        Absolute tolerance for balanced clustering: the square root of
+        the summed squared distances to cluster centers must not exceed
+        this value when discovering multiplicities. A scale-dependent
+        machine-precision floor is applied. Default is 1e-10.
     n_attempts : int
         Number of independent spectral attempts. Default is 8; explicit
         ``slices`` use one attempt. The smallest reconstruction error is kept.
     n_iters, n_restarts : int
         Balanced k-means iteration and restart budgets. Defaults are 50 and 10.
+    cutoff : float, optional
+        Singular values at or below this value are discarded in the four
+        projected-slice SVDs. BLOSTR-SVD also applies it to tail TT-SVD.
+    atol, rtol, cum_percentage : float, optional
+        Absolute or relative discarded-energy tolerance, or retained
+        squared singular-value fraction, in the projected-slice SVDs.
+        BLOSTR-SVD uses the same controls in tail TT-SVD. A prescribed
+        spectral rank must survive all four slice truncations; otherwise
+        the projection attempt is rejected.
     generator : torch.Generator, optional
         Controls spectral projections, balanced clustering and recovery
         projections.
@@ -840,8 +975,9 @@ def tr_blostr(source: SourceLike,
     """
     return BLOSTR(source, out_device=out_device).fit(
         rank, projection=projection, slices=slices,
-        spectral_atol=spectral_atol, n_attempts=n_attempts, n_iters=n_iters,
+        cluster_atol=cluster_atol, n_attempts=n_attempts, n_iters=n_iters,
         n_restarts=n_restarts, generator=generator,
+        cutoff=cutoff, atol=atol, rtol=rtol, cum_percentage=cum_percentage,
         collect_metrics=collect_metrics, verbose=verbose)
 
 
@@ -850,7 +986,7 @@ def tr_blostr_svd(source: SourceLike,
                   *,
                   slices: Optional[Sequence[Sequence[int]]] = None,
                   projection: str = 'slices',
-                  spectral_atol: float = 1e-10,
+                  cluster_atol: float = 1e-10,
                   n_attempts: int = 8,
                   n_iters: int = 50,
                   n_restarts: int = 10,
@@ -875,8 +1011,9 @@ def tr_blostr_svd(source: SourceLike,
         Finite source, format or dense tensor to decompose.
     rank : int or sequence[int], optional
         Prescribed right-link ranks, including the cyclic last entry. With
-        ``None``, balanced k-means discovers the first cyclic and adjacent
-        ranks; TT-SVD discovers the remaining bonds numerically.
+        ``None``, the common numerical rank of the four projected slices
+        is estimated first. Balanced k-means then discovers the cyclic
+        and adjacent ranks; TT-SVD discovers the remaining bonds.
     slices : sequence of four index sequences, optional
         Configurations fixing every interior axis for the two spectral ratios.
         With ``None``, configurations are drawn using ``generator``.
@@ -886,23 +1023,25 @@ def tr_blostr_svd(source: SourceLike,
         ``"slices"``, or independent dense known/unknown contractions with
         ``"gaussian"``. BLOSTR-SVD instead splits the tail with SVDs. Explicit
         ``slices`` require ``"slices"``.
-    spectral_atol : float
-        Absolute eigenvalue cutoff and relative within-cluster tolerance used
-        when discovering balanced spectral multiplicities. A machine-precision
-        floor is applied to both tests. Default is 1e-10.
+    cluster_atol : float
+        Absolute tolerance for balanced clustering: the square root of
+        the summed squared distances to cluster centers must not exceed
+        this value when discovering multiplicities. A scale-dependent
+        machine-precision floor is applied. Default is 1e-10.
     n_attempts : int
         Number of independent spectral attempts. Default is 8; explicit
         ``slices`` use one attempt. The smallest reconstruction error is kept.
     n_iters, n_restarts : int
         Balanced k-means iteration and restart budgets. Defaults are 50 and 10.
     cutoff : float, optional
-        Singular values at or below this value are discarded in tail TT-SVD.
+        Singular values at or below this value are discarded in the four
+        projected-slice SVDs. BLOSTR-SVD also applies it to tail TT-SVD.
     atol, rtol, cum_percentage : float, optional
-        Absolute or relative discarded-energy tolerance, or retained squared
-        singular-value fraction, in tail TT-SVD. With no rank or tolerance, a
-        numerical threshold accounts for the precision and conditioning of the
-        recovered first core. A supplied rank is an upper bound; smaller
-        retained ranks are returned without zero padding.
+        Absolute or relative discarded-energy tolerance, or retained
+        squared singular-value fraction, in the projected-slice SVDs.
+        BLOSTR-SVD uses the same controls in tail TT-SVD. A prescribed
+        spectral rank must survive all four slice truncations; otherwise
+        the projection attempt is rejected.
     out_device : str or torch.device, optional
         Final core storage device. ``None`` keeps the input device.
     generator : torch.Generator, optional
@@ -928,7 +1067,7 @@ def tr_blostr_svd(source: SourceLike,
     """
     return BLOSTRSVD(source, out_device=out_device).fit(
         rank, projection=projection, slices=slices,
-        spectral_atol=spectral_atol, n_attempts=n_attempts, n_iters=n_iters,
+        cluster_atol=cluster_atol, n_attempts=n_attempts, n_iters=n_iters,
         n_restarts=n_restarts, generator=generator, cutoff=cutoff,
         atol=atol, rtol=rtol, cum_percentage=cum_percentage,
         collect_metrics=collect_metrics, verbose=verbose)

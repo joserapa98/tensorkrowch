@@ -11,6 +11,84 @@ import tensorkrowch as tk
 # Evaluation
 
 
+@pytest.mark.parametrize('topology', ['tt', 'tr'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('count', [1, 2, 4])
+@pytest.mark.parametrize('stack_size', [1, 3])
+def test_tt_sketch_phis_match_dense_projection(
+        make_format, topology, dtype, count, stack_size, monkeypatch):
+    from math import prod
+
+    format = make_format(topology, count, dtype=dtype)
+    real_dtype = format.cores[0].real.dtype
+    format.bonds = [torch.linspace(.5, 1.5, rank, dtype=real_dtype)
+                    for rank in format.rank]
+    dense = format.contract_dense()
+    rng = torch.Generator().manual_seed(310)
+    ranks = (1, *(2 for _ in range(count - 1)), 1)
+    stacks = [[tuple(torch.randn(ranks[k], size, ranks[k + 1], dtype=dtype,
+                                 generator=rng, requires_grad=True)
+                      for k, size in enumerate(format.in_dim))
+               for _ in range(stack_size)] for _ in range(2)]
+
+    def project(stack, sites, left):
+        if not sites:
+            return dense.new_ones(1, 1)
+        matrices = []
+        for sketch in stack:
+            tensor = sketch[sites[0]]
+            for k in sites[1:]:
+                tensor = torch.tensordot(tensor, sketch[k], dims=([-1], [0]))
+            size = prod(format.in_dim[k] for k in sites)
+            matrices.append(tensor.reshape(size, -1).T if left else
+                             tensor.reshape(-1, size))
+        return torch.cat(matrices) * .5
+
+    expected = []
+    for site, size in enumerate(format.in_dim):
+        left = project(stacks[0], tuple(range(site)), True)
+        right = project(stacks[1], tuple(range(site + 1, count)), False)
+        tensor = dense.reshape(left.shape[1], size, right.shape[1])
+        expected.append(torch.einsum('al,lir,br->aib', left, tensor, right))
+
+    def unexpected_dense(*args):
+        pytest.fail('Sketch contraction materialized the complete format')
+
+    monkeypatch.setattr(type(format), 'contract_dense', unexpected_dense)
+    actual = format.tt_sketch_phis(*stacks, boundary_scale=.5)
+    for value, reference in zip(actual, expected):
+        torch.testing.assert_close(value, reference)
+    if count > 1:
+        first, = torch.autograd.grad(
+            sum(x.abs().square().sum() for x in actual), stacks[0][0][0])
+        second, = torch.autograd.grad(
+            sum(x.abs().square().sum() for x in expected), stacks[0][0][0])
+        torch.testing.assert_close(first, second)
+
+
+@pytest.mark.parametrize('failure', ['empty', 'count', 'physical', 'boundary',
+                                      'stack', 'scale', 'batches'])
+def test_tt_sketch_phis_reject_invalid_inputs(make_format, failure):
+    format = make_format('tr', 2, n_batches=int(failure == 'batches'))
+    left = [[torch.ones(1, 2, 2), torch.ones(2, 3, 1)]]
+    right = [[core.clone() for core in left[0]]]
+    scale = 1.
+    if failure == 'empty':
+        left = []
+    elif failure == 'count':
+        left[0].pop()
+    elif failure == 'physical':
+        left[0][0] = torch.ones(1, 4, 2)
+    elif failure == 'boundary':
+        left[0][0] = torch.ones(2, 2, 2)
+    elif failure == 'stack':
+        right *= 2
+    elif failure == 'scale':
+        scale = float('inf')
+    with pytest.raises((TypeError, ValueError)):
+        format.tt_sketch_phis(left, right, boundary_scale=scale)
+
+
 @pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
 @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
 @pytest.mark.parametrize('n_sites', [1, 4])

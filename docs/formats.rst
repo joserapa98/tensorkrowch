@@ -138,6 +138,13 @@ different computation and temporary-memory costs depending on dimensions.
 The option is available for vectors, matrices and the Quantics evaluation
 methods.
 
+``TT.tt_sketch_phis`` and ``TR.tt_sketch_phis`` contract stacks of TT sketch
+cores directly with a vector format, returning one projected tensor per site.
+They reuse left and right environments, preserve gradients and do not
+materialize the complete tensor. TR contractions keep the cyclic index in
+both environments until each local projection closes it. Structural batches
+are not supported by this operation.
+
 Use ``in_sites`` to evaluate only some variables or change their input order.
 Configuration columns follow the order of that selection. Remaining axes
 are returned in their original chain order, after the data and structural

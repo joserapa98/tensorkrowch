@@ -2689,6 +2689,130 @@ class _VectorFormat1D(TensorFormat1D):  # MARK: _VectorFormat1D
 
 
 
+    def tt_sketch_phis(self,
+                       left_cores: Sequence[Sequence[torch.Tensor]],
+                       right_cores: Sequence[Sequence[torch.Tensor]],
+                       boundary_scale: float = 1.0
+                       ) -> Tuple[torch.Tensor, ...]:
+        """
+        Contracts TT sketch stacks with this format to build every local Phi.
+        Sketches are contracted in a batch, reusing prefix and suffix
+        environments across sites. The cyclic index remains open in both
+        environments and is closed when forming each Phi. TT uses the same
+        contraction with a unit cyclic dimension. Sketches are not conjugated.
+        Structural batches are not supported; all physical sites participate
+        independently of ``in_sites``.
+
+        Parameters
+        ----------
+        left_cores : sequence of sequences of torch.Tensor
+            TT sketches in the left stack, each with one core per format site.
+            Core ``k`` has shape ``(left_rank, in_dim[k], right_rank)``, with
+            unit boundary ranks. Sketches share bond dimensions at each cut.
+        right_cores : sequence of sequences of torch.Tensor
+            TT sketches in the right stack, with the same layout and number
+            of sketches as ``left_cores``.
+        boundary_scale : float
+            Multiplier applied to the first left and last right sketch cores
+            in their environment contractions. Defaults to ``1.0``.
+
+        Returns
+        -------
+        tuple of torch.Tensor
+            One Phi per site ``k``, with shape
+            ``(left_size, in_dim[k], right_size)``. Each outer axis combines
+            sketch and bond indices; chain boundary axes have size ``1``.
+        """
+        if self.n_batches:
+            raise ValueError(
+                'TT sketch contractions do not support core batches')
+        if isinstance(boundary_scale, bool) or \
+                not isinstance(boundary_scale, Real):
+            raise TypeError('`boundary_scale` should be real')
+        if not isfinite(boundary_scale):
+            raise ValueError('`boundary_scale` should be finite')
+        for name, stack in (('left_cores', left_cores),
+                            ('right_cores', right_cores)):
+            if isinstance(stack, (str, bytes)) or \
+                    not isinstance(stack, Sequence):
+                raise TypeError(
+                    f'`{name}` should be a sequence of TT sketches')
+            if not stack:
+                raise ValueError(f'`{name}` should not be empty')
+            for cores in stack:
+                if isinstance(cores, (str, bytes)) or \
+                        not isinstance(cores, Sequence):
+                    raise TypeError('Each TT sketch should be a core sequence')
+                if len(cores) != self.n_sites:
+                    raise ValueError('Every TT sketch needs one core per site')
+                for site, core in enumerate(cores):
+                    if not isinstance(core, torch.Tensor):
+                        raise TypeError('Sketch cores should be tensors')
+                    if (core.ndim != 3) or \
+                            (core.shape[1] != self.in_dim[site]):
+                        raise ValueError(
+                            'Sketch cores should have shape '
+                            '(left rank, in_dim[site], right rank)')
+                    if any(size < 1 for size in core.shape):
+                        raise ValueError(
+                            'Sketch core dimensions should be positive')
+                    if core.shape != stack[0][site].shape:
+                        raise ValueError(
+                            'Sketches in a stack should share core shapes')
+                    if site and (core.shape[0] != cores[site - 1].shape[-1]):
+                        raise ValueError('Adjacent sketch ranks should match')
+                if (cores[0].shape[0] != 1) or (cores[-1].shape[-1] != 1):
+                    raise ValueError(
+                        'TT sketches should have unit boundary ranks')
+        if len(left_cores) != len(right_cores):
+            raise ValueError('Left and right stacks should have the same size')
+
+        source_cores = self._effective_cores()
+        dtype = self.dtype
+        for stack in (left_cores, right_cores):
+            for cores in stack:
+                for core in cores:
+                    dtype = torch.promote_types(dtype, core.dtype)
+        left_cores = [torch.stack(cores).to(device=self.device, dtype=dtype)
+                      for cores in zip(*left_cores)]
+        right_cores = [torch.stack(cores).to(device=self.device, dtype=dtype)
+                       for cores in zip(*right_cores)]
+        source_cores = [core.to(dtype=dtype) for core in source_cores]
+        stack_size = left_cores[0].shape[0]
+        closure = source_cores[0].shape[0]
+        identity = torch.eye(closure, dtype=dtype, device=self.device)
+        boundary = identity[None, :, :, None]
+
+        # Keep a separate closure index, shared by the two environments.
+        left = [boundary]
+        environment = boundary.expand(stack_size, -1, -1, -1)
+        for site in range(self.n_sites - 1):
+            environment = torch.einsum('scau,aib,suiv->scbv',
+                                       environment, source_cores[site],
+                                       left_cores[site])
+            if site == 0:
+                environment = environment * boundary_scale
+            left.append(environment)
+        right = [None] * self.n_sites
+        right[-1] = boundary
+        environment = boundary.expand(stack_size, -1, -1, -1)
+        for site in reversed(range(1, self.n_sites)):
+            environment = torch.einsum('aib,tuiv,tbcv->tacu',
+                                       source_cores[site], right_cores[site],
+                                       environment)
+            if site == self.n_sites - 1:
+                environment = environment * boundary_scale
+            right[site - 1] = environment
+
+        phis = []
+        for site, core in enumerate(source_cores):
+            phi = torch.einsum('scau,aib,tbcv->suitv', left[site], core,
+                               right[site])
+            phis.append(phi.reshape(phi.shape[0] * phi.shape[1],
+                                     self.in_dim[site],
+                                     phi.shape[3] * phi.shape[4]))
+        return tuple(phis)
+
     def evaluate(self,
                  data: Optional[EvaluationData] = None,
                  n_batches: int = 1,

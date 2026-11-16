@@ -131,7 +131,10 @@ def _sampled_blocks(states: Sequence[torch.Tensor],
 def _structured_capability(source: BaseSource,
                            name: str) -> Optional[Callable[..., Any]]:
     """Returns one optional structured ``source`` kernel by capability."""
-    if not getattr(source, '_supports_tt_contractions', True):
+    support = ('_supports_tt_sketches' if name == 'tt_sketch_phis' else
+               '_supports_tt_contractions')
+    default = getattr(source, '_supports_tt_contractions', True)
+    if not getattr(source, support, default):
         return None
     capability = getattr(source, name, None)
     return capability if callable(capability) else None

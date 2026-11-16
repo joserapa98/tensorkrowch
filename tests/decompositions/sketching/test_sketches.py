@@ -125,6 +125,43 @@ class TestSampledSketch:  # MARK: TestSampledSketch
 class TestTTStackSketch:  # MARK: TestTTStackSketch
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('count', [1, 2, 5])
+    @pytest.mark.parametrize('orthogonal', [False, True])
+    def test_tr_source_contracts_directly_and_matches_dense_rs(
+            self, dtype, count, orthogonal, monkeypatch):
+        rng = torch.Generator().manual_seed(311)
+        dimensions = tuple(2 + k % 2 for k in range(count))
+        ranks = tuple(2 + k % 2 for k in range(count))
+        ring = tk.formats.TR([
+            torch.randn(ranks[k - 1], size, ranks[k], dtype=dtype,
+                        generator=rng) for k, size in enumerate(dimensions)])
+        dense = ring.contract_dense()
+        source = tk.decompositions.FormatSource(ring)
+        assert source._supports_tt_sketches
+        assert not source._supports_tt_contractions
+        operator = tk.decompositions.TTStackSketch(
+            tt_rank=3, stack_size=3, orthogonal=orthogonal)
+        expected = operator.build(tk.decompositions.DenseTensorSource(dense),
+                                   generator=torch.Generator().manual_seed(312))
+
+        def unexpected_enumeration(*args, **kwargs):
+            pytest.fail('TR sketches used entry evaluation or TT conversion')
+
+        monkeypatch.setattr(source, 'evaluate', unexpected_enumeration)
+        monkeypatch.setattr(source, 'contract_dense', unexpected_enumeration)
+        monkeypatch.setattr(ring, 'to_tt', unexpected_enumeration)
+        actual = operator.build(source,
+                                 generator=torch.Generator().manual_seed(312))
+        assert actual.diagnostics['structured_kernel'] == \
+            'tt_stack_double_layer'
+        for value, reference in zip(actual.phi, expected.phi):
+            torch.testing.assert_close(value, reference)
+        result = tk.decompositions.TTRS(source, sketch_operator=operator).fit(
+            rtol=1e-12, generator=torch.Generator().manual_seed(312))
+        torch.testing.assert_close(result.contract_dense(), dense,
+                                   rtol=1e-8, atol=1e-9)
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     def test_recursive_blocks_match_direct_partial_contractions(self, dtype):
         in_dim = (2, 3, 2, 3, 2)
         indices = torch.cartesian_prod(*(

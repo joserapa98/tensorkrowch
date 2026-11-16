@@ -857,6 +857,12 @@ Available contraction strategies are:
 * :class:`TTStackSketch`: contract a stack of TT sketches; its construction is
   related to randomized TT sketching [ttstack]_.
 
+With an unbatched TT or TR vector in ``FormatSource``, ``TTStackSketch``
+contracts the sketch cores directly with the format and reuses prefix/suffix
+environments. TR keeps its cyclic index until each Phi closes it. This path
+neither enumerates configurations nor converts the TR to TT. Other sketch
+strategies retain their own source capabilities.
+
 Here ``transform`` acts separately on each three-axis Phi tensor, returning
 a tensor of the same shape. This allows local smoothing or other user-defined
 operations on the projected tensors. It differs from the shared evaluation

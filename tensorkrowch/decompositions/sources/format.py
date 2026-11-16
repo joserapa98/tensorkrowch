@@ -13,7 +13,7 @@ from tensorkrowch.utils import _INTEGER_DTYPES
 
 from tensorkrowch.models.mps import MPS
 from tensorkrowch.models.mpo import MPO
-from tensorkrowch.formats import TT
+from tensorkrowch.formats import TT, TR
 from tensorkrowch.formats.formats1d import TensorFormat1D
 
 from tensorkrowch.decompositions.sources.base import (BaseSource,
@@ -42,9 +42,10 @@ class FormatSource(BaseSource):  # MARK: FormatSource
     :class:`~tensorkrowch.models.MPO` to TTM or TRM, according to their
     boundaries. A sequence of cores instead constructs an open TT.
     Quantics formats require an explicit :class:`CallableQuanticsSource`.
-    Environment and sketch contractions require an unbatched open TT with
-    every site selected as an input. Effective cores are prepared for each
-    contraction, with explicit bond factors absorbed.
+    TT sketch stacks contract directly with unbatched TT and TR vectors.
+    Other environment and marginal kernels require an open TT. These kernels
+    require every site selected as an input. Effective cores are prepared
+    for each contraction, with explicit bond factors absorbed.
 
     Parameters
     ----------
@@ -120,11 +121,17 @@ class FormatSource(BaseSource):  # MARK: FormatSource
 
     @property
     def _supports_tt_contractions(self) -> bool:
-        """Whether direct TT environment and sketch contractions are supported."""
+        """Whether open-TT environment and marginal kernels are supported."""
         format = self.format
         return (isinstance(format, TT) and not format._cyclic and
                 not format.n_batches and
                 self.in_sites == tuple(range(format.n_sites)))
+
+    @property
+    def _supports_tt_sketches(self) -> bool:
+        """Whether TT sketch stacks can contract directly with this format."""
+        return (isinstance(self.format, (TT, TR)) and not self.n_batches and
+                self.in_sites == tuple(range(self.format.n_sites)))
 
     def _partial_indices(self,
                          configurations: torch.Tensor,
@@ -362,7 +369,9 @@ class FormatSource(BaseSource):  # MARK: FormatSource
         """
         Contracts TT sketch stacks with the source to build every local Phi.
         Sketches are contracted in a batch, reusing prefix and suffix
-        environments across sites. Sketch cores are used without conjugation.
+        environments across sites. TT and TR contractions delegate to the
+        backing format; the TR closure is preserved explicitly. Sketch cores
+        are used without conjugation.
 
         Parameters
         ----------
@@ -384,57 +393,8 @@ class FormatSource(BaseSource):  # MARK: FormatSource
             ``(left_size, in_dim[k], right_size)``. Each outer axis combines
             sketch and bond indices; chain boundary axes have size ``1``.
         """
-        left_cores = tuple(tuple(sketch_cores) for sketch_cores in left_cores)
-        right_cores = tuple(tuple(sketch_cores) for sketch_cores in right_cores)
-        if not left_cores or (len(left_cores) != len(right_cores)):
-            raise ValueError(
-                'Left and right stacks should contain the same number '
-                'of sketches')
-        if any(len(sketch_cores) != self.format.n_sites
-               for sketch_cores in (*left_cores, *right_cores)):
-            raise ValueError(
-                'Every TT sketch should contain one core per site')
-
-        source_cores = self.format._effective_cores()
-        dtype = source_cores[0].dtype
-        for sketch_cores in (*left_cores, *right_cores):
-            for core in sketch_cores:
-                dtype = torch.promote_types(dtype, core.dtype)
-
-        stack_size = len(left_cores)
-        left_cores = tuple(torch.stack(site_cores).to(device=self.device,
-                                                      dtype=dtype)
-                           for site_cores in zip(*left_cores))
-        right_cores = tuple(torch.stack(site_cores).to(device=self.device,
-                                                       dtype=dtype)
-                            for site_cores in zip(*right_cores))
-        source_cores = tuple(core.to(dtype=dtype) for core in source_cores)
-
-        left = [source_cores[0].new_ones((1, 1))]
-        left_envs = source_cores[0].new_ones((stack_size, 1, 1))
-        for site in range(len(source_cores) - 1):
-            left_envs = torch.einsum(
-                'sac,aib,scid->sbd',
-                left_envs, source_cores[site], left_cores[site])
-            if site == 0:
-                left_envs = left_envs * boundary_scale
-            left.append(left_envs.permute(0, 2, 1).reshape(
-                -1, left_envs.shape[1]))
-
-        right = [None] * len(source_cores)
-        right[-1] = source_cores[0].new_ones((1, 1))
-        right_envs = source_cores[0].new_ones((stack_size, 1, 1))
-        for site in range(len(source_cores) - 1, 0, -1):
-            right_envs = torch.einsum(
-                'aib,scid,sbd->sac',
-                source_cores[site], right_cores[site], right_envs)
-            if site == len(source_cores) - 1:
-                right_envs = right_envs * boundary_scale
-            right[site - 1] = right_envs.permute(0, 2, 1).reshape(
-                -1, right_envs.shape[1])
-
-        return tuple(self._local_phi(core, left[site], right[site])
-                     for site, core in enumerate(source_cores))
+        return self.format.tt_sketch_phis(
+            left_cores, right_cores, boundary_scale=boundary_scale)
 
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
         """

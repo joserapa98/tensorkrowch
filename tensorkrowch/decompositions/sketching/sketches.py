@@ -131,10 +131,7 @@ def _sampled_blocks(states: Sequence[torch.Tensor],
 def _structured_capability(source: BaseSource,
                            name: str) -> Optional[Callable[..., Any]]:
     """Returns one optional structured ``source`` kernel by capability."""
-    support = ('_supports_tt_sketches' if name == 'tt_sketch_phis' else
-               '_supports_tt_contractions')
-    default = getattr(source, '_supports_tt_contractions', True)
-    if not getattr(source, support, default):
+    if not getattr(source, '_supports_tt_contractions', True):
         return None
     capability = getattr(source, name, None)
     return capability if callable(capability) else None
@@ -705,12 +702,12 @@ class SampledSketch(SketchOperator):  # MARK: SampledSketch
         phi_kernel = _structured_capability(source, 'local_phi')
         phis = []
         for site in range(len(dimensions)):
-            left = torch.ones(
-                1, 1, dtype=source.dtype, device=device) if site == 0 \
-                else left_kernel(_unravel_indices(
+            left = left_kernel(torch.empty(
+                1, 0, dtype=torch.long, device=device)) if site == 0 else \
+                left_kernel(_unravel_indices(
                     prefix_states[site - 1], dimensions[:site]))
-            right = torch.ones(
-                1, 1, dtype=source.dtype, device=device) \
+            right = right_kernel(torch.empty(
+                1, 0, dtype=torch.long, device=device)) \
                 if site == len(dimensions) - 1 else right_kernel(
                     _unravel_indices(
                         suffix_states[site], dimensions[site + 1:]))

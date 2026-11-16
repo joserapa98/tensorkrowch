@@ -857,11 +857,11 @@ Available contraction strategies are:
 * :class:`TTStackSketch`: contract a stack of TT sketches; its construction is
   related to randomized TT sketching [ttstack]_.
 
-With an unbatched TT or TR vector in ``FormatSource``, ``TTStackSketch``
-contracts the sketch cores directly with the format and reuses prefix/suffix
-environments. TR keeps its cyclic index until each Phi closes it. This path
-neither enumerates configurations nor converts the TR to TT. Other sketch
-strategies retain their own source capabilities.
+With an unbatched TT or TR vector in ``FormatSource``, all three sketches
+contract the format cores directly. TR environments retain the cyclic index
+until each Phi closes it, without converting the ring to TT or enumerating
+the full tensor. Quantics vectors follow the same path over their digit
+sites. These kernels require all sites selected in natural order.
 
 Here ``transform`` acts separately on each three-axis Phi tensor, returning
 a tensor of the same shape. This allows local smoothing or other user-defined

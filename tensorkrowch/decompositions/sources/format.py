@@ -41,9 +41,8 @@ class FormatSource(BaseSource):  # MARK: FormatSource
     An :class:`~tensorkrowch.models.MPS` is converted to TT or TR, and an
     :class:`~tensorkrowch.models.MPO` to TTM or TRM, according to their
     boundaries. A sequence of cores instead constructs an open TT.
-    Quantics formats require an explicit :class:`CallableQuanticsSource`.
-    TT sketch stacks contract directly with unbatched TT and TR vectors.
-    Other environment and marginal kernels require an open TT. These kernels
+    Quantics formats are treated as finite tensors of digit indices.
+    Sketches contract directly with unbatched TT and TR vectors. These kernels
     require every site selected as an input. Effective cores are prepared
     for each contraction, with explicit bond factors absorbed.
 
@@ -92,9 +91,6 @@ class FormatSource(BaseSource):  # MARK: FormatSource
                 cores = (cores[0].squeeze(0), *cores[1:-1], cores[-1].squeeze(-1)) \
                     if len(cores) > 1 else (cores[0].squeeze(0).squeeze(-1),)
             format = TT(cores)
-        if format._quantized:
-            raise TypeError(
-                'Quantics formats require an explicit Quantics source')
 
         self.format = format
         super().__init__(format.n_sites,
@@ -121,17 +117,11 @@ class FormatSource(BaseSource):  # MARK: FormatSource
 
     @property
     def _supports_tt_contractions(self) -> bool:
-        """Whether open-TT environment and marginal kernels are supported."""
+        """Whether vector environment and sketch kernels are supported."""
         format = self.format
-        return (isinstance(format, TT) and not format._cyclic and
+        return (isinstance(format, (TT, TR)) and
                 not format.n_batches and
                 self.in_sites == tuple(range(format.n_sites)))
-
-    @property
-    def _supports_tt_sketches(self) -> bool:
-        """Whether TT sketch stacks can contract directly with this format."""
-        return (isinstance(self.format, (TT, TR)) and not self.n_batches and
-                self.in_sites == tuple(range(self.format.n_sites)))
 
     def _partial_indices(self,
                          configurations: torch.Tensor,
@@ -158,7 +148,7 @@ class FormatSource(BaseSource):  # MARK: FormatSource
 
     def left_envs(self, configurations: torch.Tensor) -> torch.Tensor:
         """
-        Contracts the first TT sites at fixed indices, leaving their right
+        Contracts the first TT or TR sites at fixed indices, leaving the right
         bond open.
 
         Parameters
@@ -173,21 +163,25 @@ class FormatSource(BaseSource):  # MARK: FormatSource
         torch.Tensor
             Shape ``(batch, right_rank)``, where ``right_rank`` is the bond
             dimension after the prefix. An empty prefix returns ones with
-            shape ``(batch, 1)``. Direct contractions do not record point
-            evaluations.
+            shape ``(batch, 1)``. TR instead returns
+            ``(batch, cyclic_rank, right_rank)``, with an identity for an
+            empty prefix. Direct contractions do not record point evaluations.
         """
         indices = self._partial_indices(
             configurations, start=0, name='configurations')
         cores = self.format._effective_cores()
-        environment = cores[0].new_ones((indices.shape[0], 1))
+        closure = cores[0].shape[0]
+        environment = torch.eye(
+            closure, dtype=self.dtype, device=self.device).expand(
+                indices.shape[0], -1, -1)
         for site in range(indices.shape[1]):
             matrices = cores[site][:, indices[:, site], :].permute(1, 0, 2)
-            environment = torch.einsum('ba,bar->br', environment, matrices)
-        return environment
+            environment = torch.einsum('bca,bar->bcr', environment, matrices)
+        return environment if self.format._cyclic else environment.squeeze(1)
 
     def right_envs(self, configurations: torch.Tensor) -> torch.Tensor:
         """
-        Contracts the final TT sites at fixed indices, leaving their left
+        Contracts the final TT or TR sites at fixed indices, leaving the left
         bond open.
 
         Parameters
@@ -202,8 +196,9 @@ class FormatSource(BaseSource):  # MARK: FormatSource
         torch.Tensor
             Shape ``(batch, left_rank)``, where ``left_rank`` is the bond
             dimension before the suffix. An empty suffix returns ones with
-            shape ``(batch, 1)``. Direct contractions do not record point
-            evaluations.
+            shape ``(batch, 1)``. TR instead returns
+            ``(batch, left_rank, cyclic_rank)``, with an identity for an
+            empty suffix. Direct contractions do not record point evaluations.
         """
         start = self.format.n_sites - configurations.shape[1] \
             if isinstance(configurations, torch.Tensor) and \
@@ -211,12 +206,15 @@ class FormatSource(BaseSource):  # MARK: FormatSource
         indices = self._partial_indices(
             configurations, start=start, name='configurations')
         cores = self.format._effective_cores()
-        environment = cores[0].new_ones((indices.shape[0], 1))
+        closure = cores[0].shape[0]
+        environment = torch.eye(
+            closure, dtype=self.dtype, device=self.device).expand(
+                indices.shape[0], -1, -1)
         for offset in range(indices.shape[1] - 1, -1, -1):
             site = start + offset
             matrices = cores[site][:, indices[:, offset], :].permute(1, 0, 2)
-            environment = torch.einsum('bar,br->ba', matrices, environment)
-        return environment
+            environment = torch.einsum('bar,brc->bac', matrices, environment)
+        return environment if self.format._cyclic else environment.squeeze(-1)
 
     @staticmethod
     def _local_phi(core: torch.Tensor,
@@ -224,11 +222,19 @@ class FormatSource(BaseSource):  # MARK: FormatSource
                    right: torch.Tensor,
                    factor: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Contracts a ``(left, input, right)`` core with sketch environments."""
-        if not isinstance(left, torch.Tensor) or (left.ndim != 2):
-            raise TypeError('`left` should be a matrix')
-        if not isinstance(right, torch.Tensor) or (right.ndim != 2):
-            raise TypeError('`right` should be a matrix')
-        if left.shape[1] != core.shape[0]:
+        if not isinstance(left, torch.Tensor) or (left.ndim not in (2, 3)):
+            raise TypeError('`left` should have two or three axes')
+        if left.ndim == 2:
+            left = left.unsqueeze(1)
+        if not isinstance(right, torch.Tensor) or \
+                (right.ndim not in (2, 3)):
+            raise TypeError('`right` should have two or three axes')
+        if right.ndim == 2:
+            right = right.unsqueeze(-1)
+        if left.shape[1] != right.shape[-1]:
+            raise ValueError(
+                '`left` and `right` closure dimensions should match')
+        if left.shape[-1] != core.shape[0]:
             raise ValueError('`left` does not match the source left rank')
         if right.shape[1] != core.shape[-1]:
             raise ValueError('`right` does not match the source right rank')
@@ -244,7 +250,7 @@ class FormatSource(BaseSource):  # MARK: FormatSource
         if factor is not None:
             core = core * factor.to(device=core.device,
                                     dtype=dtype)[None, :, None]
-        return torch.einsum('la,aib,rb->lir',
+        return torch.einsum('lca,aib,rbc->lir',
                             left.to(device=core.device, dtype=dtype),
                             core,
                             right.to(device=core.device, dtype=dtype))
@@ -255,8 +261,8 @@ class FormatSource(BaseSource):  # MARK: FormatSource
                   right: torch.Tensor,
                   factor: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
-        Contracts a TT core with left and right sketch environments, leaving
-        its input axis open. Environments are used without conjugation.
+        Contracts a TT or TR core with sketch environments, leaving its input
+        axis open. Environments are used without conjugation.
 
         Parameters
         ----------
@@ -264,10 +270,12 @@ class FormatSource(BaseSource):  # MARK: FormatSource
             Site of the source core.
         left : torch.Tensor
             Shape ``(left_size, left_rank)``. Columns match the core's left
-            bond; rows identify left sketch coordinates.
+            bond; rows identify left sketch coordinates. For TR, shape
+            ``(left_size, cyclic_rank, left_rank)`` retains the closure index.
         right : torch.Tensor
             Shape ``(right_size, right_rank)``. Columns match the core's right
-            bond; rows identify right sketch coordinates.
+            bond; rows identify right sketch coordinates. For TR, shape
+            ``(right_size, right_rank, cyclic_rank)`` retains the same closure.
         factor : torch.Tensor, optional
             Multiplicative input weights of shape ``(in_dim[site],)``.
             ``None`` uses unit weights.
@@ -290,7 +298,7 @@ class FormatSource(BaseSource):  # MARK: FormatSource
                      factor: Optional[Sequence[torch.Tensor]] = None
                      ) -> torch.Tensor:
         """
-        Sums distant TT sites while retaining the central site and its local
+        Sums distant TT or TR sites, retaining the central site and its local
         neighbors for a Markov marginal sketch.
 
         Parameters
@@ -340,26 +348,29 @@ class FormatSource(BaseSource):  # MARK: FormatSource
                        for value in factors]
 
         left_start = max(0, site - order)
-        left = cores[0].new_ones((1, 1))
+        closure = cores[0].shape[0]
+        boundary = torch.eye(
+            closure, dtype=cores[0].dtype, device=self.device).unsqueeze(0)
+        left = boundary
         for position in range(left_start):
             matrix = torch.einsum(
                 'aib,i->ab', cores[position], factors[position])
             left = left @ matrix
         for position in range(left_start, site):
             core = cores[position] * factors[position][None, :, None]
-            left = torch.einsum('la,aib->lib', left, core).reshape(
-                -1, core.shape[-1])
+            left = torch.einsum('lca,aib->licb', left, core).reshape(
+                -1, closure, core.shape[-1])
 
         right_stop = min(len(cores), site + 1 + order)
-        right = cores[0].new_ones((1, 1))
+        right = boundary
         for position in range(len(cores) - 1, right_stop - 1, -1):
             matrix = torch.einsum(
                 'aib,i->ab', cores[position], factors[position])
-            right = torch.einsum('ab,rb->ra', matrix, right)
+            right = torch.einsum('ab,rbc->rac', matrix, right)
         for position in range(right_stop - 1, site, -1):
             core = cores[position] * factors[position][None, :, None]
-            right = torch.einsum('aib,rb->ira', core, right).reshape(
-                -1, core.shape[0])
+            right = torch.einsum('aib,rbc->irac', core, right).reshape(
+                -1, core.shape[0], closure)
         return self._local_phi(cores[site], left, right, factor=factors[site])
 
     def tt_sketch_phis(self,
@@ -430,7 +441,7 @@ class FormatSource(BaseSource):  # MARK: FormatSource
               site: int,
               values: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
-        Varies one input site while fixing the other inputs. Uses direct TT
+        Varies one input site while fixing the other inputs. Uses direct core
         environments when available, otherwise :meth:`BaseSource.fiber`.
 
         Parameters
@@ -460,16 +471,12 @@ class FormatSource(BaseSource):  # MARK: FormatSource
 
         indices = _discrete_indices(configurations, self.in_dim, self.device)
         cores = self.format._effective_cores()
-        matrices = [core[:, indices[:, position], :].permute(1, 0, 2)
-                    for position, core in enumerate(cores)]
-
-        left = cores[0].new_ones((indices.shape[0], 1))
-        for matrix in matrices[:site]:
-            left = torch.einsum('ba,bar->br', left, matrix)
-        right = cores[0].new_ones((indices.shape[0], 1))
-        for matrix in reversed(matrices[site + 1:]):
-            right = torch.einsum('bar,br->ba', matrix, right)
-        result = torch.einsum('ba,apr,br->bp', left, cores[site], right)
+        left = self.left_envs(indices[:, :site])
+        right = self.right_envs(indices[:, site + 1:])
+        if not self.format._cyclic:
+            left = left.unsqueeze(1)
+            right = right.unsqueeze(-1)
+        result = torch.einsum('bca,apr,brc->bp', left, cores[site], right)
 
         if values is None:
             self._record_evaluation(points=indices.shape[0] * self.in_dim[site])

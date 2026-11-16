@@ -23,6 +23,8 @@ statistics. :class:`DenseTensorSource`, :class:`SparseTensorSource` and
 :class:`CallableSource` evaluates user functions; :class:`CallableTensorSource`
 adds finite input dimensions, and :class:`CallableQuanticsSource` converts
 digit indices into domain coordinates before evaluating the function.
+:class:`FormatSource` also accepts Quantics formats, treating their cores as
+a finite tensor of digit indices.
 
 Construction:
 

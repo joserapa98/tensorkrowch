@@ -281,8 +281,34 @@ def test_invalid_backing_objects(value):
         tk.decompositions.FormatSource(value)
 
 
-def test_quantics_formats_require_an_explicit_source():
-    format = tk.formats.QTT([torch.ones(2)], n_coordinates=1,
-                             base=2, level=1, domain=(0., 1.))
-    with pytest.raises(TypeError, match='Quantics'):
-        tk.decompositions.FormatSource(format)
+@pytest.mark.parametrize('cyclic', [False, True])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('count', [1, 2, 5])
+def test_quantics_source_evaluation_fibers_and_marginals(cyclic, dtype, count):
+    rng = torch.Generator().manual_seed(415)
+    cores = [torch.randn(2, 2, 2, dtype=dtype, generator=rng)
+             for _ in range(count)]
+    if not cyclic:
+        cores[0] = cores[0][0]
+        cores[-1] = cores[-1][..., 0]
+    cls = tk.formats.QTR if cyclic else tk.formats.QTT
+    format = cls(cores, n_coordinates=1, base=2, level=count, domain=(0., 1.))
+    source = tk.decompositions.FormatSource(format)
+    dense = format.contract_dense()
+    indices = torch.tensor(list(product(range(2), repeat=count)))
+    batch = tk.decompositions.ConfigurationBatch(indices)
+    torch.testing.assert_close(source.evaluate(batch), dense.reshape(-1))
+    for site in range(count):
+        left = source.left_envs(indices[:, :site])
+        right = source.right_envs(indices[:, site + 1:])
+        phi = source.local_phi(site, left, right)
+        expected = source.fiber(batch, site)
+        torch.testing.assert_close(phi[torch.arange(len(indices)), :,
+                                       torch.arange(len(indices))], expected)
+        for value in range(2):
+            entries = indices.clone()
+            entries[:, site] = value
+            torch.testing.assert_close(expected[:, value],
+                                       dense[tuple(entries.T)])
+        torch.testing.assert_close(source.fiber(batch, site, torch.tensor([1])),
+                                   expected[:, 1:])

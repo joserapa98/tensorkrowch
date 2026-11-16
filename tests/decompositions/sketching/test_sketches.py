@@ -137,8 +137,7 @@ class TestTTStackSketch:  # MARK: TestTTStackSketch
                         generator=rng) for k, size in enumerate(dimensions)])
         dense = ring.contract_dense()
         source = tk.decompositions.FormatSource(ring)
-        assert source._supports_tt_sketches
-        assert not source._supports_tt_contractions
+        assert source._supports_tt_contractions
         operator = tk.decompositions.TTStackSketch(
             tt_rank=3, stack_size=3, orthogonal=orthogonal)
         expected = operator.build(tk.decompositions.DenseTensorSource(dense),
@@ -373,6 +372,84 @@ class TestCoreDeterminingSystem:  # MARK: TestCoreDeterminingSystem
 
 
 class TestStructuredTTBackend:  # MARK: TestStructuredTTBackend
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('operator', [
+        tk.decompositions.SampledSketch(),
+        tk.decompositions.MarginalSketch(order=2),
+        tk.decompositions.TTStackSketch(tt_rank=4, stack_size=2),
+    ])
+    def test_rs_recovers_ring_source(self, dtype, operator):
+        rng = torch.Generator().manual_seed(416)
+        ring = tk.formats.TR([
+            torch.randn(2, 3, 2, dtype=dtype, generator=rng) / 2
+            for _ in range(5)])
+        source = tk.decompositions.FormatSource(ring)
+        result = tk.decompositions.TTRS(
+            source, sketch_operator=operator).fit(
+                rtol=1e-12, generator=torch.Generator().manual_seed(417))
+        dense = ring.contract_dense()
+        error = (result.contract_dense() - dense).norm() / dense.norm()
+        assert error < 1e-10
+        assert source.evaluation_stats.requested_points == 0
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('count', [1, 2, 5])
+    @pytest.mark.parametrize('quantics', [False, True])
+    @pytest.mark.parametrize('kind', ['sampled', 'marginal', 'stack'])
+    @pytest.mark.parametrize('cyclic', [False, True])
+    def test_ring_sketches_use_cores_and_match_dense(
+            self, dtype, count, quantics, kind, cyclic, monkeypatch):
+        rng = torch.Generator().manual_seed(413)
+        cores = [torch.randn(2 + (k - 1) % 2, 2, 2 + k % 2,
+                             dtype=dtype, generator=rng)
+                 for k in range(count)]
+        # Close the cyclic bond also for odd chain lengths.
+        cores[0] = torch.randn(cores[-1].shape[-1], 2, cores[0].shape[-1],
+                               dtype=dtype, generator=rng, requires_grad=True)
+        if not cyclic:
+            cores[0] = cores[0][0]
+            cores[-1] = cores[-1][..., 0]
+        cls = (tk.formats.QTR if cyclic else tk.formats.QTT) if quantics else (
+            tk.formats.TR if cyclic else tk.formats.TT)
+        options = dict(n_coordinates=1, base=2, level=count,
+                       domain=(0., 1.)) if quantics else {}
+        format = cls(cores, **options)
+        format.bonds = [torch.linspace(.7, 1.1, dimension,
+                                        dtype=torch.float64)
+                        for dimension in format.rank]
+        dense = format.contract_dense()
+        source = tk.decompositions.FormatSource(format)
+        if kind == 'sampled':
+            operator = tk.decompositions.SampledSketch(sketch_size=3)
+        elif kind == 'marginal':
+            operator = tk.decompositions.MarginalSketch(
+                order=2, factor=[torch.tensor([.5, 1.2], dtype=dtype)
+                                 for _ in cores])
+        else:
+            operator = tk.decompositions.TTStackSketch(
+                tt_rank=2, stack_size=2)
+        oracle = operator.build(
+            tk.decompositions.DenseTensorSource(dense),
+            generator=torch.Generator().manual_seed(414))
+
+        def forbidden(*args, **kwargs):
+            raise AssertionError('Sketches should contract source cores')
+
+        monkeypatch.setattr(source, 'evaluate', forbidden)
+        monkeypatch.setattr(source, 'contract_dense', forbidden)
+        if cyclic:
+            monkeypatch.setattr(format, 'to_tt', forbidden)
+        actual = operator.build(
+            source, generator=torch.Generator().manual_seed(414))
+        assert source.evaluation_stats.requested_points == 0
+        for phi, expected in zip(actual.phi, oracle.phi):
+            torch.testing.assert_close(phi, expected)
+        loss = sum(phi.abs().square().sum() for phi in actual.phi)
+        expected_loss = sum(phi.abs().square().sum() for phi in oracle.phi)
+        gradient = torch.autograd.grad(loss, cores[0], retain_graph=True)[0]
+        expected_gradient = torch.autograd.grad(expected_loss, cores[0])[0]
+        torch.testing.assert_close(gradient, expected_gradient)
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('operator', [

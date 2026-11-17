@@ -71,6 +71,31 @@ class TestDomainSpec:  # MARK: TestDomainSpec
 
 class TestEmbeddingSpec:  # MARK: TestEmbeddingSpec
 
+    def test_shared_model_identity_and_refreshed_domain_matrices(self):
+        class Model(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.weight = torch.nn.Parameter(
+                    torch.ones(2, dtype=torch.float64))
+
+            def forward(self, x):
+                return torch.stack((torch.ones_like(x), x), -1) * self.weight
+
+        model = Model()
+        domain = torch.linspace(0, 1, 4, dtype=torch.float64)
+        domains = _DomainSpec.normalize(domain, n_sites=2)
+        spec = _EmbeddingSpec.normalize(model, domains)
+        assert spec.embeddings[0] is spec.embeddings[1] is model
+        before = spec.matrix(0).detach().clone()
+        with torch.no_grad():
+            model.weight.mul_(2)
+        spec.refresh()
+        for site in range(2):
+            torch.testing.assert_close(spec.matrix(site), 2 * before)
+        with pytest.raises(ValueError, match='rows'):
+            spec.set(0, torch.ones(1, 2))
+        assert spec.embeddings[0] is model
+
     def test_site_embeddings_are_cached_once_with_heterogeneous_dimensions(
             self):
         calls = [0, 0]

@@ -52,6 +52,277 @@ def _continuous_problem(n_sites=3, dtype=torch.float64):
 
 class TestTTRSS:  # MARK: TestTTRSS
 
+    @pytest.mark.parametrize('function', [tk.decompositions.tt_rss,
+                                        tk.decompositions.tr_rss])
+    def test_direct_wrappers_forward_fit_transform(self, function):
+        calls = []
+
+        def fit_transform(configurations, phis):
+            calls.append(len(phis))
+            for phi in phis:
+                phi.fit(phi.axis, phi.input_fitter, phi.domain)
+            return list(phis)
+
+        result = function(torch.ones(2, 2, 2), _grid((2, 2, 2)),
+                          rank=1, fit_transform=fit_transform)
+        assert calls == [3]
+        torch.testing.assert_close(result.contract_dense(),
+                                   torch.ones(2, 2, 2))
+
+    @pytest.mark.parametrize('function', [tk.decompositions.qtt_rss,
+                                        tk.decompositions.qtr_rss])
+    def test_quantics_wrappers_forward_fit_transform(self, function):
+        source = tk.decompositions.CallableQuanticsSource(
+            lambda x: (1 + x[:, 0] * 0).to(torch.float64),
+            1, base=2, level=3,
+            domain=(0., 1.), dtype=torch.float64)
+        calls = []
+
+        def fit_transform(configurations, phis):
+            calls.append(len(phis))
+            for phi in phis:
+                phi.fit(phi.axis, phi.input_fitter, phi.domain)
+            return phis
+
+        result = function(source, _grid((2, 2, 2)), sample_space='digits',
+                          rank=1, fit_transform=fit_transform)
+        assert calls == [3]
+        assert result.layout == source.layout
+        torch.testing.assert_close(result.contract_dense(),
+                                   source.contract_dense())
+
+    @pytest.mark.parametrize('engine', [tk.decompositions.TTRSS,
+                                      tk.decompositions.TRRSS])
+    @pytest.mark.parametrize('count', [1, 3, 5])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_fit_transform_reuses_queries_and_local_fitters(
+            self, engine, count, dtype):
+        tensor = torch.ones((2,) * count, dtype=dtype)
+        source = tk.decompositions.DenseTensorSource(tensor)
+        calls = []
+
+        def fit_transform(configurations, phis):
+            before = source.evaluation_stats.source_calls
+            assert configurations.values.shape[0] == 2**count
+            for phi in phis:
+                assert phi.domain is phi.components[phi.axis][1]
+                assert phi.coefficients is None
+                phi.fit(phi.axis, phi.input_fitter, phi.domain,
+                        return_info=True)
+                torch.testing.assert_close(phi.reconstruct(),
+                                           phi.materialize())
+            assert source.evaluation_stats.source_calls == before
+            calls.append(phis)
+            return phis
+
+        result = engine(source, fit_transform=fit_transform).fit(
+            _grid(tensor.shape), rank=1, collect_metrics=True)
+        assert len(calls) == 1
+        assert len(result.metrics.input_fits) == count
+        torch.testing.assert_close(result.contract_dense(), tensor)
+
+    @pytest.mark.parametrize('bad', ['none', 'tensor', 'missing', 'reversed',
+                                    'new', 'unset', 'shape', 'integer', 'nan'])
+    def test_invalid_fit_transform_results(self, bad):
+        def fit_transform(configurations, phis):
+            if bad == 'none':
+                return None
+            if bad == 'tensor':
+                return configurations.values
+            if bad == 'missing':
+                return phis[:-1]
+            if bad == 'reversed':
+                return phis[::-1]
+            if bad == 'new':
+                return [tk.decompositions.PhiOperator.from_tensor(
+                    phi.materialize()) for phi in phis]
+            if bad == 'unset':
+                return phis
+            for phi in phis:
+                phi.fit(phi.axis, phi.input_fitter, phi.domain)
+            if bad == 'shape':
+                phis[0].coefficients = phis[0].coefficients.unsqueeze(0)
+            elif bad == 'integer':
+                phis[0].coefficients = phis[0].coefficients.long()
+            else:
+                phis[0].coefficients = phis[0].coefficients * float('nan')
+            return phis
+
+        with pytest.raises((TypeError, ValueError),
+                           match='Phi|Phis|fit_transform'):
+            tk.decompositions.TTRSS(
+                torch.ones(2, 2, 2), fit_transform=fit_transform).fit(
+                    _grid((2, 2, 2)), rank=1)
+
+    def test_fit_transform_constructor_validation(self):
+        with pytest.raises(TypeError, match='fit_transform'):
+            tk.decompositions.TTRSS(torch.ones(2, 2), fit_transform=1)
+        with pytest.raises(ValueError, match='incompatible'):
+            tk.decompositions.TRRSS(torch.ones(2, 2),
+                transform=lambda table: table.values,
+                fit_transform=lambda table, phis: phis)
+
+    @pytest.mark.parametrize('shared', [False, True])
+    @pytest.mark.parametrize('engine', [tk.decompositions.TTRSS,
+                                      tk.decompositions.TRRSS])
+    def test_joint_embedding_training_in_recursion(self, shared, engine):
+        class Model(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.weight = torch.nn.Parameter(
+                    torch.eye(2, dtype=torch.float64))
+
+            def forward(self, x):
+                return torch.stack((torch.ones_like(x), x), -1) @ self.weight
+
+        models = [Model()] * 3 if shared else [Model() for _ in range(3)]
+        domain = torch.linspace(0, 1, 4, dtype=torch.float64)
+        samples = torch.cartesian_prod(domain, domain, domain)
+
+        def function(x):
+            return (1 + .2 * x).prod(-1)
+
+        def fit_transform(configurations, phis):
+            parameters = {}
+            for phi, model in zip(phis, models):
+                assert phi.embedding is model
+                phi.fit(phi.axis, phi.input_fitter, phi.domain)
+                phi.coefficients = torch.nn.Parameter(
+                    phi.coefficients.detach())
+                parameters[id(phi.coefficients)] = phi.coefficients
+                for parameter in model.parameters():
+                    parameters[id(parameter)] = parameter
+            with torch.no_grad():
+                for model in {id(model): model for model in models}.values():
+                    model.weight.mul_(1.1)
+            optimizer = torch.optim.SGD(list(parameters.values()), lr=.01)
+            for _ in range(3):
+                optimizer.zero_grad()
+                residuals = [phi.reconstruct() - phi.materialize()
+                             for phi in phis]
+                loss = sum(residual.square().mean() for residual in residuals)
+                loss.backward()
+                assert all(parameter.grad is not None
+                           for parameter in parameters.values())
+                optimizer.step()
+            # The application explicitly chooses to refit after model training.
+            for phi in phis:
+                phi.fit(phi.axis, phi.input_fitter, phi.domain)
+            return phis
+
+        algorithm = engine(function, embedding=models, domain=domain,
+                           fit_transform=fit_transform)
+        result = algorithm.fit(samples, rank=1)
+        for site, model in enumerate(models):
+            assert algorithm.embeddings.embeddings[site] is model
+            torch.testing.assert_close(algorithm.embeddings.matrix(site),
+                                       model(domain))
+        embedded = tuple(model(samples[:, k])
+                         for k, model in enumerate(models))
+        torch.testing.assert_close(result.evaluate(embedded),
+                                   function(samples))
+
+    @pytest.mark.parametrize('engine', [tk.decompositions.TTRSS,
+                                      tk.decompositions.TRRSS])
+    def test_callback_replaces_effective_embedding(self, engine):
+        function, embedding, samples, domain = _continuous_problem()
+
+        def replacement(values):
+            return 2 * embedding(values)
+
+        def fit_transform(configurations, phis):
+            for phi in phis:
+                phi.embedding = replacement
+                fitter = tk.decompositions.FixedEmbeddingFitter(phi.embedding)
+                phi.fit(phi.axis, fitter, phi.domain)
+                assert phi.embedding is replacement
+                torch.testing.assert_close(phi.reconstruct(),
+                                           phi.materialize())
+            return phis
+
+        algorithm = engine(function, embedding=embedding, domain=domain,
+                           fit_transform=fit_transform)
+        result = algorithm.fit(samples, rank=2)
+        assert all(entry is replacement
+                   for entry in algorithm.embeddings.embeddings)
+        torch.testing.assert_close(result.evaluate(replacement(samples)),
+                                   function(samples))
+
+    def test_callback_auxiliary_evaluations_are_recorded(self):
+        domain = torch.linspace(0, 1, 3, dtype=torch.float64)
+        recorded = []
+
+        def fit_transform(configurations, phis):
+            extra = domain.new_tensor([[.25], [.25]])
+            torch.testing.assert_close(configurations.evaluate(extra),
+                                       1 + extra[:, 0])
+            recorded.append(configurations.stats)
+            for phi in phis:
+                phi.fit(phi.axis, phi.input_fitter, phi.domain)
+            return phis
+
+        result = tk.decompositions.TTRSS(
+            lambda x: 1 + x[:, 0], domain=domain,
+            embedding=lambda x: torch.stack((torch.ones_like(x), x), -1),
+            fit_transform=fit_transform).fit(
+                domain[:, None], rank=1, collect_metrics=True)
+        assert recorded[0].unique_points == 4
+        assert result.metrics.evaluations[0] == recorded[0]
+
+    def test_nonlinear_coefficient_training_is_not_overwritten(self):
+        domain = torch.linspace(0, 1, 8, dtype=torch.float64)
+
+        def embedding(x):
+            return torch.stack((torch.ones_like(x), x), -1)
+
+        def source(x):
+            return (1 + x[:, 0]).square()
+
+        def fit_transform(configurations, phis):
+            phi, = phis
+            phi.coefficients = torch.nn.Parameter(domain.new_tensor([1., .1]))
+            optimizer = torch.optim.Adam([phi.coefficients], lr=.05)
+            for _ in range(150):
+                optimizer.zero_grad()
+                prediction = phi.reconstruct()
+                residual = prediction.square() - phi.materialize()
+                loss = residual.square().mean()
+                loss = loss + 1e-5 * phi.coefficients.square().sum()
+                loss.backward()
+                optimizer.step()
+            return phis
+
+        result = tk.decompositions.TTRSS(
+            source, embedding=embedding, domain=domain,
+            fit_transform=fit_transform).fit(domain[:, None], rank=1)
+        amplitudes = result.evaluate(embedding(domain)[:, None, :])
+        torch.testing.assert_close(
+            amplitudes.square(), source(domain[:, None]), rtol=.005, atol=.005)
+
+    @pytest.mark.parametrize('engine', [tk.decompositions.TTRSS,
+                                      tk.decompositions.TRRSS])
+    def test_fit_transform_matrix_outputs_use_canonical_basis(self, engine):
+        source = tk.decompositions.DenseTensorSource.matrix(
+            torch.ones(2, 2, 2, 2))
+        outputs = []
+
+        def fit_transform(configurations, phis):
+            for phi in phis:
+                phi.fit(phi.axis, phi.input_fitter, phi.domain)
+                torch.testing.assert_close(phi.reconstruct(),
+                                           phi.materialize())
+                if phi._output_axis:
+                    with pytest.raises(ValueError, match='canonical'):
+                        phi.embedding = torch.eye(2)
+                    outputs.append(phi)
+            return phis
+
+        result = engine(source, fit_transform=fit_transform).fit(
+            _grid((2, 2)), rank=1)
+        assert len(outputs) == 2
+        torch.testing.assert_close(result.contract_dense(),
+                                   source.contract_dense())
+
     def test_error_metric_preserves_complex_reference_for_real_fit(self):
         class RealFitter:
 

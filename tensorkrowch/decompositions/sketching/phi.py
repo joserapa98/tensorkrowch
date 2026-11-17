@@ -11,6 +11,7 @@ This script contains:
         * _fiber_selection
 """
 
+from functools import partial
 from math import prod
 from typing import (Any,
                     Optional,
@@ -23,6 +24,7 @@ from typing import (Any,
 
 import torch
 
+from tensorkrowch.embeddings import basis
 from tensorkrowch.utils import _INTEGER_DTYPES, truncated_svd
 
 from tensorkrowch.decompositions.metrics import (EvaluationStats,
@@ -209,6 +211,12 @@ class PhiOperator:  # MARK: PhiOperator
     and retains central lifting maps in ``left_lift`` and ``right_lift``.
     These operations leave the original query coordinates and cache unchanged.
 
+    RSS configures ``axis``, :attr:`domain`, :attr:`embedding` and
+    ``input_fitter`` before local or joint fitting. The domain comes from the
+    explicit physical component; embeddings reference the engine's shared
+    basis registry. :meth:`reconstruct` applies the current embedding to
+    untruncated coefficients without consulting source observations.
+
     Parameters
     ----------
     source : BaseSource
@@ -348,6 +356,13 @@ class PhiOperator:  # MARK: PhiOperator
 
         # Fitted coefficients and directional SVD lifting maps.
         self.coefficients = None
+        self.axis = None
+        self.input_fitter = None
+        self._embedding_spec = None
+        self._embedding_site = None
+        self._embedding = None
+        self._fit_domain = None
+        self._output_axis = False
         self.left_lift = self.right_lift = None
         self.truncations = self.projections = ()
 
@@ -355,6 +370,95 @@ class PhiOperator:  # MARK: PhiOperator
         self.record = None
         self.model = self.model_state = None
         self.metadata = {}
+
+    @property
+    def domain(self) -> torch.Tensor:
+        """Coordinate values of the configured physical fitting axis."""
+        if self._fit_domain is not None:
+            return self._fit_domain
+        if self.axis is None:
+            raise ValueError('The Phi fitting `axis` has not been configured')
+        return self.components[self.axis][1]
+
+    @property
+    def embedding(self) -> Any:
+        """Effective embedding, shared with the RSS site's basis registry."""
+        if self._embedding_spec is not None:
+            return self._embedding_spec.embeddings[self._embedding_site]
+        return self._embedding
+
+    @embedding.setter
+    def embedding(self, value: Any) -> None:
+        if not (isinstance(value, torch.Tensor) or callable(value)):
+            raise TypeError('`embedding` should be a tensor or callable')
+        if self._output_axis:
+            raise ValueError('Output Phi axes retain their canonical basis')
+        if self._embedding_spec is not None:
+            self._embedding_spec.set(self._embedding_site, value)
+        else:
+            self._embedding = value
+
+    def _bind_input(self, site: int, embeddings: Any, fitter: Any) -> None:
+        """Links physical fitting to the shared basis without copying it."""
+        self.axis = self.layout.index(site)
+        self.input_fitter = fitter
+        kind, index = self.output_spec.layout[site]
+        self._output_axis = kind == 'output'
+        if self._output_axis:
+            self._embedding = partial(
+                basis, dim=self.output_spec.out_shape[index])
+        else:
+            self._embedding_spec, self._embedding_site = embeddings, index
+
+    def _set_fitting(self, axis: int, domain: torch.Tensor,
+                     embedding: Any, fitter: Any) -> None:
+        """Stores standalone fitting coordinates or updates the RSS basis."""
+        self.axis, self.input_fitter = axis, fitter
+        if (self._embedding_spec is None) and not self._output_axis:
+            self._fit_domain = domain
+        if not self._output_axis:
+            self.embedding = embedding
+
+    def reconstruct(self) -> torch.Tensor:
+        """
+        Applies the effective embedding to the untruncated Phi coefficients.
+
+        Returns
+        -------
+        torch.Tensor
+            Predicted values with the original ``shape``. Gradients through
+            coefficients and embeddings are preserved. This does not query
+            the source or update ``tensor``. Use before external truncations.
+
+        Raises
+        ------
+        ValueError
+            If fitting is not configured, coefficients are missing or their
+            external axes no longer match the original query shape.
+        """
+        if self.axis is None or self.embedding is None:
+            raise ValueError('Phi fitting should be configured first')
+        coefficients = self.coefficients
+        if not isinstance(coefficients, torch.Tensor):
+            raise ValueError('Phi `coefficients` should be a tensor')
+        if (coefficients.ndim != len(self.shape)) or any(
+                coefficients.shape[axis] != size
+                for axis, size in enumerate(self.shape) if axis != self.axis):
+            raise ValueError('Phi coefficients no longer match its query axes')
+        embedding = self.embedding
+        matrix = embedding(self.domain) if callable(embedding) else embedding
+        if not isinstance(matrix, torch.Tensor) or (matrix.ndim != 2):
+            raise ValueError('`embedding` should produce a matrix')
+        if matrix.shape != (self.domain.shape[0],
+                            coefficients.shape[self.axis]):
+            raise ValueError(
+                '`embedding` should match domain and coefficients')
+        dtype = torch.promote_types(matrix.dtype, coefficients.dtype)
+        matrix = matrix.to(device=coefficients.device, dtype=dtype)
+        moved = coefficients.to(dtype).movedim(self.axis, 0)
+        values = matrix @ moved.reshape(moved.shape[0], -1)
+        return values.reshape(matrix.shape[0], *moved.shape[1:]).movedim(
+            0, self.axis)
 
     @classmethod
     def from_tensor(cls, tensor: torch.Tensor) -> 'PhiOperator':

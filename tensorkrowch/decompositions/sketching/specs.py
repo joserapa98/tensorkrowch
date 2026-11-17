@@ -174,7 +174,7 @@ class _DomainSpec:  # MARK: _DomainSpec
         return self.values[_validate_site(site, self.n_sites)]
 
 
-@dataclass(frozen=True)
+@dataclass
 class _EmbeddingSpec:  # MARK: _EmbeddingSpec
     """
     Caches validated site ``embeddings`` and their finite-domain ``matrices``.
@@ -202,8 +202,8 @@ class _EmbeddingSpec:  # MARK: _EmbeddingSpec
                 raise TypeError(
                     f'Embedding at site {site} should be callable or a tensor')
             self._validate_matrix(site, matrix)
-        object.__setattr__(self, 'embeddings', embeddings)
-        object.__setattr__(self, 'matrices', matrices)
+        self.embeddings = embeddings
+        self.matrices = matrices
 
     @classmethod
     def normalize(cls,
@@ -224,24 +224,44 @@ class _EmbeddingSpec:  # MARK: _EmbeddingSpec
                 raise ValueError(
                     '`embedding` should contain one entry per input site')
 
-        matrices = []
-        for site, (entry, domain) in enumerate(zip(
-                embeddings, domains.values)):
-            if callable(entry):
-                try:
-                    matrix = entry(domain)
-                except (TypeError, ValueError, RuntimeError) as exc:
-                    raise ValueError(
-                        f'Embedding at site {site} failed on its domain') \
-                        from exc
-            elif isinstance(entry, torch.Tensor):
-                matrix = entry
-            else:
-                raise TypeError(
-                    f'Embedding at site {site} should be callable or a tensor')
-            cls._validate_matrix_for_domain(site, matrix, domain)
-            matrices.append(matrix)
+        matrices = [cls._domain_matrix(site, entry, domain)
+                    for site, (entry, domain) in enumerate(zip(
+                        embeddings, domains.values))]
         return cls(embeddings, domains, matrices)
+
+    @staticmethod
+    def _domain_matrix(site: int, embedding: _Embedding,
+                       domain: torch.Tensor) -> torch.Tensor:
+        """Evaluates and validates one basis on its finite domain."""
+        if callable(embedding):
+            try:
+                matrix = embedding(domain)
+            except (TypeError, ValueError, RuntimeError) as exc:
+                raise ValueError(
+                    f'Embedding at site {site} failed on its domain') from exc
+        elif isinstance(embedding, torch.Tensor):
+            matrix = embedding
+        else:
+            raise TypeError(
+                f'Embedding at site {site} should be callable or a tensor')
+        _EmbeddingSpec._validate_matrix_for_domain(site, matrix, domain)
+        return matrix
+
+    def set(self, site: int, embedding: _Embedding) -> None:
+        """Replaces a site's effective basis after validating its matrix."""
+        site = _validate_site(site, self.n_sites)
+        matrix = self._domain_matrix(
+            site, embedding, self.domains.for_site(site))
+        self.embeddings = (*self.embeddings[:site], embedding,
+                           *self.embeddings[site + 1:])
+        self.matrices = (*self.matrices[:site], matrix,
+                         *self.matrices[site + 1:])
+
+    def refresh(self) -> None:
+        """Refreshes cached matrices after in-place model training."""
+        self.matrices = tuple(self._domain_matrix(site, entry, domain)
+                              for site, (entry, domain) in enumerate(zip(
+                                  self.embeddings, self.domains.values)))
 
     @staticmethod
     def _validate_matrix_for_domain(site: int,

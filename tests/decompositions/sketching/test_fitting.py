@@ -56,6 +56,17 @@ class _AffineEmbedding(torch.nn.Module):
 
 class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
 
+    def test_functional_input_retains_observations_after_deembedding(self):
+        embedding = torch.tensor([[1., 0.], [0., 1.], [1., 1.]])
+        coefficients = torch.arange(8.).reshape(2, 2, 2)
+        values = torch.einsum('js,asb->ajb', embedding, coefficients)
+        view = _FiberOnlyPhi(values)
+        fitted = tk.decompositions.FixedEmbeddingFitter(
+            embedding, fiber_batch_size=2).fit(view, 1, torch.arange(3))
+        assert fitted.shape == values.shape
+        torch.testing.assert_close(fitted.materialize(), values)
+        torch.testing.assert_close(fitted.reconstruct(), values)
+
     def test_exact_deembedding_preserves_phi_axis_order(self):
         embedding = torch.tensor([
             [1.0, 0.0],
@@ -295,6 +306,17 @@ class TestBasisFitter:  # MARK: TestBasisFitter
 
 
 class TestTrainableEmbeddingFitter:  # MARK: TestTrainableEmbeddingFitter
+
+    def test_effective_model_is_kept_without_diagnostics(self):
+        model = _AffineEmbedding()
+        domain = torch.linspace(0, 1, 5, dtype=torch.float64)
+        values = (1 + domain).reshape(1, 5, 1)
+        phi = tk.decompositions.PhiOperator.from_tensor(values)
+        fitter = tk.decompositions.TrainableEmbeddingFitter(model, max_steps=2)
+        fitted = fitter.fit(phi, 1, domain, return_info=False)
+        assert fitted.model is None
+        assert fitted.embedding is model
+        torch.testing.assert_close(fitted.reconstruct(), values)
 
     def test_trains_from_functional_fibers_and_returns_optional_state(self):
         domain = torch.linspace(-1, 1, 7, dtype=torch.float64)

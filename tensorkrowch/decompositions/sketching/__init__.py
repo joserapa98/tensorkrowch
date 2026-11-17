@@ -43,6 +43,12 @@ its ``evaluate`` method permits cached auxiliary source queries without adding
 sketch samples. :class:`PhiOperator` gathers the local tensors from these
 values. Phi tensors are materialized for current SVD and ALS workflows; the
 operator also supports lazy selected entries and fibers.
+Alternatively, ``fit_transform(configuration_map, phis)`` jointly sets the
+coefficients of the same Phi operators and returns them in their original
+order. It replaces local fitting and is incompatible with ``transform``.
+Each Phi exposes its fitting domain, effective embedding and local fitter;
+``reconstruct()`` predicts its values before external truncation. Embeddings
+remain shared with the engine's registry, including trained models.
 
 ``PhiOperator`` owns both its original query coordinates and prepared
 coefficients. Input fitting and directional truncation update that operator;

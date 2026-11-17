@@ -187,6 +187,10 @@ class TRRSS(TTRSS):  # MARK: TRRSS
     It is a residual of the intermediate TT, rather than an error bound for
     the final ring.
 
+    ``fit_transform(configuration_map, phis)`` follows :class:`TTRSS`: it
+    replaces local fitting, sets the Phi coefficients and returns the same
+    operators in their original order. It is incompatible with ``transform``.
+
     Examples
     --------
     >>> samples = torch.cartesian_prod(*[torch.arange(2)] * 5)
@@ -436,6 +440,7 @@ def tr_rss(source: Any, sketch_samples: Samples,
            block_center: bool = True,
            block_boundaries: bool = True,
            transform: Optional[Callable] = None,
+           fit_transform: Optional[Callable] = None,
            cutoff: Optional[float] = None,
            atol: Optional[float] = None,
            rtol: Optional[float] = None,
@@ -453,6 +458,11 @@ def tr_rss(source: Any, sketch_samples: Samples,
     ``None`` requests discovery. ``loop_opener`` owns local ALS configuration.
     ``transform(configuration_map)`` acts once on the shared value table.
 
+    ``fit_transform(configuration_map, phis)`` replaces local fitting and
+    cannot be combined with ``transform``. It must set ``phi.coefficients``
+    and return the same Phi operators in their original order; see
+    :class:`TTRSS` for the complete callback contract.
+
     Examples
     --------
     >>> samples = torch.cartesian_prod(*[torch.arange(2)] * 4)
@@ -464,7 +474,7 @@ def tr_rss(source: Any, sketch_samples: Samples,
     return TRRSS(
         source, embedding, in_dim, domain, domain_multiplier, out_position,
         device=device, dtype=dtype, out_device=out_device,
-        transform=transform).fit(
+        transform=transform, fit_transform=fit_transform).fit(
             sketch_samples, labels, rank, center=center,
             loop_opener=loop_opener, block_center=block_center,
             block_boundaries=block_boundaries,
@@ -481,6 +491,7 @@ def qtr_rss(source: CallableQuanticsSource, sketch_samples: Samples, *,
             block_center: bool = True,
             block_boundaries: bool = True,
             transform: Optional[Callable] = None,
+            fit_transform: Optional[Callable] = None,
             cutoff: Optional[float] = None,
             atol: Optional[float] = None,
             rtol: Optional[float] = None,
@@ -521,6 +532,11 @@ def qtr_rss(source: CallableQuanticsSource, sketch_samples: Samples, *,
         Whether to group boundary sites into automatic blocks.
     transform : callable, optional
         Global callback as in :class:`TTRSS`.
+    fit_transform : callable, optional
+        Called as ``fit_transform(configuration_map, phis)`` instead of local
+        fitting. Set ``phi.coefficients`` and return the same Phi operators
+        in their original order. Cannot be combined with ``transform``;
+        see :class:`TTRSS` for the complete callback contract.
     cutoff, atol, rtol, cum_percentage : float, optional
         SVD truncation criteria, as in :meth:`TRRSS.fit`.
     batch_size : int
@@ -547,7 +563,8 @@ def qtr_rss(source: CallableQuanticsSource, sketch_samples: Samples, *,
         values = (sketch_samples.values if isinstance(
             sketch_samples, ConfigurationBatch) else sketch_samples)
         sketch_samples = ConfigurationBatch(values, kind='indices')
-    return TRRSS(source, transform=transform, out_device=out_device).fit(
+    return TRRSS(source, transform=transform, fit_transform=fit_transform,
+                 out_device=out_device).fit(
         sketch_samples, rank=rank, center=center, loop_opener=loop_opener,
         block_center=block_center, block_boundaries=block_boundaries,
         cutoff=cutoff, atol=atol, rtol=rtol,

@@ -29,6 +29,7 @@ from typing import (Any,
 
 import torch
 
+from tensorkrowch.embeddings import basis
 from tensorkrowch.utils import _INTEGER_DTYPES, safe_divide
 
 from tensorkrowch.decompositions._utils import (_normalize_dims,
@@ -150,7 +151,8 @@ def _restore_fitted_axis(solution: torch.Tensor,
 
 
 def _store_fit(phi_view: _Phi, tensor: torch.Tensor, axis: int,
-               domain_size: int, in_dim: int,
+               domain: torch.Tensor, in_dim: int,
+               embedding: Embedding, fitter: Any, target: torch.Tensor,
                record: Optional[InputFitRecord] = None,
                model: Optional[torch.nn.Module] = None,
                model_state: Optional[Mapping[str, torch.Tensor]] = None,
@@ -159,10 +161,12 @@ def _store_fit(phi_view: _Phi, tensor: torch.Tensor, axis: int,
     if isinstance(phi_view, PhiOperator):
         phi = phi_view
     else:
-        original = phi_view if isinstance(phi_view, torch.Tensor) else tensor
+        original = phi_view if isinstance(phi_view, torch.Tensor) else \
+            _restore_fitted_axis(target, phi_view.shape, axis)
         phi = PhiOperator.from_tensor(original)
     phi.coefficients = tensor
-    phi.axis, phi.domain_size, phi.in_dim = axis, domain_size, in_dim
+    phi._set_fitting(axis, domain, embedding, fitter)
+    phi.domain_size, phi.in_dim = domain.shape[0], in_dim
     phi.record = record
     phi.model, phi.model_state = model, model_state
     phi.metadata = {} if metadata is None else dict(metadata)
@@ -329,8 +333,8 @@ class FixedEmbeddingFitter:  # MARK: FixedEmbeddingFitter
         return _store_fit(
             phi_view, tensor=tensor,
             axis=axis,
-            domain_size=matrix.shape[0],
-            in_dim=matrix.shape[1],
+            domain=domain, in_dim=matrix.shape[1],
+            embedding=self.embedding, fitter=self, target=target,
             record=record)
 
 
@@ -432,12 +436,15 @@ class BasisFitter:  # MARK: BasisFitter
             condition_number=1.,
             used_fibers=used_fibers) if return_info else None
         tensor = _restore_fitted_axis(solution, shape, axis)
+        dtype = tensor.dtype
+
+        def embedding(values: torch.Tensor) -> torch.Tensor:
+            return basis(values, dim=in_dim).to(dtype=dtype)
+
         return _store_fit(
             phi_view, tensor=tensor,
-            axis=axis,
-            domain_size=domain.shape[0],
-            in_dim=in_dim,
-            record=record)
+            axis=axis, domain=domain, in_dim=in_dim,
+            embedding=embedding, fitter=self, target=target, record=record)
 
 
 class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
@@ -451,10 +458,10 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
     Gradients and random state are confined to this fitter; the surrounding
     decomposition remains an ordinary numerical routine.
 
-    The trained model and a detached CPU state dictionary are attached to
-    :class:`PhiOperator` only when ``return_info=True``. Otherwise the
-    result contains only the fitted tensor and the model remains accessible as
-    ``fitter.model``.
+    A detached CPU state dictionary and model diagnostics are attached to
+    :class:`PhiOperator` only when ``return_info=True``. The effective
+    model remains accessible as ``phi.embedding`` and ``fitter.model``
+    without diagnostics.
 
     Parameters
     ----------
@@ -702,9 +709,8 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
         return _store_fit(
             phi_view, tensor=tensor,
             axis=axis,
-            domain_size=domain.shape[0],
-            in_dim=matrix.shape[1],
-            record=record,
+            domain=domain, in_dim=matrix.shape[1],
+            embedding=self.model, fitter=self, target=target, record=record,
             model=model,
             model_state=model_state,
             metadata={

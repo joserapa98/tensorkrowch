@@ -24,6 +24,34 @@ def _scalar_output_spec(n_inputs):
 
 class TestPhiOperator:  # MARK: TestPhiOperator
 
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_reconstruct_values_and_gradients(self, dtype):
+        generator = torch.Generator().manual_seed(951)
+        embedding = torch.randn(5, 3, dtype=dtype, generator=generator)
+        coefficients = torch.randn(2, 3, 4, dtype=dtype, generator=generator)
+        values = torch.einsum('js,asb->ajb', embedding, coefficients)
+        phi = PhiOperator.from_tensor(values)
+        domain = torch.arange(5)
+        phi.fit(1, tk.decompositions.FixedEmbeddingFitter(embedding), domain)
+        assert phi.embedding is embedding
+        assert phi.domain is domain
+        assert phi.record is None
+        torch.testing.assert_close(phi.reconstruct(), values)
+        assert phi.materialize() is values
+        phi.coefficients = torch.nn.Parameter(coefficients.clone())
+        phi.embedding = torch.nn.Parameter(embedding.clone())
+        gradient = torch.autograd.grad(phi.reconstruct().abs().square().sum(),
+                                       (phi.coefficients, phi.embedding))
+        assert all(torch.isfinite(value).all() for value in gradient)
+        phi.truncate('right', rank_right=1)
+        with pytest.raises(ValueError, match='query axes'):
+            phi.reconstruct()
+
+    def test_reconstruct_requires_a_fitted_representation(self):
+        phi = PhiOperator.from_tensor(torch.ones(2, 3))
+        with pytest.raises(ValueError, match='configured'):
+            phi.reconstruct()
+
     def test_five_site_shared_and_cached_queries_on_available_devices(
             self, device_dtype, assert_close):
         device, dtype = device_dtype

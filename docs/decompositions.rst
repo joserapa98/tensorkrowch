@@ -824,6 +824,113 @@ should be treated as read-only. Optimize a separate value table as above
 instead of assigning independently to overlapping Phis. The returned
 ``detach()`` makes this example an independent inner optimization.
 
+Joint fitting of Phi coefficients
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``fit_transform`` is an alternative to ``transform``. The callback receives
+``(configuration_map, phis)`` after shared source evaluation, with gradients
+enabled. It must set each ``phi.coefficients`` and return a sequence containing
+the same Phi operators in the same order. It runs before external truncations;
+no automatic coefficient fit follows it. The two callbacks cannot be combined.
+
+Each Phi exposes its physical ``axis``, ``domain``, effective ``embedding`` and
+configured ``input_fitter``. ``phi.materialize()`` reads observations, whereas
+``phi.reconstruct()`` applies the effective embedding to the current
+coefficients, without querying the source. Embeddings refer to the engine's
+shared registry; changing a shared model changes the basis at every site using
+it. After the callback, the engine refreshes embedding matrices for recursion.
+Replacing ``phi.embedding`` changes that site's effective basis. To refit in
+a replacement basis, pass a fitter configured for it to ``phi.fit``; the
+original ``input_fitter`` retains its own configuration.
+
+A basic callback reproduces local fitting, with control over all Phis:
+
+.. code-block:: python
+
+   domain = torch.linspace(0, 1, 3, dtype=torch.float64)
+   samples = torch.cartesian_prod(domain, domain, domain)
+
+   def function(x):
+       return (1 + 0.2 * x).prod(-1)
+
+   def embedding(x):
+       return torch.stack((torch.ones_like(x), x), dim=-1)
+
+   def fit_transform(configurations, phis):
+       for phi in phis:
+           phi.fit(phi.axis, phi.input_fitter, phi.domain)
+       return phis
+
+   source = d.CallableSource(function, n_sites=3, dtype=torch.float64)
+   engine = d.TTRSS(source, embedding=embedding, domain=domain,
+                    fit_transform=fit_transform)
+   result = engine.fit(samples, rank=2)
+
+The callback can instead train coefficients and a shared embedding together.
+The following application fits amplitudes whose squares reproduce observed
+values, with a consistency loss against a shared amplitude table and a nuclear
+norm penalty on a coefficient unfolding. This objective is application code;
+the library imposes no loss, optimizer or consistency requirement:
+
+.. code-block:: python
+
+   domain = torch.linspace(0, 1, 3, dtype=torch.float64)
+   samples = torch.cartesian_prod(domain, domain, domain)
+
+   def observations(x):
+       return (1 + 0.2 * x).prod(-1).square()
+
+   targets = observations(samples)
+
+   class Embedding(torch.nn.Module):
+       def __init__(self):
+           super().__init__()
+           self.weight = torch.nn.Parameter(torch.eye(2, dtype=torch.float64))
+
+       def forward(self, x):
+           return torch.stack((torch.ones_like(x), x), -1) @ self.weight
+
+   model = Embedding()
+
+   def fit_transform(configurations, phis):
+       amplitudes = torch.nn.Parameter(configurations.values.sqrt().detach())
+       for phi, index in zip(phis, configurations.phi_indices):
+           initial = d.PhiOperator.from_tensor(amplitudes[index].detach())
+           initial = d.FixedEmbeddingFitter(phi.embedding).fit(
+               initial, phi.axis, phi.domain)
+           phi.coefficients = torch.nn.Parameter(initial.coefficients.detach())
+
+       parameters = [amplitudes, *model.parameters(),
+                     *(phi.coefficients for phi in phis)]
+       optimizer = torch.optim.Adam(parameters, lr=1e-3)
+       rows, sample_rows = configurations.sample_indices()
+       for _ in range(50):
+           optimizer.zero_grad()
+           residual = amplitudes[rows].square() - targets[sample_rows]
+           loss = residual.square().mean()
+           for phi, index in zip(phis, configurations.phi_indices):
+               residual = phi.reconstruct() - amplitudes[index]
+               loss = loss + residual.square().mean()
+               matrix = phi.coefficients.reshape(phi.coefficients.shape[0], -1)
+               loss = loss + 1e-4 * torch.linalg.svdvals(matrix).sum()
+           loss = loss + 1e-4 * model.weight.square().sum()
+           loss.backward()
+           optimizer.step()
+       return phis
+
+   source = d.CallableSource(observations, n_sites=3, dtype=torch.float64)
+   engine = d.TTRSS(source, embedding=model, domain=domain,
+                    fit_transform=fit_transform)
+   result = engine.fit(samples, rank=2)
+
+The parameter list includes the shared model once; callbacks with several
+models should likewise avoid duplicate parameters. The training budget and
+penalty weights are illustrative. Reconstruction preserves gradients during
+the callback; the subsequent decomposition remains a numerical algorithm.
+When metrics are collected, the source residual still compares predictions
+with raw source observations, not with the callback's custom observation model
+or objective. The same callback interface is available in :class:`TRRSS`.
+
 Tensor-valued functions
 ^^^^^^^^^^^^^^^^^^^^^^^
 

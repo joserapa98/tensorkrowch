@@ -71,6 +71,8 @@ class ConfigurationMap:  # MARK: ConfigurationMap
     contains these inputs directly, and :attr:`values` contains the aligned raw
     source values. Both tables keep their original shape and order while the
     callback runs. The callback returns transformed values with the same shape.
+    ``fit_transform(configuration_map, phis)`` receives this same map of raw
+    observations and returns fitted Phi operators instead of a value table.
 
     :meth:`evaluate` can query additional configurations. It returns raw source
     values, preserving the requested order and repetitions, and evaluates only

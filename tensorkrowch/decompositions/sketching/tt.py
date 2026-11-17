@@ -156,6 +156,18 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         ``phi_indices`` reconstructs query Phis from a value table, and
         ``sample_indices()`` matches the original sketch samples already
         present in that table without evaluating missing samples.
+    fit_transform : callable, optional
+        Alternative to ``transform`` and automatic local fitting. Called once
+        as ``fit_transform(configuration_map, phis)``, with the shared raw
+        observations and a tuple of untruncated :class:`PhiOperator` objects.
+        Set each operator's ``coefficients`` and optionally update its
+        ``embedding``; return a sequence containing the same operators in the
+        same order. Coefficients preserve external axes and replace the
+        physical axis by the embedding dimension. Runs with gradients enabled.
+        ``input_fitter`` remains available through each Phi for optional local
+        initialization. No fitting follows the callback. Source-error metrics
+        still compare the returned representation with raw source values;
+        they do not measure a user-defined objective.
     local_solver : LeastSquaresSolver, optional
         Solver for local core-determining equations.
 
@@ -190,6 +202,7 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
                      InputFitter, Sequence[InputFitter]]] = None,
                  range_projector: Optional[RangeProjector] = None,
                  transform: Optional[Callable] = None,
+                 fit_transform: Optional[Callable] = None,
                  local_solver: Optional[LeastSquaresSolver] = None) -> None:
         source_like = (as_tensor_source(source)
                        if isinstance(source, torch.Tensor) else source)
@@ -245,6 +258,12 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
             raise TypeError(
                 '`local_solver` should be LeastSquaresSolver type or None')
 
+        if (fit_transform is not None) and not callable(fit_transform):
+            raise TypeError('`fit_transform` should be callable or None')
+        if (transform is not None) and (fit_transform is not None):
+            raise ValueError(
+                '`transform` and `fit_transform` are incompatible')
+
         self._source_like = source_like
         self._source = source_like
         self._embedding = embedding
@@ -261,6 +280,7 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         self._input_fitter_option = input_fitter
         self._range_projector_option = range_projector
         self._transform_option = transform
+        self._fit_transform_option = fit_transform
         self._local_solver = LeastSquaresSolver() \
             if local_solver is None else local_solver
         self._input_kind = 'features'
@@ -315,6 +335,9 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
                 '`embedding` should contain one entry per input site')
         normalized = []
         for entry in entries:
+            if isinstance(entry, torch.nn.Module):
+                normalized.append(entry.to(device=device))
+                continue
             if isinstance(entry, torch.Tensor):
                 normalized.append(entry.to(device=device, dtype=dtype))
                 continue
@@ -440,6 +463,7 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
             input_fitter=self._input_fitter_option,
             range_projector=self._range_projector_option,
             transform=self._transform_option,
+            fit_transform=self._fit_transform_option,
             out_device=self._out_device)
         return samples
 
@@ -700,10 +724,25 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
             configurations.evaluate_source()
         with context.phase('values.transform'):
             configurations.prepare_values()
-        if context.collect_metrics:
-            context.metrics.evaluations.append(configurations.stats)
-            if self.transform is not None:
-                context.state['configuration_map'] = configurations
+        if context.collect_metrics and (self.transform is not None):
+            context.state['configuration_map'] = configurations
+
+        for site, (phi, handle) in enumerate(zip(phis, handles)):
+            phi._bind(configurations, handle)
+            phi._bind_input(site, self.embeddings, self.input_fitter[site])
+        if self.fit_transform is not None:
+            with context.phase('input.fit_transform'), torch.enable_grad():
+                fitted = self.fit_transform(configurations, tuple(phis))
+            if isinstance(fitted, (str, bytes)) or not isinstance(
+                    fitted, Sequence):
+                raise TypeError('`fit_transform` should return a Phi sequence')
+            if (len(fitted) != count) or any(
+                    actual is not expected for actual, expected in zip(
+                        fitted, phis)):
+                raise ValueError('`fit_transform` should return the same Phis '
+                                 'in their original order')
+            self.embeddings.refresh()
+            self._validate_in_dim(self.embeddings.in_dim)
 
         dimensions = self.outputs.site_dim(self.embeddings)
         ranks = context.state['rank']
@@ -715,10 +754,31 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
             options['rtol'] = (scale * torch.finfo(
                 self._source.dtype).eps) ** 2
         prepared = []
-        for site, (phi, handle) in enumerate(zip(phis, handles)):
-            phi._bind(configurations, handle)
-            axis = phi.layout.index(site)
-            tensor = self._fit_input_axis(site, phi, axis, context)
+        for site, phi in enumerate(phis):
+            if self.fit_transform is None:
+                phi.coefficients = self._fit_input_axis(
+                    site, phi, phi.axis, context)
+                dimensions = self.outputs.site_dim(self.embeddings)
+            tensor = phi.coefficients
+            if not isinstance(tensor, torch.Tensor):
+                raise TypeError('Phi `coefficients` should be tensors')
+            if phi.axis != phi.layout.index(site):
+                raise ValueError('Phi fitting `axis` should remain unchanged')
+            expected = list(phi.shape)
+            expected[phi.axis] = dimensions[site]
+            if tuple(tensor.shape) != tuple(expected):
+                raise ValueError('Phi `coefficients` should preserve external '
+                                 'axes and match the effective embedding')
+            if not (tensor.is_floating_point() or tensor.is_complex()):
+                raise TypeError(
+                    'Phi `coefficients` should be floating or complex')
+            if (tensor.device != self.source.device) or \
+                    not torch.isfinite(tensor).all():
+                raise ValueError('Phi `coefficients` should be finite and '
+                                 'on the source device')
+            phi.domain_size, phi.in_dim = phi.shape[phi.axis], dimensions[site]
+            if self.fit_transform is not None:
+                self._record_input_fit(site, phi.record, tensor, context)
             # Empty prefix/suffix axes are implicit in the query layout.
             if site == 0:
                 tensor = tensor.unsqueeze(0)
@@ -759,9 +819,18 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
                 context.metrics.range_projections.extend(item.projections)
             prepared.append(item)
 
+        if self.fit_transform is None:
+            self.embeddings.refresh()
+            self._validate_in_dim(self.embeddings.in_dim)
+
+        if context.collect_metrics:
+            context.metrics.evaluations.append(configurations.stats)
+
         # Custom fitters can return different coefficient dtypes. Include the
         # embeddings' source dtype before any recursive contractions.
         dtype = self._source.dtype
+        for matrix in self.embeddings.matrices:
+            dtype = torch.promote_types(dtype, matrix.dtype)
         for item in prepared:
             dtype = torch.promote_types(dtype, item.coefficients.dtype)
         for item in prepared:
@@ -1223,6 +1292,7 @@ def tt_rss(source: 'SourceLike', sketch_samples: Samples,
            out_position: Optional[Union[int, Sequence[int]]] = None,
            center: Optional[int] = None,
            transform: Optional[Callable] = None,
+           fit_transform: Optional[Callable] = None,
            cutoff: Optional[float] = None,
            atol: Optional[float] = None,
            rtol: Optional[float] = None,
@@ -1243,6 +1313,11 @@ def tt_rss(source: 'SourceLike', sketch_samples: Samples,
     ``transform(configuration_map)`` acts once on the shared value table.
     Use the class for custom fitters, range projectors or local solvers.
 
+    ``fit_transform(configuration_map, phis)`` replaces local fitting and
+    cannot be combined with ``transform``. It must set ``phi.coefficients``
+    and return the same Phi operators in their original order; see
+    :class:`TTRSS` for the complete callback contract.
+
     Examples
     --------
     >>> samples = torch.cartesian_prod(*[torch.arange(2)] * 3)
@@ -1253,7 +1328,7 @@ def tt_rss(source: 'SourceLike', sketch_samples: Samples,
     return TTRSS(
         source, embedding, in_dim, domain, domain_multiplier, out_position,
         device=device, dtype=dtype, out_device=out_device,
-        transform=transform).fit(
+        transform=transform, fit_transform=fit_transform).fit(
             sketch_samples, labels, rank, center=center, cutoff=cutoff,
             atol=atol, rtol=rtol, cum_percentage=cum_percentage,
             batch_size=batch_size, generator=generator, verbose=verbose,
@@ -1265,6 +1340,7 @@ def qtt_rss(source: CallableQuanticsSource, sketch_samples: Samples, *,
             sample_space: str = 'coordinates',
             rank: Optional[_Rank] = None, center: Optional[int] = None,
             transform: Optional[Callable] = None,
+            fit_transform: Optional[Callable] = None,
             cutoff: Optional[float] = None,
             atol: Optional[float] = None,
             rtol: Optional[float] = None,
@@ -1282,6 +1358,11 @@ def qtt_rss(source: CallableQuanticsSource, sketch_samples: Samples, *,
     ``transform`` follows :class:`TTRSS`. Returns a Quantics decomposition,
     preserving matrix structure when supplied by the source.
 
+    ``fit_transform(configuration_map, phis)`` replaces local fitting and
+    cannot be combined with ``transform``. It must set ``phi.coefficients``
+    and return the same Phi operators in their original order; see
+    :class:`TTRSS` for the complete callback contract.
+
     Examples
     --------
     >>> source = tk.decompositions.CallableQuanticsSource(
@@ -1298,7 +1379,8 @@ def qtt_rss(source: CallableQuanticsSource, sketch_samples: Samples, *,
         raise ValueError("`sample_space` should be 'coordinates' or 'digits'")
     if sample_space == 'digits':
         sketch_samples = ConfigurationBatch(sketch_samples)
-    return TTRSS(source, transform=transform, out_device=out_device).fit(
+    return TTRSS(source, transform=transform, fit_transform=fit_transform,
+                 out_device=out_device).fit(
         sketch_samples, rank=rank, center=center, cutoff=cutoff, atol=atol,
         rtol=rtol, cum_percentage=cum_percentage, batch_size=batch_size,
         generator=generator, verbose=verbose, collect_metrics=collect_metrics)

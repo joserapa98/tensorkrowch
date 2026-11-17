@@ -109,6 +109,18 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
     transform : callable, optional
         Called once with a :class:`ConfigurationMap` and returns transformed
         values with the same shape as its initial ``values`` table.
+    fit_transform : callable, optional
+        Alternative to ``transform`` and automatic local fitting. Called once
+        as ``fit_transform(configuration_map, phis)``, with the shared raw
+        observations and a tuple of untruncated :class:`PhiOperator` objects.
+        Set each operator's ``coefficients`` and optionally update its
+        ``embedding``; return a sequence containing the same operators in the
+        same order. Coefficients preserve external axes and replace the
+        physical axis by the embedding dimension. Runs with gradients enabled.
+        ``input_fitter`` remains available through each Phi for optional local
+        initialization. No fitting follows the callback. Source-error metrics
+        still compare the returned representation with raw source values;
+        they do not measure a user-defined objective.
     out_device : str or torch.device, optional
         Device receiving completed cores; ``None`` retains the source device.
     """
@@ -119,6 +131,7 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
                      InputFitter, Sequence[InputFitter]]] = None,
                  range_projector: Optional[RangeProjector] = None,
                  transform: Optional[Any] = None,
+                 fit_transform: Optional[Any] = None,
                  out_device: Optional[Union[str, torch.device]] = 'cpu'
                  ) -> None:
         if not isinstance(source, BaseSource):
@@ -140,6 +153,12 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
         if (transform is not None) and not callable(transform):
             raise TypeError('`transform` should be callable or None')
 
+        if (fit_transform is not None) and not callable(fit_transform):
+            raise TypeError('`fit_transform` should be callable or None')
+        if (transform is not None) and (fit_transform is not None):
+            raise ValueError(
+                '`transform` and `fit_transform` are incompatible')
+
         self._source = source
         self.domains = domains
         self.embeddings = embeddings
@@ -148,13 +167,15 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
             device=source.device, out_device=out_device, dtype=source.dtype)
         self._range_projector = range_projector
         self.transform = transform
+        self.fit_transform = fit_transform
 
         if input_fitter is None:
             fitters = []
             for kind, axis in outputs.layout:
-                fitters.append(FixedEmbeddingFitter(embeddings.matrix(axis))
-                               if kind == 'input' else BasisFitter(
-                                   in_dim=outputs.out_shape[axis]))
+                fitter = FixedEmbeddingFitter(embeddings.embeddings[axis]) \
+                    if kind == 'input' else BasisFitter(
+                        in_dim=outputs.out_shape[axis])
+                fitters.append(fitter)
         elif isinstance(input_fitter, InputFitter):
             fitters = [input_fitter] * outputs.n_sites
         elif isinstance(input_fitter, Sequence) and not isinstance(
@@ -226,13 +247,19 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
         with context.phase('input.fit', site=site):
             fitted = self.input_fitter[site].fit(
                 phi, axis, domain, return_info=context.need_diagnostics)
-        if context.collect_metrics and (fitted.record is not None):
-            context.metrics.input_fits.append(fitted.record)
-            threshold = torch.finfo(fitted.coefficients.real.dtype).eps ** -0.5
-            if fitted.record.condition_number > threshold:
+        self._record_input_fit(
+            site, fitted.record, fitted.coefficients, context)
+        return fitted.coefficients
+
+    def _record_input_fit(self, site: int, record: Any, tensor: torch.Tensor,
+                          context: _SketchingFitContext) -> None:
+        """Retains local or callback fitting diagnostics consistently."""
+        if context.collect_metrics and (record is not None):
+            context.metrics.input_fits.append(record)
+            threshold = torch.finfo(tensor.real.dtype).eps ** -0.5
+            if record.condition_number > threshold:
                 context.metrics.warnings.append(
                     f'Input fit at site {site} is ill-conditioned')
-        return fitted.coefficients
 
     @abstractmethod
     def fit(self, *args: Any, **kwargs: Any) -> Any:

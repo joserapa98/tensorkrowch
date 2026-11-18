@@ -275,7 +275,7 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
                                                        **options)
         indices = coordinate_map.to_indices(dataset)
         if kernel is None:
-            lookup = _SparseLookup(indices, weights, layout.grid_size)
+            lookup = _SparseLookup(indices, weights)
 
             def empirical(coordinates: torch.Tensor) -> torch.Tensor:
                 return lookup(coordinate_map.to_indices(coordinates))

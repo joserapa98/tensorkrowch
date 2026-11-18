@@ -91,3 +91,20 @@ def test_ravel_indices_preserves_int64_boundary():
     flat = _ravel_indices(indices, (2,) * 63)
     assert flat.item() == torch.iinfo(torch.int64).max
     torch.testing.assert_close(_unravel_indices(flat, (2,) * 63), indices)
+
+
+class TestCoordinateMatching:
+
+    def test_large_space_reordered_repeated_and_missing_rows(self):
+        from tensorkrowch.decompositions._utils import _match_indices
+        reference = torch.stack((torch.ones(144, dtype=torch.long),
+                                  torch.zeros(144, dtype=torch.long)))
+        missing = reference[0].clone()
+        missing[0] = 0
+        indices = torch.stack((reference[1], reference[0],
+                               missing, reference[1]))
+        assert _match_indices(indices, reference).tolist() == [1, 0, -1, 1]
+        assert _match_indices(indices, reference[:0]).tolist() == [-1] * 4
+        assert _match_indices(indices[:0], reference).shape == (0,)
+        empty = torch.empty(3, 0, dtype=torch.long)
+        assert _match_indices(empty, empty[:1]).tolist() == [0] * 3

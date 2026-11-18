@@ -6,7 +6,8 @@ This script contains:
         * _normalize_dims
         * _normalize_rank
 
-    Internal index conversions:
+    Internal index utilities:
+        * _match_indices
         * _ravel_indices
         * _unravel_indices
 """
@@ -52,6 +53,20 @@ def _normalize_rank(rank: Union[int, Sequence[int]],
         raise ValueError(
             f'`rank` should contain {n_links} values, one per link')
     return ranks
+
+
+def _match_indices(indices: torch.Tensor,
+                    reference: torch.Tensor) -> torch.Tensor:
+    """Maps coordinate rows to unique reference-row positions, or ``-1``."""
+    if not indices.shape[1]:
+        return indices.new_full((indices.shape[0],),
+                                0 if reference.shape[0] else -1)
+    unique, inverse = torch.unique(torch.cat((reference, indices)),
+                                    dim=0, return_inverse=True)
+    count = reference.shape[0]
+    positions = inverse.new_full((unique.shape[0],), -1)
+    positions[inverse[:count]] = torch.arange(count, device=inverse.device)
+    return positions[inverse[count:]]
 
 
 def _ravel_indices(indices: torch.Tensor,

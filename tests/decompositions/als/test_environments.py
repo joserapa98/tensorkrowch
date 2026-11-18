@@ -27,6 +27,13 @@ from tests.decompositions.als._oracles import (absorb_right_qr,
                                                solve_local_core)
 
 
+def _oracle_coordinates(ids, cores):
+    """Coordinates of selected rows in the small materialized dense oracle."""
+    return torch.stack(torch.unravel_index(
+        ids, tuple(core.shape[1] for core in cores)), 1)
+
+
+
 def _empty_update():
     """Returns an atomic commit that only advances a fixed site."""
     return dict(zip((), ()))
@@ -83,7 +90,8 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
             ids=flat_ids,
             probabilities=probabilities,
             weights=(5 * probabilities).rsqrt(),
-            generation=4)
+            generation=4,
+            indices=_oracle_coordinates(flat_ids, cores))
         order = tuple(range(len(cores)))
         if direction == 'reverse':
             order = tuple(reversed(order))
@@ -259,12 +267,14 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
             ids=torch.tensor([0, 4, 9]),
             probabilities=probabilities,
             weights=(3 * probabilities).rsqrt(),
-            generation=0)
+            generation=0,
+            indices=_oracle_coordinates(torch.tensor([0, 4, 9]), cores))
         second_samples = tk.decompositions.SampleBatch(
             ids=torch.tensor([1, 5, 10]),
             probabilities=probabilities,
             weights=(3 * probabilities).rsqrt(),
-            generation=1)
+            generation=1,
+            indices=_oracle_coordinates(torch.tensor([1, 5, 10]), cores))
         cache = tk.decompositions.TTEnvironmentCache(cores)
         order = tuple(range(len(cores)))
         cache.prepare_sweep(order, first_samples)
@@ -500,7 +510,8 @@ class TestDirectTREnvironment:  # MARK: TestDirectTREnvironment
             ids=ids,
             probabilities=probabilities,
             weights=(4 * probabilities).rsqrt(),
-            generation=3)
+            generation=3,
+            indices=_oracle_coordinates(ids, cores))
         local = tk.decompositions.DirectTREnvironment(cores)
         local.design(1, samples=samples)
         expected = dense_local_design(
@@ -547,7 +558,8 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
             ids=ids,
             probabilities=probabilities,
             weights=(5 * probabilities).rsqrt(),
-            generation=6)
+            generation=6,
+            indices=_oracle_coordinates(ids, cores))
         order = tuple(range(len(cores)))
         if direction == 'reverse':
             order = tuple(reversed(order))
@@ -703,7 +715,8 @@ class TestEnvironmentContracts:  # MARK: TestEnvironmentContracts
         ids = torch.tensor([0, 7, 7, 13, 20, 23])
         probabilities = torch.full((len(ids),), 1 / prod(dimensions))
         samples = tk.decompositions.SampleBatch(
-            ids, probabilities, (len(ids) * probabilities).rsqrt(), 3)
+            ids, probabilities, (len(ids) * probabilities).rsqrt(), 3,
+            indices=_oracle_coordinates(ids, cores))
         original = (samples.ids.clone(), samples.probabilities.clone(),
                     samples.weights.clone())
         caches = [cache_type(cores, zipup=zipup, renormalize=renormalize)
@@ -928,7 +941,7 @@ def test_compact_sampled_designs_share_complete_fibers(dtype, site):
         owner = SimpleNamespace(cores=cores, core_versions=(0,) * 4)
         batch = tk.decompositions.UniformRows().draw(
             owner, site, 12, generator)
-        indices = torch.stack(torch.unravel_index(batch.ids, dimensions), 1)
+        indices = batch.indices
         if topology == 'tt':
             matrix, scale = _direct_sampled_tt_design(
                 cores, site, indices, True, compact=True)

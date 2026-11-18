@@ -552,7 +552,7 @@ class CallableTensorSource(CallableSource):  # MARK: CallableTensorSource
 
         in_dim = _normalize_dims(in_dim, 'in_dim')
         indices = _discrete_indices(configurations, in_dim, dataset.device)
-        evaluator = _SparseLookup(indices, weights, in_dim) if kernel is None \
+        evaluator = _SparseLookup(indices, weights) if kernel is None \
             else _DataEvaluator(dataset, weights, kernel, kernel_kwargs)
         return cls(evaluator, in_dim, out_shape=(),
                    dtype=weights.dtype if kernel is None else None,

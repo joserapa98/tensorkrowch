@@ -9,6 +9,32 @@ import tensorkrowch as tk
 
 class TestSparseTensorSource:  # MARK: TestSparseTensorSource
 
+    @pytest.mark.parametrize('dimensions', [(2,) * 144, (10,) * 20])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128,
+                                       torch.bool])
+    def test_coordinate_lookup_without_representable_flat_ids(
+            self, dimensions, dtype):
+        count = len(dimensions)
+        indices = torch.stack((torch.zeros(count, dtype=torch.long),
+                               torch.ones(count, dtype=torch.long),
+                               torch.zeros(count, dtype=torch.long)))
+        values = torch.tensor([[1., 2.], [3., 4.], [2., 3.]], dtype=dtype)
+        source = tk.decompositions.SparseTensorSource(
+            indices, values, in_dim=(*dimensions, 2))
+        missing = torch.zeros(count, dtype=torch.long)
+        missing[0] = 1
+        queries = torch.stack((indices[1], missing, indices[0], indices[1]))
+        expected = torch.stack((values[1], torch.zeros_like(values[1]),
+                                values[0] + values[2], values[1]))
+        torch.testing.assert_close(source.evaluate(
+            tk.decompositions.ConfigurationBatch(queries)), expected)
+        if dtype == torch.float64:
+            empirical = tk.decompositions.SparseTensorSource.from_data(
+                indices, in_dim=dimensions, dtype=dtype)
+            torch.testing.assert_close(empirical.evaluate(
+                tk.decompositions.ConfigurationBatch(queries)),
+                torch.tensor([1/3, 0., 2/3, 1/3], dtype=dtype))
+
     def test_sparse_source_coalesces_and_declares_missing_zeros(self):
         source = tk.decompositions.SparseTensorSource(
             indices=torch.tensor([[0, 0], [0, 0], [1, 2]]),

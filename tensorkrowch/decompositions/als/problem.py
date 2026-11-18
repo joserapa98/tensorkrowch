@@ -16,7 +16,7 @@ import torch
 
 from tensorkrowch.utils import safe_divide
 
-from tensorkrowch.decompositions._utils import (_ravel_indices,
+from tensorkrowch.decompositions._utils import (_match_indices,
                                                 _unravel_indices)
 from tensorkrowch.decompositions.als.environments import _evaluate_cores
 from tensorkrowch.decompositions.sources import (BaseSource,
@@ -340,13 +340,9 @@ class ALSProblem:  # MARK: ALSProblem
             if self.observations is None:
                 weights = self.weights[tuple(indices.unbind(1))]
             else:
-                stored = _ravel_indices(
-                    self.observations.support.values, self.in_dim)
-                queried = _ravel_indices(indices, self.in_dim)
-                positions = torch.searchsorted(stored, queried)
-                valid = positions < stored.numel()
-                positions = positions.clamp_max(stored.numel() - 1)
-                if not torch.all(valid & (stored[positions] == queried)):
+                positions = _match_indices(
+                    indices, self.observations.support.values)
+                if torch.any(positions < 0):
                     raise ValueError(
                         '`indices` should belong to observed support')
                 weights = self.weights[positions]

@@ -361,6 +361,14 @@ target values. Values greater than one also reuse those targets across that
 many directional sweeps. Fixed observations remain restricted to their
 known entries and never expand unknown fibers.
 
+Configurations are stored as multi-indices, one coordinate row per sample.
+Sparse keys, observed-weight lookups and sampled prefix/suffix states use
+these rows without encoding the complete tensor position in an integer.
+``SampleBatch.indices`` supplies configurations to evaluation and environment
+contractions. Optional ``SampleBatch.ids`` only selects rows of an explicit
+reference table, as in observed support or a materialized system; it does
+not encode a configuration and cannot replace ``indices`` in contractions.
+
 ``SamplingPolicy(zipup=False)`` selects physical slices before contracting
 each core, which is the default. With ``zipup=True``, contraction with the
 accumulated environment precedes physical selection. This changes only the
@@ -979,7 +987,10 @@ available operators extend that basic formulation.
 
 Available contraction strategies are:
 
-* :class:`SampledSketch`: select fibers using supplied or generated indices.
+* :class:`SampledSketch`: select fibers using coordinate configurations.
+  Sparse sources default to their stored support. Structured sources without
+  explicit ``samples`` enumerate candidate prefix/suffix states before applying
+  ``sketch_size``; excessive enumeration raises an error requesting samples.
 * :class:`MarginalSketch`: form local marginals, with configurable order and
   optional per-site factors. This is the default strategy.
 * :class:`TTStackSketch`: contract a stack of TT sketches; its construction is

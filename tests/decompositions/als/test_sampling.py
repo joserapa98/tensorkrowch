@@ -13,6 +13,15 @@ from tensorkrowch.decompositions.als import sampling as sampling_module
 from tests.decompositions.als._oracles import dense_local_design, make_tr_cores
 
 
+def _reference_ids(batch, dimensions):
+    """Positions in the small row-major dense oracle used by these tests."""
+    ids = torch.zeros(batch.indices.shape[0], dtype=torch.long,
+                      device=batch.indices.device)
+    for site, dimension in enumerate(dimensions):
+        ids = ids * dimension + batch.indices[:, site]
+    return ids
+
+
 def _mixed_canonical_cores(tensor, site, rank=2):
     """Builds standard TT cores mixed-canonical around ``site``."""
     result = tk.decompositions.TTSVD(
@@ -47,23 +56,24 @@ class TestSamplingPolicy:  # MARK: TestSamplingPolicy
         (tk.decompositions.TRALS, 'leverage', 0),
         (tk.decompositions.TRALS, 'product_leverage', 0),
     ])
-    def test_coordinate_and_legacy_batches_give_same_updates(
+    def test_reference_row_ids_do_not_change_coordinate_updates(
             self, engine, method, reuse, monkeypatch):
         tensor = torch.arange(1., 4., dtype=torch.float64)
         tensor = torch.einsum('i,j,k->ijk', tensor, tensor, tensor)
         build = sampling_module._sample_batch
-        legacy = False
+        with_ids = False
         draws = []
 
         def sample(*args, **kwargs):
             batch = build(*args, **kwargs)
-            draws.append((batch.ids.clone(), batch.probabilities.clone(),
+            draws.append((batch.indices.clone(), batch.probabilities.clone(),
                           batch.weights.clone()))
-            return replace(batch, indices=None) if legacy else batch
+            return replace(batch, ids=torch.arange(batch.indices.shape[0])) \
+                if with_ids else batch
 
         monkeypatch.setattr(sampling_module, '_sample_batch', sample)
         fits, states, records = [], [], []
-        for legacy in (False, True):
+        for with_ids in (False, True):
             draws.clear()
             generator = torch.Generator().manual_seed(933)
             fits.append(engine(tensor).fit(
@@ -108,7 +118,7 @@ class TestSamplingPolicy:  # MARK: TestSamplingPolicy
             raise AssertionError('Sampling must not materialize the tensor')
 
         monkeypatch.setattr(source, 'contract_dense', forbidden)
-        monkeypatch.setattr(sampling_module, '_ravel_indices', forbidden)
+        assert not hasattr(sampling_module, '_ravel_indices')
         monkeypatch.setattr(sampling_module, '_unravel_indices', forbidden)
         sampler_type = (tk.decompositions.UniformRows if method == 'uniform'
                         else tk.decompositions.TTLeverageRows
@@ -173,7 +183,8 @@ class TestSamplingPolicy:  # MARK: TestSamplingPolicy
 
         def record(*args, **kwargs):
             batch = draw(*args, **kwargs)
-            records.append((batch.ids.clone(), batch.probabilities.clone(),
+            assert batch.ids is None
+            records.append((batch.indices.clone(), batch.probabilities.clone(),
                             batch.weights.clone()))
             return batch
 
@@ -308,28 +319,38 @@ class TestSampleBatch:  # MARK: TestSampleBatch
         assert not batch.is_exact_for((1, 5, 2))
         assert not approximate.is_exact_for((1, 4, 2))
 
-    def test_coordinate_batches_match_legacy_ids(self):
+    def test_reference_rows_alone_cannot_define_configurations(self):
+        probabilities = torch.ones(2)
+        batch = tk.decompositions.SampleBatch(
+            torch.tensor([0, 1]), probabilities, torch.full((2,), 2**-.5), 0)
+        with pytest.raises(ValueError,
+                           match='configurations require `indices`'):
+            batch._get_indices((2,), torch.device('cpu'))
+
+    def test_reference_row_ids_do_not_encode_coordinates(self):
         indices = torch.tensor([[0, 1], [1, 2], [1, 0]])
         ids = torch.tensor([1, 5, 3])
         probabilities = torch.full((3,), 1 / 6, dtype=torch.float64)
         weights = (3 * probabilities).rsqrt()
-        legacy = tk.decompositions.SampleBatch(ids, probabilities, weights, 0)
+        with_ids = tk.decompositions.SampleBatch(
+            torch.tensor([8, 3, 42]), probabilities, weights, 0,
+            indices=indices)
         coordinates = tk.decompositions.SampleBatch(
             None, probabilities, weights, 0, indices=indices)
-        for batch in (legacy, coordinates):
+        for batch in (with_ids, coordinates):
             torch.testing.assert_close(batch._get_indices((2, 3), ids.device),
                                        indices)
         cores = [torch.ones(1, 2, 1), torch.ones(1, 3, 1)]
         for cls in (tk.decompositions.TTEnvironmentCache,
                     tk.decompositions.TRSegmentEnvironmentCache):
             environments = []
-            for batch in (legacy, coordinates):
+            for batch in (with_ids, coordinates):
                 cache = cls(cores)
                 cache.prepare_sweep((0, 1), samples=batch)
                 environments.append(cache.design(0))
             torch.testing.assert_close(*environments)
         environments = [tk.decompositions.DirectTREnvironment(cores).design(
-            0, samples=batch) for batch in (legacy, coordinates)]
+            0, samples=batch) for batch in (with_ids, coordinates)]
         torch.testing.assert_close(*environments)
 
     @pytest.mark.parametrize('field,value,error', [
@@ -383,7 +404,7 @@ class TestRowSamplers:  # MARK: TestRowSamplers
             n_samples=20,
             generator=torch.Generator().manual_seed(30))
 
-        assert torch.equal(first.ids, second.ids)
+        assert torch.equal(first.indices, second.indices)
         assert torch.equal(first.probabilities, second.probabilities)
         assert torch.equal(first.weights, second.weights)
         assert torch.equal(
@@ -401,6 +422,8 @@ class TestRowSamplers:  # MARK: TestRowSamplers
             n_samples=100_000,
             generator=generator)
 
+        batch = replace(batch, ids=_reference_ids(
+            batch, tuple(core.shape[1] for core in state.cores)))
         sampled_environment, sampled_target = batch.gather_and_weight(
             environment, target)
 
@@ -426,7 +449,7 @@ class TestRowSamplers:  # MARK: TestRowSamplers
         batch = sampler.draw(
             state, site=0, n_samples=None, generator=None)
 
-        assert torch.equal(batch.ids, torch.tensor([1, 3, 5]))
+        assert torch.equal(batch.ids, torch.arange(3))
         assert torch.equal(batch.weights, torch.ones(3))
         assert not sampler.refreshable
 
@@ -442,7 +465,7 @@ class TestRowSamplers:  # MARK: TestRowSamplers
         batch = tk.decompositions.UniformRows().draw(
             state, site=0, n_samples=8, generator=generator)
 
-        assert batch.ids.device.type == 'cuda'
+        assert batch.indices.device.type == 'cuda'
         assert batch.probabilities.device.type == 'cuda'
         with pytest.raises(ValueError, match='generator'):
             tk.decompositions.UniformRows().draw(
@@ -505,8 +528,7 @@ class TestSampleReuse:  # MARK: TestSampleReuse
             for site, dimension in enumerate(dimensions):
                 batch, refreshed = policy.sample(
                     sampler, owner, site, 7, generator, sweep=sweep)
-                indices = torch.stack(torch.unravel_index(
-                    batch.ids, dimensions), dim=1).reshape(7, dimension, -1)
+                indices = batch.indices.reshape(7, dimension, -1)
                 assert torch.equal(indices[:, :, site],
                                    torch.arange(dimension).expand(7, -1))
                 external = [i for i in range(len(dimensions)) if i != site]
@@ -641,8 +663,7 @@ class TestTTLeverageRows:  # MARK: TestTTLeverageRows
             n_samples=100,
             generator=torch.Generator().manual_seed(36))
 
-        indices = torch.stack(torch.unravel_index(
-            batch.ids, tensor.shape), dim=1)
+        indices = batch.indices
         expected = sampler.probabilities(
             site, tk.decompositions.ConfigurationBatch(indices))
         assert torch.allclose(batch.probabilities, expected)
@@ -669,6 +690,8 @@ class TestTTLeverageRows:  # MARK: TestTTLeverageRows
             site=site,
             n_samples=100_000,
             generator=generator)
+        batch = replace(batch, ids=_reference_ids(
+            batch, tuple(core.shape[1] for core in cores)))
         sampled_design, sampled_target = batch.gather_and_weight(
             design, target)
 
@@ -763,18 +786,17 @@ class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
             site=2,
             n_samples=100,
             generator=torch.Generator().manual_seed(73))
-        indices = torch.stack(torch.unravel_index(
-            batch.ids, tuple(core.shape[1] for core in cores)), dim=1)
+        indices = batch.indices
         expected = sampler.probabilities(
             2, tk.decompositions.ConfigurationBatch(indices))
 
         assert torch.allclose(batch.probabilities, expected)
         assert torch.allclose(
-            batch.weights, (batch.ids.numel() * expected).rsqrt())
+            batch.weights, (batch.indices.shape[0] * expected).rsqrt())
         assert batch.proposal_core_versions == (2, 4, 3, 1)
         assert not batch.is_exact_for((2, 4, 3, 1))
         assert batch.site == 2
-        assert batch.ids.numel() == 100 * cores[2].shape[1]
+        assert batch.indices.shape[0] == 100 * cores[2].shape[1]
         fibers = indices.reshape(100, cores[2].shape[1], len(cores))
         assert torch.equal(
             fibers[:, :, 2],
@@ -803,6 +825,8 @@ class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
             site=site,
             n_samples=50_000,
             generator=generator)
+        batch = replace(batch, ids=_reference_ids(
+            batch, tuple(core.shape[1] for core in cores)))
         sampled_design, sampled_target = batch.gather_and_weight(
             design, target)
 
@@ -881,13 +905,12 @@ class TestTRExactLeverageRows:  # MARK: TestTRExactLeverageRows
             site=site,
             n_samples=40,
             generator=torch.Generator().manual_seed(77))
-        indices = torch.stack(torch.unravel_index(
-            batch.ids, in_dim), dim=1)
+        indices = batch.indices
         expected = sampler.probabilities(
             site, tk.decompositions.ConfigurationBatch(indices))
         fibers = indices.reshape(40, in_dim[site], len(in_dim))
 
-        assert batch.ids.numel() == 40 * in_dim[site]
+        assert batch.indices.shape[0] == 40 * in_dim[site]
         assert torch.equal(
             fibers[:, :, site],
             torch.arange(in_dim[site]).expand(40, -1))
@@ -899,7 +922,7 @@ class TestTRExactLeverageRows:  # MARK: TestTRExactLeverageRows
             fibers[:, :1, site + 1:].expand(-1, in_dim[site], -1))
         assert torch.allclose(batch.probabilities, expected)
         assert torch.allclose(
-            batch.weights, (batch.ids.numel() * expected).rsqrt())
+            batch.weights, (batch.indices.shape[0] * expected).rsqrt())
         assert batch.is_exact_for((1, 4, 2, 3))
         assert not batch.is_exact_for((1, 5, 2, 3))
 
@@ -920,7 +943,8 @@ class TestTRExactLeverageRows:  # MARK: TestTRExactLeverageRows
             n_samples=n_samples,
             generator=torch.Generator().manual_seed(81))
 
-        base_ids = batch.ids.reshape(n_samples, in_dim[site])[:, 0]
+        base_ids = _reference_ids(batch, in_dim).reshape(
+            n_samples, in_dim[site])[:, 0]
         frequencies = torch.bincount(
             base_ids, minlength=prod(in_dim)).to(torch.float64) / n_samples
         all_ids = torch.arange(prod(in_dim))
@@ -1032,11 +1056,11 @@ class TestLeverageContracts:  # MARK: TestLeverageContracts
         assert sampler.probabilities(site, empty).shape == (0,)
         state = _owner(prod(dimensions), (0,) * n_sites)
         batch = sampler.draw(state, site, 8, generator=generator)
-        drawn = torch.stack(torch.unravel_index(batch.ids, dimensions), dim=1)
+        drawn = batch.indices
         expected = sampler.probabilities(
             site, tk.decompositions.ConfigurationBatch(drawn))
         assert torch.allclose(batch.probabilities, expected)
-        assert batch.ids.numel() == 8 * dimensions[site]
+        assert batch.indices.shape[0] == 8 * dimensions[site]
         fibers = drawn.reshape(8, dimensions[site], n_sites)
         assert torch.equal(fibers[:, :, site],
                            torch.arange(dimensions[site]).expand(8, -1))
@@ -1051,7 +1075,8 @@ class TestLeverageContracts:  # MARK: TestLeverageContracts
         sampler = tk.decompositions.ObservedRows(observations)
         state = _owner(2 ** n_sites, (0,) * n_sites)
         batch = sampler.draw(state, 0)
-        assert torch.equal(batch.ids, torch.tensor([0, 2 ** n_sites - 1]))
+        assert torch.equal(batch.ids, torch.arange(2))
+        assert torch.equal(batch.indices, indices)
         assert torch.equal(batch.weights, torch.ones(2))
         with pytest.raises(ValueError, match='all observations'):
             sampler.draw(state, 0, n_samples=1)

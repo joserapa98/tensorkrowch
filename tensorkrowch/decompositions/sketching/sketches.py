@@ -11,7 +11,6 @@ This script contains:
 
     Functions:
         * _one_hot_ids
-        * _selected_ids
         * _sample_states
         * _sampled_blocks
         * _structured_capability
@@ -36,7 +35,8 @@ import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES
 
-from tensorkrowch.decompositions._utils import (_normalize_rank,
+from tensorkrowch.decompositions._utils import (_match_indices,
+                                                _normalize_rank,
                                                 _normalize_dims,
                                                 _ravel_indices,
                                                 _unravel_indices)
@@ -66,31 +66,16 @@ def _one_hot_ids(ids: torch.Tensor,
     return result
 
 
-def _selected_ids(values: torch.Tensor,
-                  reference: torch.Tensor) -> torch.Tensor:
-    """
-    Maps sorted flat ``values`` to sorted ``reference`` positions or ``-1``.
-    """
-    positions = torch.searchsorted(reference, values)
-    safe = positions.clamp(max=max(reference.numel() - 1, 0))
-    result = torch.full_like(positions, -1)
-    if reference.numel():
-        matched = (positions < reference.numel()) & \
-            (reference.index_select(0, safe) == values)
-        result[matched] = positions[matched]
-    return result
-
-
 def _sample_states(values: torch.Tensor,
                    maximum: Optional[int],
                    generator: Optional[torch.Generator]) -> torch.Tensor:
-    """Selects a deterministic sorted state set under an optional cap."""
-    states = torch.unique(values, sorted=True)
-    if (maximum is None) or (states.numel() <= maximum):
+    """Selects sorted unique coordinate rows under an optional cap."""
+    states = torch.unique(values, dim=0, sorted=True)
+    if (maximum is None) or (states.shape[0] <= maximum):
         return states
     permutation = torch.randperm(
-        states.numel(), generator=generator, device=states.device)[:maximum]
-    return states.index_select(0, permutation).sort().values
+        states.shape[0], generator=generator, device=states.device)[:maximum]
+    return states.index_select(0, permutation.sort().values)
 
 
 def _sampled_blocks(states: Sequence[torch.Tensor],
@@ -104,25 +89,20 @@ def _sampled_blocks(states: Sequence[torch.Tensor],
     for cut, current_states in enumerate(states):
         if right:
             site = cut + 1
-            old_states = current_states.new_tensor([0]) \
+            old_states = current_states.new_empty(1, 0) \
                 if site == len(in_dim) - 1 else states[cut + 1]
-            stride = prod(in_dim[site + 1:])
-            current = torch.div(
-                current_states, stride, rounding_mode='floor')
-            previous = current_states.remainder(stride)
+            current, previous = current_states[:, 0], current_states[:, 1:]
         else:
             site = cut
-            old_states = current_states.new_tensor([0]) \
+            old_states = current_states.new_empty(1, 0) \
                 if site == 0 else states[cut - 1]
-            current = current_states.remainder(in_dim[site])
-            previous = torch.div(
-                current_states, in_dim[site], rounding_mode='floor')
-        positions = _selected_ids(previous, old_states)
+            current, previous = current_states[:, -1], current_states[:, :-1]
+        positions = _match_indices(previous, old_states)
         valid = positions >= 0
         block = torch.zeros(
-            current_states.numel(), in_dim[site], old_states.numel(),
+            current_states.shape[0], in_dim[site], old_states.shape[0],
             dtype=dtype, device=device)
-        rows = torch.arange(current_states.numel(), device=device)[valid]
+        rows = torch.arange(current_states.shape[0], device=device)[valid]
         block[rows, current[valid], positions[valid]] = 1
         blocks.append(block)
     return tuple(blocks)
@@ -617,7 +597,9 @@ class SampledSketch(SketchOperator):  # MARK: SampledSketch
         ``None`` uses the source support or all states for a format source.
     sketch_size : int or None, optional
         Maximum number of distinct prefix and suffix states at each cut.
-        ``None`` retains every reference state.
+        ``None`` retains every reference state. For structured sources without
+        ``samples``, candidate states are enumerated before this selection;
+        excessively large enumerations raise an error requesting ``samples``.
 
     Examples
     --------
@@ -672,23 +654,30 @@ class SampledSketch(SketchOperator):  # MARK: SampledSketch
 
         prefix_states = []
         suffix_states = []
+        # Bound candidate-coordinate storage before any Cartesian enumeration.
+        if (reference is None) and (sum(
+                (cut + 1) * prod(dimensions[:cut + 1]) +
+                (len(dimensions) - cut - 1) * prod(dimensions[cut + 1:])
+                for cut in range(len(dimensions) - 1)) > 1_000_000):
+            raise ValueError(
+                'Implicit SampledSketch states are too large to enumerate; '
+                'provide explicit `samples`. `sketch_size` limits selected '
+                'states, not this enumeration')
         for site in range(len(dimensions) - 1):
             if reference is None:
-                prefix_ids = torch.arange(
-                    prod(dimensions[:site + 1]), device=device)
-                suffix_ids = torch.arange(
-                    prod(dimensions[site + 1:]), device=device)
+                prefix = _unravel_indices(torch.arange(
+                    prod(dimensions[:site + 1]), device=device),
+                    dimensions[:site + 1])
+                suffix = _unravel_indices(torch.arange(
+                    prod(dimensions[site + 1:]), device=device),
+                    dimensions[site + 1:])
             else:
-                prefix_ids = _ravel_indices(
-                    reference[:, :site + 1], dimensions[:site + 1])
-                suffix_ids = _ravel_indices(
-                    reference[:, site + 1:], dimensions[site + 1:])
-            states = _sample_states(
-                prefix_ids, self.sketch_size, generator)
-            suffix = _sample_states(
-                suffix_ids, self.sketch_size, generator)
-            prefix_states.append(states)
-            suffix_states.append(suffix)
+                prefix = reference[:, :site + 1]
+                suffix = reference[:, site + 1:]
+            prefix_states.append(_sample_states(
+                prefix, self.sketch_size, generator))
+            suffix_states.append(_sample_states(
+                suffix, self.sketch_size, generator))
 
         blocks = _sampled_blocks(
             prefix_states, dimensions, source.dtype, device)
@@ -704,13 +693,11 @@ class SampledSketch(SketchOperator):  # MARK: SampledSketch
         for site in range(len(dimensions)):
             left = left_kernel(torch.empty(
                 1, 0, dtype=torch.long, device=device)) if site == 0 else \
-                left_kernel(_unravel_indices(
-                    prefix_states[site - 1], dimensions[:site]))
+                left_kernel(prefix_states[site - 1])
             right = right_kernel(torch.empty(
                 1, 0, dtype=torch.long, device=device)) \
                 if site == len(dimensions) - 1 else right_kernel(
-                    _unravel_indices(
-                        suffix_states[site], dimensions[site + 1:]))
+                    suffix_states[site])
             phis.append(phi_kernel(site, left, right))
         return CoreDeterminingSystem(
             phi=phis,
@@ -723,11 +710,11 @@ class SampledSketch(SketchOperator):  # MARK: SampledSketch
                 'structured_kernel': 'sampled_prefix_suffix',
                 'support_size': None,
                 'sampled_states': tuple(
-                    states.numel() for states in prefix_states),
+                    states.shape[0] for states in prefix_states),
                 'left_dimensions': tuple(
-                    states.numel() for states in prefix_states),
+                    states.shape[0] for states in prefix_states),
                 'right_dimensions': tuple(
-                    states.numel() for states in suffix_states),
+                    states.shape[0] for states in suffix_states),
             })
 
     def _weights(self,
@@ -750,23 +737,21 @@ class SampledSketch(SketchOperator):  # MARK: SampledSketch
         prefix_states = []
         suffix_states = []
         for cut in range(len(in_dim) - 1):
-            prefix_dim = in_dim[:cut + 1]
             states = _sample_states(
-                _ravel_indices(reference[:, :cut + 1], prefix_dim),
+                reference[:, :cut + 1],
                 self.sketch_size, generator)
             prefix_states.append(states)
-            ids = _ravel_indices(indices[:, :cut + 1], prefix_dim)
+            coordinates = indices[:, :cut + 1]
             left.append(_one_hot_ids(
-                _selected_ids(ids, states), states.numel(), dtype))
+                _match_indices(coordinates, states), states.shape[0], dtype))
 
-            suffix_dim = in_dim[cut + 1:]
             states = _sample_states(
-                _ravel_indices(reference[:, cut + 1:], suffix_dim),
+                reference[:, cut + 1:],
                 self.sketch_size, generator)
             suffix_states.append(states)
-            ids = _ravel_indices(indices[:, cut + 1:], suffix_dim)
+            coordinates = indices[:, cut + 1:]
             right.append(_one_hot_ids(
-                _selected_ids(ids, states), states.numel(), dtype))
+                _match_indices(coordinates, states), states.shape[0], dtype))
 
         blocks = _sampled_blocks(
             prefix_states, in_dim, dtype, indices.device)
@@ -776,7 +761,7 @@ class SampledSketch(SketchOperator):  # MARK: SampledSketch
             left, right, blocks, right_blocks,
             torch.ones(indices.shape[0], device=indices.device, dtype=dtype),
             diagnostics={'sampled_states': tuple(
-                states.numel() for states in prefix_states)})
+                states.shape[0] for states in prefix_states)})
 
 
 class MarginalSketch(SketchOperator):  # MARK: MarginalSketch

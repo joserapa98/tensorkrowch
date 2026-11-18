@@ -417,3 +417,22 @@ class TestFixedEvaluation:  # MARK: TestFixedEvaluation
         reference = 2 * problem._evaluation_indices.sum(1).double()
         assert not problem._evaluation_values.requires_grad
         assert problem.evaluation_error(reference)[0] == 0
+
+
+@pytest.mark.parametrize('dimensions', [(2,) * 144, (10,) * 20])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_observed_weights_use_support_rows_in_large_spaces(dimensions, dtype):
+    indices = torch.stack((torch.zeros(len(dimensions), dtype=torch.long),
+                           torch.ones(len(dimensions), dtype=torch.long)))
+    observations = tk.decompositions.SparseTensorSource(
+        indices, torch.tensor([0., 2.], dtype=dtype), dimensions)
+    weights = torch.tensor([.25, 3.], dtype=torch.float64)
+    problem = tk.decompositions.ALSProblem(observations=observations,
+                                          weights=weights)
+    query = indices[[1, 0, 1]]
+    torch.testing.assert_close(problem.entry_weights(query),
+                               weights[[1, 0, 1]])
+    missing = indices[0:1].clone()
+    missing[0, 0] = 1
+    with pytest.raises(ValueError, match='observed support'):
+        problem.entry_weights(missing)

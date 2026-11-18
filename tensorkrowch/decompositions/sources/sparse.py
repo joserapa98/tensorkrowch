@@ -8,7 +8,7 @@ This script contains:
         * SparseTensorSource
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from math import prod
 from typing import Optional, Sequence, Tuple
 
@@ -16,8 +16,8 @@ import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES
 
-from tensorkrowch.decompositions._utils import (_normalize_dims,
-                                                _ravel_indices,
+from tensorkrowch.decompositions._utils import (_match_indices,
+                                                _normalize_dims,
                                                 _unravel_indices)
 from tensorkrowch.decompositions.sources.base import (BaseSource,
                                                       ConfigurationBatch,
@@ -27,36 +27,27 @@ from tensorkrowch.decompositions.sources.base import (BaseSource,
 
 @dataclass
 class _SparseLookup:  # MARK: _SparseLookup
-    """Stores coalesced indexed values and performs ordered sparse lookups."""
+    """Coalesces coordinate rows and looks up values without global row ids."""
 
     indices: torch.Tensor
     values: torch.Tensor
-    in_dim: Tuple[int, ...]
-    flat_ids: torch.Tensor = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        flat_ids = _ravel_indices(self.indices, self.in_dim)
-        self.flat_ids, inverse = torch.unique(flat_ids,
-                                              sorted=True,
-                                              return_inverse=True)
+        self.indices, inverse = torch.unique(
+            self.indices, dim=0, sorted=True, return_inverse=True)
         values = self.values
         if values.dtype == torch.bool:
             values = values.to(torch.long)
-        combined = values.new_zeros((self.flat_ids.numel(), *values.shape[1:]))
+        combined = values.new_zeros((self.indices.shape[0], *values.shape[1:]))
         self.values = combined.index_add(0, inverse, values).to(self.values.dtype)
-        self.indices = _unravel_indices(self.flat_ids, self.in_dim)
 
     def __call__(self, indices: torch.Tensor) -> torch.Tensor:
         """Returns stored values or zero for absent configurations."""
-        flat_ids = _ravel_indices(indices.to(torch.long), self.in_dim)
-        positions = torch.searchsorted(self.flat_ids, flat_ids)
-        result = self.values.new_zeros((flat_ids.numel(),
+        positions = _match_indices(indices.to(torch.long), self.indices)
+        matched = positions >= 0
+        result = self.values.new_zeros((indices.shape[0],
                                         *self.values.shape[1:]))
-        if self.flat_ids.numel():
-            safe = positions.clamp(max=self.flat_ids.numel() - 1)
-            matched = (positions < self.flat_ids.numel()) & (
-                self.flat_ids.index_select(0, safe) == flat_ids)
-            result[matched] = self.values.index_select(0, safe[matched])
+        result[matched] = self.values[positions[matched]]
         return result
 
 
@@ -163,9 +154,8 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
         indices = _discrete_indices(
             ConfigurationBatch(indices, kind='indices'),
             self._in_sites_dims, values.device)
-        self._lookup = _SparseLookup(indices, values, self._in_sites_dims)
+        self._lookup = _SparseLookup(indices, values)
         self._indices, self._values = self._lookup.indices, self._lookup.values
-        self._flat_ids = self._lookup.flat_ids
 
     @classmethod
     def matrix(cls,

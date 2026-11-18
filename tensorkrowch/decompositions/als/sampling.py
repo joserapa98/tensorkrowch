@@ -31,7 +31,7 @@ import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES
 
-from tensorkrowch.decompositions._utils import _ravel_indices, _unravel_indices
+from tensorkrowch.decompositions._utils import _unravel_indices
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
                                                  SparseTensorSource)
 from tensorkrowch.decompositions.sources.base import _discrete_indices
@@ -163,9 +163,9 @@ class SampleBatch:  # MARK: SampleBatch
     Parameters
     ----------
     ids : torch.Tensor or None
-        Integer global row identifiers with shape ``(n_rows,)``, when the
-        complete input space fits int64. Otherwise ``None``; ``indices``
-        supplies the sampled configurations.
+        Optional row positions in an explicit reference table, with shape
+        ``(n_rows,)``. These do not encode tensor configurations; ``indices``
+        retains their coordinates.
     probabilities : torch.Tensor
         Positive draw probabilities with shape ``(n_rows,)``.
     weights : torch.Tensor
@@ -183,10 +183,11 @@ class SampleBatch:  # MARK: SampleBatch
     indices : torch.Tensor, optional
         Integer configurations with shape ``(n_rows, n_sites)``. Samplers
         retain these coordinates for evaluation and environment contractions.
-        Legacy batches containing only ``ids`` are decoded when used.
+        Required when evaluating configurations or contracting environments.
+        ``ids`` alone can only select rows from an explicit matrix.
     """
 
-    ids: Optional[torch.Tensor]  # Global row identifiers when representable
+    ids: Optional[torch.Tensor]  # Row positions in an explicit reference table
     probabilities: torch.Tensor  # Original draw probabilities
     weights: torch.Tensor  # Multiplicative residual weights in row order
     generation: int  # Sampling generation number
@@ -264,16 +265,13 @@ class SampleBatch:  # MARK: SampleBatch
 
     def _get_indices(self, in_dim: Sequence[int],
                      device: torch.device) -> torch.Tensor:
-        """Validates stored coordinates or decodes legacy global row ids."""
+        """Validates coordinates independently of reference-table row ids."""
         indices = self.indices
-        if (indices is not None) and (indices.device != device):
-            raise ValueError('Samples and cores should share a device')
         if indices is None:
-            if self.ids.device != device:
-                raise ValueError('Samples and cores should share a device')
-            if int(self.ids.max()) >= prod(in_dim):
-                raise ValueError('A sampled row id is out of bounds')
-            indices = _unravel_indices(self.ids.to(torch.long), in_dim)
+            raise ValueError('Tensor configurations require `indices`; '
+                             '`ids` only identify reference-table rows')
+        if indices.device != device:
+            raise ValueError('Samples and cores should share a device')
         return _discrete_indices(ConfigurationBatch(indices, kind='indices'),
                                  in_dim, device)
 
@@ -297,9 +295,9 @@ class SampleBatch:  # MARK: SampleBatch
                           target: torch.Tensor) -> Tuple[
             torch.Tensor, torch.Tensor]:
         """
-        Selects global rows and applies their sampling weights.
+        Selects explicit reference-table rows and applies their weights.
 
-        Requires representable global ``ids``.
+        Requires ``ids`` identifying rows of the supplied matrix and target.
 
         Parameters
         ----------
@@ -327,7 +325,7 @@ class SampleBatch:  # MARK: SampleBatch
                 '`target` and `environment` should have matching rows')
         if self.ids is None:
             raise ValueError(
-                'Global row selection requires representable `ids`')
+                'Reference-table row selection requires `ids`')
         if (environment.device != self.ids.device) or \
                 (target.device != self.ids.device):
             raise ValueError('Sampled tensors and ids should share a device')
@@ -390,32 +388,26 @@ def _sample_batch(rows: torch.Tensor,
                   site: int,
                   proposal_core_versions: Tuple[int, ...] = (),
                   proposal_exact: bool = True,
-                  in_dim: Optional[Sequence[int]] = None) -> SampleBatch:
-    """Builds weights from immutable draw ``probabilities``."""
-    indices = rows if rows.ndim == 2 else None
-    ids = rows if indices is None else (
-        _ravel_indices(indices, in_dim)
-        if prod(in_dim) - 1 <= torch.iinfo(torch.int64).max else None)
+                  row_ids: Optional[torch.Tensor] = None) -> SampleBatch:
+    """Keeps coordinate rows and their immutable draw probabilities."""
     weights = (probabilities.numel() * probabilities).rsqrt()
     return SampleBatch(
-        ids=ids,
+        ids=row_ids,
         probabilities=probabilities,
         weights=weights,
         generation=sampler.generation,
         proposal_core_versions=proposal_core_versions,
         proposal_exact=proposal_exact,
         site=site,
-        indices=indices)
+        indices=rows)
 
 
 def _uniform_indices(in_dim: Sequence[int], n_samples: int,
                      device: torch.device,
                      generator: Optional[torch.Generator]) -> torch.Tensor:
-    """Draws uniform coordinates, retaining representable flat draws."""
-    if prod(in_dim) <= torch.iinfo(torch.int64).max:
-        ids = torch.randint(prod(in_dim), (n_samples,), device=device,
-                            generator=generator)
-        return _unravel_indices(ids, in_dim)
+    """Draws each coordinate uniformly without global linear indices."""
+    if not in_dim:
+        return torch.empty(n_samples, 0, dtype=torch.long, device=device)
     return torch.stack([torch.randint(dim, (n_samples,), device=device,
                                       generator=generator)
                         for dim in in_dim], dim=1)
@@ -489,7 +481,9 @@ class ExactRows(RowSampler):  # MARK: ExactRows
             1 / self.n_rows,
             device=self.device,
             dtype=torch.get_default_dtype())
-        return _sample_batch(ids, probabilities, self, site)
+        in_dim = tuple(core.shape[1] for core in owner.cores)
+        return _sample_batch(_unravel_indices(ids, in_dim), probabilities,
+                             self, site, row_ids=ids)
 
 
 class ObservedRows(RowSampler):  # MARK: ObservedRows
@@ -563,7 +557,8 @@ class ObservedRows(RowSampler):  # MARK: ObservedRows
             device=self.device,
             dtype=torch.get_default_dtype())
         return _sample_batch(indices, probabilities, self, site,
-                             in_dim=self.observations.in_dim)
+                             row_ids=torch.arange(n_observations,
+                                                  device=self.device))
 
 
 class UniformRows(RowSampler):  # MARK: UniformRows
@@ -631,7 +626,7 @@ class UniformRows(RowSampler):  # MARK: UniformRows
         probabilities = torch.full(
             (indices.shape[0],), 1 / self.n_rows, device=self.device,
             dtype=torch.get_default_dtype())
-        return _sample_batch(indices, probabilities, self, site, in_dim=in_dim)
+        return _sample_batch(indices, probabilities, self, site)
 
     def sample(self, owner: Any, site: int, n_samples: int,
                generator: Optional[torch.Generator], generation: int,
@@ -991,7 +986,6 @@ class TTLeverageRows(RowSampler):  # MARK: TTLeverageRows
             rows=indices,
             probabilities=probabilities,
             sampler=self,
-            in_dim=in_dim,
             site=site,
             proposal_core_versions=self.core_versions,
             proposal_exact=True)
@@ -1235,7 +1229,6 @@ class TRProductLeverageRows(RowSampler):  # MARK: TRProductLeverageRows
             rows=indices,
             probabilities=probabilities,
             sampler=self,
-            in_dim=in_dim,
             site=site,
             proposal_core_versions=self.core_versions,
             proposal_exact=False)
@@ -1546,7 +1539,6 @@ class TRExactLeverageRows(RowSampler):  # MARK: TRExactLeverageRows
             rows=indices,
             probabilities=probabilities,
             sampler=self,
-            in_dim=in_dim,
             site=site,
             proposal_core_versions=self.core_versions,
             proposal_exact=True)

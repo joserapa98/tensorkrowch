@@ -493,3 +493,36 @@ class TestStructuredTTBackend:  # MARK: TestStructuredTTBackend
 
 
 __all__ = []
+
+
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('structured', [False, True])
+def test_sampled_sketch_long_coordinates_without_global_ids(dtype, structured):
+    count = 70
+    indices = torch.stack((torch.zeros(count, dtype=torch.long),
+                           torch.ones(count, dtype=torch.long)))
+    if structured:
+        source = tk.decompositions.FormatSource(tk.formats.TT([
+            torch.ones(2, 1, dtype=dtype),
+            *[torch.ones(1, 2, 1, dtype=dtype) for _ in range(count - 2)],
+            torch.ones(1, 2, dtype=dtype)]))
+    else:
+        source = tk.decompositions.SparseTensorSource(
+            indices, torch.tensor([.4, .6], dtype=dtype), (2,) * count)
+    operator = tk.decompositions.SampledSketch(
+        samples=indices if structured else None, sketch_size=2)
+    result = tk.decompositions.TTRS(source, sketch_operator=operator).fit(
+        rank=1 if structured else 2, rtol=1e-12)
+    expected = torch.ones(2, dtype=dtype) if structured else \
+        torch.tensor([.4, .6], dtype=dtype)
+    torch.testing.assert_close(result.evaluate(indices), expected,
+                               rtol=1e-10, atol=1e-10)
+
+
+def test_sampled_sketch_rejects_large_implicit_states_before_enumeration():
+    count = 70
+    source = tk.decompositions.FormatSource(tk.formats.TT([
+        torch.ones(2, 1), *[torch.ones(1, 2, 1) for _ in range(count - 2)],
+        torch.ones(1, 2)]))
+    with pytest.raises(ValueError, match='provide explicit `samples`'):
+        tk.decompositions.SampledSketch(sketch_size=2).build(source)

@@ -367,7 +367,9 @@ class OrthGaugeRecursion:  # MARK: OrthGaugeRecursion
 
     The outgoing right gauge is dualized and mirrored into the next fixed
     left gauge. The leftward operation is its mirror. The induced support
-    projector is orthogonal; deficient rank is allowed.
+    projector is orthogonal; deficient rank is allowed. TT2TR uses effective
+    cores with or without Vidal data; see :ref:`tt2tr-recursion` for target
+    preparation and the differences from adjoint transport.
 
     Parameters
     ----------
@@ -449,6 +451,9 @@ class PinvGaugeRecursion(OrthGaugeRecursion):  # MARK: PinvGaugeRecursion
     formed by the incoming gauge and recovered TR core, the next gauge is
     :math:`E=M^+X`. An initial multi-site block is contracted and inverted
     as a whole. Components outside the column space of :math:`M` are allowed.
+    TT2TR uses effective cores with or without Vidal data. This Euclidean
+    solve generally differs from Vidal adjoint transport; see
+    :ref:`tt2tr-recursion`.
 
     Parameters
     ----------
@@ -627,8 +632,10 @@ class AdjointGaugeRecursion(PinvGaugeRecursion):  # MARK: AdjointGaugeRecursion
     A valid :class:`~tensorkrowch.formats.VidalGauge` instead supplies the
     isometries directly. Stored Schmidt powers are removed or absorbed on
     both sides before applying the adjoint; powers may differ at each bond.
-    The input's local targets and their ALS metric are retained. Explicit,
-    implicit and inverse Vidal therefore share the same transport strategy.
+    The stored local targets and their ALS metric are retained, so they need
+    not be orthogonality centers. The targets and transport differ from the
+    pseudoinverse strategies in general; see :ref:`tt2tr-recursion` for each
+    Vidal form and the ordinary QR case.
 
     Parameters
     ----------

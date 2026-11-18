@@ -519,6 +519,8 @@ opener. This example also balances each target and refines its factors:
    converter = d.TT2TR(initial_tt)
    result = converter.fit(rank=2, loop_opener=opener, enrich=True)
 
+.. _tt2tr-recursion:
+
 Recursion and enrichment
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -536,6 +538,158 @@ A configured :class:`GaugeRecursion` strategy accepts PyTorch pseudoinverse
 keyword arguments. ``enrich=True`` adds orthogonal residual constraints to
 the transported sample space without increasing the requested TR ranks.
 ``enrich_rank`` and ``enrich_rtol`` limit those extra coordinates.
+
+Local targets and pseudoinverse recursions
+"""""""""""""""""""""""""""""""""""""""""
+
+The recursion determines both the reference TT cores used by the openings and
+how a learned gauge is passed to the next opening. The following formulas
+describe rightward transport without enrichment. Leftward transport exchanges
+left and right; enrichment adds the residual directions described above.
+
+Let :math:`T_k(\ell,i,r)` be the reference TT core supplied to the local
+opening, :math:`A_k(a,i,b)` its recovered TR core, and
+:math:`L(g,\ell,a)` the incoming gauge. Here :math:`\ell,r` are TT bond
+indices, :math:`a,b` are TR bond indices, and :math:`g` is the cyclic TR
+index. Define
+
+.. math::
+
+   M_{(\ell,i),r}=T_k(\ell,i,r),
+   \qquad
+   X_{(\ell,i),(g,b)}=\sum_a L(g,\ell,a)A_k(a,i,b).
+
+The outgoing gauge :math:`R(b,r,g)` completes the approximation
+:math:`T_k(\ell,i,r)\approx\sum_{g,a,b}L(g,\ell,a)A_k(a,i,b)R(b,r,g)`.
+ALS minimizes this local residual with the specified opener settings. The
+central opening has free external gauges; subsequent openings hold the
+incoming gauge fixed. For a block, the physical indices are grouped in these
+formulas, while ALS still optimizes its individual TR cores.
+
+Both ``"pinv"`` and ``"orth"`` use the input's effective TT cores as
+:math:`T_k`: each explicit bond factor is absorbed into the right virtual axis
+of the core immediately to its left. Neither strategy canonicalizes the TT or
+moves its orthogonality center. This rule applies whether or not the input
+has Vidal data.
+
+* ``"pinv"`` computes :math:`E=M^+X` and reshapes :math:`E` into the next
+  fixed incoming gauge. This minimizes :math:`\|ME-X\|_F^2`, with the
+  minimum-norm convention of the pseudoinverse. For an initial block,
+  :math:`M` is the unfolding of the entire contracted reference block.
+* ``"orth"`` instead dualizes the learned outgoing gauge. If
+  :math:`G_{r,(b,g)}=R(b,r,g)`, the next left gauge satisfies
+  :math:`L_{\mathrm{next}}(g,r,b)=(G^+)_{(b,g),r}`. Thus :math:`GG^+`
+  is the orthogonal projector onto the column space of :math:`G`, with
+  numerical support controlled by the pseudoinverse tolerances. This operation
+  does not solve the TT-core coordinate problem :math:`ME\approx X`.
+
+With the same opener and initialization, these two strategies therefore
+start from the same central problem. Their inherited gauges, and hence the
+later local problems, can differ.
+
+Adjoint recursion without Vidal data
+"""""""""""""""""""""""""""""""""""
+
+For ``"adjoint"`` without valid Vidal data, TT2TR first prepares a mixed
+canonical TT centered at ``center``. The central target is consequently an
+orthogonality center. After opening a site or block, it factorizes the
+rightward unfolding as :math:`M=QF`, with :math:`Q^\dagger Q=I`, and computes
+:math:`E=Q^\dagger X`. It absorbs :math:`F` into the next reference core
+before opening that core. The reference TT is preserved, and its
+orthogonality center moves to the next local target. The left branch uses
+the mirrored operation. Here :math:`\dagger` denotes conjugate transpose.
+
+Adjoint recursion with Vidal data
+""""""""""""""""""""""""""""""""
+
+For valid :class:`~tensorkrowch.formats.VidalGauge` data, ``"adjoint"`` uses
+the stored Schmidt spectra instead of performing those QRs. To describe
+arbitrary absorption powers, write the stored core and remaining bond factor
+as
+
+.. math::
+
+   B_k=\Lambda_{k-1}^{b_{k-1}}\Gamma_k\Lambda_k^{a_k},
+   \qquad D_k=\Lambda_k^{1-a_k-b_k}.
+
+At bond :math:`k`, :math:`a_k` is the power absorbed into core :math:`k`
+and :math:`b_k` the power absorbed into core :math:`k+1`. Missing endpoint
+spectra are identities. For ``"adjoint"``, a singleton ALS target is the
+stored :math:`B_k`; a block target contracts these cores with each internal
+:math:`D_k` once. External Schmidt powers are not added to make every target
+an orthogonality center.
+
+In contrast, the effective singleton target used by ``"pinv"`` and
+``"orth"`` is
+
+.. math::
+
+   \widehat B_k=B_kD_k
+   =\Lambda_{k-1}^{b_{k-1}}\Gamma_k\Lambda_k^{1-b_k}.
+
+The common Vidal forms therefore give the following local targets:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 35 35
+
+   * - Vidal form
+     - :math:`(a,b)`
+     - ``adjoint`` target
+     - ``pinv`` / ``orth`` target
+   * - Explicit
+     - :math:`(0,0)`
+     - :math:`\Gamma_k`
+     - :math:`\Gamma_k\Lambda_k`
+   * - Implicit
+     - :math:`(1/2,1/2)`
+     - :math:`\Lambda_{k-1}^{1/2}\Gamma_k\Lambda_k^{1/2}`
+     - Same as ``adjoint``
+   * - Inverse
+     - :math:`(1,1)`
+     - :math:`\Lambda_{k-1}\Gamma_k\Lambda_k`
+     - :math:`\Lambda_{k-1}\Gamma_k`
+
+Only the inverse Vidal ``"adjoint"`` target in this table is generally an
+orthogonality center at every site. Explicit and implicit targets retain
+their own local Frobenius metric, even though the transport uses isometries.
+
+For rightward Vidal transport, let :math:`M` now unfold :math:`B_k` and
+form :math:`X` from the learned factors as above. The implementation computes
+
+.. math::
+
+   H=\Lambda_{k-1}^{1-b_{k-1}}\otimes I_{n_k},\qquad
+   Q=HM\Lambda_k^{-a_k}
+     =\operatorname{mat}(\Lambda_{k-1}\Gamma_k),
+   \qquad
+   E=\Lambda_k^{b_k-1}Q^\dagger HX.
+
+The rows of :math:`H` act on :math:`(\ell,i)`; the final Schmidt power acts
+on the outgoing TT coordinate. It converts the isometric coordinates into
+the powers required by the next stored target. Leftward transport uses
+:math:`\Gamma_k\Lambda_k`, weights the incoming right axis by
+:math:`\Lambda_k^{1-a_k}`, and converts the outgoing left coordinates with
+:math:`\Lambda_{k-1}^{a_{k-1}-1}`. Inverse powers act only on nonzero
+Schmidt support; exact zero values remain zero.
+
+In particular, implicit Vidal gives the same central ALS target for all
+three strategies, but generally different transport. On nonzero Schmidt
+support, its adjoint formula is the weighted coordinate solve
+
+.. math::
+
+   E_{\mathrm{adjoint}}
+   =\Lambda_k^{-1/2}Q^\dagger HX
+   =\underset{E}{\operatorname{argmin}}\;\|H(ME-X)\|_F^2,
+   \qquad H=\Lambda_{k-1}^{1/2}\otimes I_{n_k}.
+
+The ``"pinv"`` formula instead minimizes :math:`\|ME-X\|_F^2`. They agree
+for an exactly representable :math:`X` with unique supported coordinates,
+but need not agree when :math:`X` has a residual outside the column space of
+:math:`M`. Isometric transport does not make these two metrics identical.
+``QRLoopOpener`` may additionally balance and refine any of these local
+problems; that is independent of the reference TT preparation described here.
 
 Exact spectral recovery
 ^^^^^^^^^^^^^^^^^^^^^^^

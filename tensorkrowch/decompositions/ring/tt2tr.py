@@ -544,7 +544,9 @@ class TT2TR:  # MARK: TT2TR
             ``"adjoint"`` moves QR centers or uses stored Vidal isometries;
             ``"pinv"`` uses TT-core pseudoinverses; ``"orth"`` dualizes the
             learned gauge. Configured objects accept PyTorch pseudoinverse
-            keyword options. Exact BLOSTR conversion does not use transport.
+            keyword options. Target preparation depends on the recursion and
+            Vidal form; see :ref:`tt2tr-recursion`. Exact BLOSTR conversion
+            does not use transport.
         block_center : bool
             Grow an optimization block around ``center`` when needed.
             Defaults to ``True``. ``False`` starts from ``center`` alone.
